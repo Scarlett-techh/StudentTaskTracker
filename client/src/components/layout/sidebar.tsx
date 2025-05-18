@@ -8,7 +8,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ currentPath }: SidebarProps) => {
-  const { data: subjects, isLoading: isLoadingSubjects } = useQuery({
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ["/api/subjects"],
   });
 
@@ -49,7 +49,7 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
         <div className="mt-2 space-y-1">
           {isLoadingSubjects ? (
             <div className="px-3 py-2 text-sm text-gray-500">Loading subjects...</div>
-          ) : subjects && subjects.length > 0 ? (
+          ) : Array.isArray(subjects) && subjects.length > 0 ? (
             subjects.map((subject: any) => (
               <div 
                 key={subject.id}

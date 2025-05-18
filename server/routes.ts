@@ -271,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      const file = req.file;
+      const file = req.file as Express.Multer.File;
       const fileData = file.buffer.toString('base64');
       
       // In a real app, we would resize the image to create a thumbnail
