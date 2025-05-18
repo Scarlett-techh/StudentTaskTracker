@@ -34,7 +34,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
   const isEditing = !!task;
 
   // Get subjects for dropdown
-  const { data: subjects } = useQuery({
+  const { data: subjects = [] } = useQuery({
     queryKey: ["/api/subjects"],
   });
 

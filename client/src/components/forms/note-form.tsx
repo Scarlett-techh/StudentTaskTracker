@@ -31,7 +31,7 @@ const NoteForm: FC<NoteFormProps> = ({ note, onSuccess, onCancel }) => {
   const isEditing = !!note;
 
   // Get subjects for dropdown
-  const { data: subjects } = useQuery({
+  const { data: subjects = [] } = useQuery({
     queryKey: ["/api/subjects"],
   });
 

@@ -31,12 +31,12 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get subjects for dropdown
-  const { data: subjects } = useQuery({
+  const { data: subjects = [] } = useQuery({
     queryKey: ["/api/subjects"],
   });
 
   // Get tasks for dropdown (optional, for associating photos with tasks)
-  const { data: tasks } = useQuery({
+  const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
   });
 
