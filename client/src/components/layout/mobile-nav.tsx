@@ -20,15 +20,15 @@ const MobileNav = ({ currentPath }: MobileNavProps) => {
       <div className="flex justify-around">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
-            <a 
+            <div 
               className={cn(
-                "flex flex-col items-center py-2 px-3",
+                "flex flex-col items-center py-2 px-3 cursor-pointer",
                 currentPath === item.href ? "text-primary" : "text-gray-600"
               )}
             >
               {item.icon}
               <span className="text-xs mt-1">{item.label}</span>
-            </a>
+            </div>
           </Link>
         ))}
       </div>

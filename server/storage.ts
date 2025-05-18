@@ -107,7 +107,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      name: insertUser.name || null,
+      avatar: insertUser.avatar || null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -132,7 +137,17 @@ export class MemStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = this.taskCurrentId++;
     const createdAt = new Date();
-    const task: Task = { ...insertTask, id, createdAt };
+    const task: Task = {
+      ...insertTask,
+      id,
+      createdAt,
+      description: insertTask.description || null,
+      subject: insertTask.subject || null,
+      status: insertTask.status || 'pending',
+      dueDate: insertTask.dueDate || null,
+      dueTime: insertTask.dueTime || null,
+      order: insertTask.order !== undefined ? insertTask.order : 0
+    };
     this.tasks.set(id, task);
     return task;
   }
@@ -179,7 +194,14 @@ export class MemStorage implements IStorage {
     const id = this.noteCurrentId++;
     const createdAt = new Date();
     const updatedAt = new Date();
-    const note: Note = { ...insertNote, id, createdAt, updatedAt };
+    const note: Note = { 
+      ...insertNote, 
+      id, 
+      createdAt, 
+      updatedAt,
+      content: insertNote.content || null,
+      subject: insertNote.subject || null
+    };
     this.notes.set(id, note);
     return note;
   }
@@ -212,7 +234,15 @@ export class MemStorage implements IStorage {
   async createPhoto(insertPhoto: InsertPhoto): Promise<Photo> {
     const id = this.photoCurrentId++;
     const createdAt = new Date();
-    const photo: Photo = { ...insertPhoto, id, createdAt };
+    const photo: Photo = { 
+      ...insertPhoto, 
+      id, 
+      createdAt,
+      subject: insertPhoto.subject || null,
+      thumbnailData: insertPhoto.thumbnailData || null,
+      taskId: insertPhoto.taskId || null,
+      noteId: insertPhoto.noteId || null
+    };
     this.photos.set(id, photo);
     return photo;
   }
@@ -239,7 +269,13 @@ export class MemStorage implements IStorage {
   async createTaskAttachment(insertAttachment: InsertTaskAttachment): Promise<TaskAttachment> {
     const id = this.taskAttachmentCurrentId++;
     const createdAt = new Date();
-    const attachment: TaskAttachment = { ...insertAttachment, id, createdAt };
+    const attachment: TaskAttachment = { 
+      ...insertAttachment, 
+      id, 
+      createdAt,
+      photoId: insertAttachment.photoId || null,
+      noteId: insertAttachment.noteId || null 
+    };
     this.taskAttachments.set(id, attachment);
     return attachment;
   }

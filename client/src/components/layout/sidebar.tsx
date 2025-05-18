@@ -29,9 +29,9 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
             key={link.href} 
             href={link.href}
           >
-            <a 
+            <div 
               className={cn(
-                "flex items-center px-3 py-2 rounded-md font-medium",
+                "flex items-center px-3 py-2 rounded-md font-medium cursor-pointer",
                 currentPath === link.href
                   ? "bg-blue-50 text-primary"
                   : "text-gray-700 hover:bg-gray-50"
@@ -39,7 +39,7 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
             >
               {link.icon}
               {link.label}
-            </a>
+            </div>
           </Link>
         ))}
       </nav>
@@ -51,17 +51,16 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
             <div className="px-3 py-2 text-sm text-gray-500">Loading subjects...</div>
           ) : subjects && subjects.length > 0 ? (
             subjects.map((subject: any) => (
-              <a 
-                key={subject.id} 
-                href="#" 
-                className="flex items-center group px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50"
+              <div 
+                key={subject.id}
+                className="flex items-center group px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 <span 
                   className="w-2 h-2 rounded-full mr-3" 
                   style={{ backgroundColor: subject.color }}
                 ></span>
                 <span className="font-medium">{subject.name}</span>
-              </a>
+              </div>
             ))
           ) : (
             <div className="px-3 py-2 text-sm text-gray-500">No subjects found</div>
