@@ -13,8 +13,8 @@ import { UploadCloud } from "lucide-react";
 
 const photoFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  subject: z.string().optional(),
-  taskId: z.string().optional(),
+  subject: z.string().optional().nullable(),
+  taskId: z.string().optional().nullable(),
 });
 
 type PhotoFormValues = z.infer<typeof photoFormSchema>;
@@ -45,8 +45,8 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
     resolver: zodResolver(photoFormSchema),
     defaultValues: {
       title: "",
-      subject: "",
-      taskId: "",
+      subject: null,
+      taskId: null,
     },
   });
 
@@ -221,7 +221,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                 <FormLabel>Subject</FormLabel>
                 <Select 
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value === null ? "" : field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -229,9 +229,9 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {subjects?.map((subject: any) => (
-                      <SelectItem key={subject.id} value={subject.name}>
+                    <SelectItem value="">None</SelectItem>
+                    {Array.isArray(subjects) && subjects.map((subject: any) => (
+                      <SelectItem key={subject.id} value={subject.name || ""}>
                         {subject.name}
                       </SelectItem>
                     ))}
@@ -250,7 +250,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                 <FormLabel>Related Task (Optional)</FormLabel>
                 <Select 
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value === null ? "" : field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -258,8 +258,8 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {tasks?.map((task: any) => (
+                    <SelectItem value="">None</SelectItem>
+                    {Array.isArray(tasks) && tasks.map((task: any) => (
                       <SelectItem key={task.id} value={String(task.id)}>
                         {task.title}
                       </SelectItem>
