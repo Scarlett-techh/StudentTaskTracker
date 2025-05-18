@@ -1,0 +1,178 @@
+import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PlusIcon } from "lucide-react";
+import TaskCard from "@/components/dashboard/task-card";
+import TaskForm from "@/components/forms/task-form";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Helmet } from "react-helmet-async";
+
+const Tasks = () => {
+  const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  // Fetch tasks
+  const { data: tasks, isLoading, refetch } = useQuery({
+    queryKey: ["/api/tasks"],
+  });
+
+  // Handle drag-and-drop reordering
+  const handleDragStart = (position: number) => {
+    dragItem.current = position;
+  };
+
+  const handleDragEnter = (position: number) => {
+    dragOverItem.current = position;
+  };
+
+  const handleDrop = async () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    
+    // Make a copy of the tasks array
+    const _tasks = [...tasks];
+    
+    // Get the dragged item
+    const draggedItemContent = _tasks[dragItem.current];
+    
+    // Remove the dragged item
+    _tasks.splice(dragItem.current, 1);
+    
+    // Add the dragged item at the new position
+    _tasks.splice(dragOverItem.current, 0, draggedItemContent);
+    
+    // Reset refs
+    dragItem.current = null;
+    dragOverItem.current = null;
+    
+    // Update the order property for each task
+    const tasksWithNewOrder = _tasks.map((task, index) => ({
+      id: task.id,
+      order: index,
+    }));
+    
+    // Update the tasks order in the backend
+    try {
+      await apiRequest("PATCH", "/api/tasks/reorder", { tasks: tasksWithNewOrder });
+      
+      // Refetch tasks to get the updated order
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    } catch (error: any) {
+      toast({
+        title: "Error reordering tasks",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <>
+      <Helmet>
+        <title>Tasks - Student Task Tracker</title>
+        <meta 
+          name="description" 
+          content="Manage and organize your academic tasks. Track progress, set due dates, and prioritize your work."
+        />
+      </Helmet>
+      
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800">Tasks</h2>
+          <Button onClick={() => setNewTaskDialogOpen(true)}>
+            <PlusIcon className="mr-2 h-4 w-4" />
+            New Task
+          </Button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">All Tasks</h3>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm">
+                  <span className="mr-1 text-sm">Filter</span>
+                </Button>
+                <Button variant="outline" size="sm">
+                  <span className="mr-1 text-sm">Sort</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Task List */}
+          <div className="p-6">
+            {isLoading ? (
+              <div className="text-center py-8">Loading tasks...</div>
+            ) : tasks && tasks.length > 0 ? (
+              <div className="space-y-4">
+                {tasks.map((task: any, index: number) => (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragEnter={() => handleDragEnter(index)}
+                    onDragEnd={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                  >
+                    <TaskCard 
+                      task={task} 
+                      onTaskUpdate={refetch}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <svg 
+                  className="mx-auto h-12 w-12 text-gray-300" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
+                  ></path>
+                </svg>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">No tasks yet</h3>
+                <p className="text-gray-500 mt-1">Add a new task to get started</p>
+                <Button 
+                  onClick={() => setNewTaskDialogOpen(true)}
+                  className="mt-4"
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Add Task
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* New Task Dialog */}
+      <Dialog open={newTaskDialogOpen} onOpenChange={setNewTaskDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Task</DialogTitle>
+          </DialogHeader>
+          <TaskForm 
+            onSuccess={() => {
+              setNewTaskDialogOpen(false);
+              refetch();
+            }} 
+            onCancel={() => setNewTaskDialogOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+export default Tasks;
