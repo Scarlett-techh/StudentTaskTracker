@@ -85,14 +85,23 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
   // Upload photo mutation
   const uploadPhotoMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      console.log("Sending photo data:", {
+        title: data.get('title'),
+        subject: data.get('subject'),
+        taskId: data.get('taskId'),
+        fileExists: data.get('file') !== null
+      });
+      
       const response = await fetch("/api/photos", {
         method: "POST",
         body: data,
+        // Don't set Content-Type header, let the browser set it with the boundary
         credentials: "include",
       });
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("Photo upload error:", errorText);
         throw new Error(errorText || response.statusText);
       }
       

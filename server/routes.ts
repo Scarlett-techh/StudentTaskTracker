@@ -13,6 +13,14 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+// Debug middleware for file uploads
+const logRequest = (req: any, res: any, next: any) => {
+  console.log("Request body:", req.body);
+  console.log("Request files:", req.files);
+  console.log("Request file:", req.file);
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Error handling middleware
   function handleError(err: any, res: Response) {
@@ -263,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Upload a new photo
-  app.post("/api/photos", upload.single('file'), async (req: Request, res: Response) => {
+  app.post("/api/photos", logRequest, upload.single('file'), async (req: Request, res: Response) => {
     try {
       const userId = 1; // Hardcoded for demo
       
@@ -272,6 +280,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const file = req.file as Express.Multer.File;
+      console.log("File received:", {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        encoding: file.encoding,
+        mimetype: file.mimetype,
+        size: file.size,
+        buffer: file.buffer ? "Buffer present" : "No buffer"
+      });
+      
       const fileData = file.buffer.toString('base64');
       
       // In a real app, we would resize the image to create a thumbnail
@@ -283,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileData,
         thumbnailData,
         mimeType: file.mimetype,
-        subject: req.body.subject,
+        subject: req.body.subject || null,
         userId,
         taskId: req.body.taskId ? parseInt(req.body.taskId) : undefined,
         noteId: req.body.noteId ? parseInt(req.body.noteId) : undefined
