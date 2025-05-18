@@ -220,7 +220,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {subjects?.map((subject: any) => (
                       <SelectItem key={subject.id} value={subject.name}>
                         {subject.name}
@@ -249,7 +249,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {tasks?.map((task: any) => (
                       <SelectItem key={task.id} value={String(task.id)}>
                         {task.title}

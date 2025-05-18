@@ -135,7 +135,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {subjects?.map((subject: any) => (
                       <SelectItem key={subject.id} value={subject.name}>
                         {subject.name}
