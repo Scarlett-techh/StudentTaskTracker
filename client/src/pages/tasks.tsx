@@ -19,6 +19,12 @@ const Tasks = () => {
   const { data: tasks = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/tasks"],
   });
+  
+  // Fetch task attachments for all tasks
+  const { data: allAttachments = [] } = useQuery({
+    queryKey: ["/api/tasks/attachments"],
+    enabled: tasks.length > 0,
+  });
 
   // Handle drag-and-drop reordering
   const handleDragStart = (position: number) => {

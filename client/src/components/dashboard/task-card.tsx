@@ -225,7 +225,27 @@ const TaskCard: FC<TaskCardProps> = ({
                 </div>
               )}
               
-              {/* Attachments would be displayed here */}
+              {/* Display attachments if there are any */}
+              {attachments && attachments.length > 0 && (
+                <div className="mt-2 pl-8">
+                  <div className="flex flex-wrap gap-2">
+                    {Array.isArray(attachments) && attachments.map((attachment: any) => (
+                      <div 
+                        key={attachment.id}
+                        className="bg-gray-100 rounded p-1 flex items-center text-xs"
+                      >
+                        <span className="mr-1">
+                          {attachment.attachmentType === 'photo' ? '📷' : '📝'}
+                        </span>
+                        <span className="truncate max-w-[120px]">
+                          {attachment.attachmentType === 'photo' ? 'Photo' : 'Note'} 
+                          #{attachment.photoId || attachment.noteId}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
