@@ -43,11 +43,13 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   };
   
   const getFacebookShareUrl = () => {
-    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(shareMessage)}`;
+    // Using just the message since we don't have a dedicated page URL for the task
+    return `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(shareMessage)}`;
   };
   
   const getLinkedInShareUrl = () => {
-    return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}&summary=${encodeURIComponent(shareMessage)}`;
+    // Using just the message since we don't have a dedicated page URL for the task
+    return `https://www.linkedin.com/sharing/share-offsite/?summary=${encodeURIComponent(shareMessage)}`;
   };
   
   const getEmailShareUrl = () => {
@@ -61,7 +63,6 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
         await navigator.share({
           title: 'Task Completed',
           text: shareMessage,
-          url: window.location.href,
         });
         toast({
           title: "Shared!",
@@ -69,6 +70,12 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
         });
       } catch (error) {
         console.error('Error sharing:', error);
+        // Fallback if Web Share API fails
+        handleCopy();
+        toast({
+          title: "Copied instead",
+          description: "Share text was copied to clipboard",
+        });
       }
     } else {
       // Fallback if Web Share API is not available
@@ -78,9 +85,12 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] dialog-content">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Share Your Accomplishment</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Share your completed task with friends or social media.
+          </p>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
