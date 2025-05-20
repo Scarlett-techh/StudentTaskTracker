@@ -6,7 +6,6 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Paperclip, Image, FileText, X, Upload, Camera, File } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TaskAttachmentDialogProps {
   open: boolean;
@@ -16,7 +15,8 @@ interface TaskAttachmentDialogProps {
 
 const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDialogProps) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<string>("upload");
+  const [activeTab, setActiveTab] = useState<string>("current");
+  const [photoNoteTab, setPhotoNoteTab] = useState<string>("photos");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,13 +30,13 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
   // Get photo details if needed
   const { data: photos = [] } = useQuery({
     queryKey: ['/api/photos'],
-    enabled: open && activeTab === "photos",
+    enabled: open && activeTab === "existing" && photoNoteTab === "photos",
   });
   
   // Get note details if needed
   const { data: notes = [] } = useQuery({
     queryKey: ['/api/notes'],
-    enabled: open && activeTab === "notes",
+    enabled: open && activeTab === "existing" && photoNoteTab === "notes",
   });
   
   // Handle file selection
@@ -213,9 +213,11 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
   // Find the associated photo or note for an attachment
   const getAttachmentDetails = (attachment: any) => {
     if (attachment.attachmentType === 'photo' && attachment.photoId) {
-      return photos.find((p: any) => p.id === attachment.photoId);
+      const foundPhoto = photos.find((p: any) => p.id === attachment.photoId);
+      return foundPhoto;
     } else if (attachment.attachmentType === 'note' && attachment.noteId) {
-      return notes.find((n: any) => n.id === attachment.noteId);
+      const foundNote = notes.find((n: any) => n.id === attachment.noteId);
+      return foundNote;
     }
     return null;
   };
@@ -250,7 +252,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
           <TabsContent value="current">
             <div className="space-y-4">
               {Array.isArray(attachments) && attachments.length > 0 ? (
-                <ScrollArea className="h-[300px] rounded-md border p-4">
+                <div className="h-[300px] overflow-auto rounded-md border p-4">
                   <div className="space-y-3">
                     {attachments.map((attachment: any) => {
                       const details = getAttachmentDetails(attachment);
@@ -293,7 +295,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Paperclip className="mx-auto h-12 w-12 text-gray-400 mb-3" />
@@ -380,7 +382,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
           
           {/* Existing Files Tab */}
           <TabsContent value="existing">
-            <Tabs defaultValue="photos">
+            <Tabs defaultValue="photos" value={photoNoteTab} onValueChange={setPhotoNoteTab}>
               <TabsList className="grid grid-cols-2 mb-4">
                 <TabsTrigger value="photos">Photos</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -388,7 +390,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
               
               <TabsContent value="photos">
                 {Array.isArray(photos) && photos.length > 0 ? (
-                  <ScrollArea className="h-[300px] rounded-md border p-4">
+                  <div className="h-[300px] overflow-auto rounded-md border p-4">
                     <div className="grid grid-cols-2 gap-4">
                       {photos.map((photo: any) => (
                         <div 
@@ -424,7 +426,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <p>No photos available</p>
@@ -434,7 +436,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
               
               <TabsContent value="notes">
                 {Array.isArray(notes) && notes.length > 0 ? (
-                  <ScrollArea className="h-[300px] rounded-md border p-4">
+                  <div className="h-[300px] overflow-auto rounded-md border p-4">
                     <div className="space-y-3">
                       {notes.map((note: any) => (
                         <div 
@@ -461,7 +463,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <p>No notes available</p>
