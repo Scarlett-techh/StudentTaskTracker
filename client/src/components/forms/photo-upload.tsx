@@ -138,13 +138,23 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
     formData.append("file", selectedFile);
     formData.append("title", data.title);
     
-    if (data.subject) {
+    // Only append subject if it's not "none"
+    if (data.subject && data.subject !== "none") {
       formData.append("subject", data.subject);
     }
     
-    if (data.taskId) {
+    // Only append taskId if it's not "none"
+    if (data.taskId && data.taskId !== "none") {
       formData.append("taskId", data.taskId);
     }
+    
+    console.log("Submitting form with data:", {
+      title: data.title,
+      subject: data.subject,
+      taskId: data.taskId,
+      fileSize: selectedFile.size,
+      fileName: selectedFile.name
+    });
     
     uploadPhotoMutation.mutate(formData);
   };
@@ -229,9 +239,9 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {Array.isArray(subjects) && subjects.map((subject: any) => (
-                      <SelectItem key={subject.id} value={subject.name || ""}>
+                      <SelectItem key={subject.id} value={subject.name || `subject-${subject.id}`}>
                         {subject.name}
                       </SelectItem>
                     ))}
@@ -258,7 +268,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {Array.isArray(tasks) && tasks.map((task: any) => (
                       <SelectItem key={task.id} value={String(task.id)}>
                         {task.title}
