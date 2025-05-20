@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Paperclip, Image, FileText, X, Upload, Camera, File } from 'lucide-react';
 
@@ -233,12 +233,15 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Paperclip className="mr-2 h-5 w-5" />
             Task Attachments
           </DialogTitle>
+          <DialogDescription>
+            Manage files and notes attached to this task
+          </DialogDescription>
         </DialogHeader>
         
         <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab}>
