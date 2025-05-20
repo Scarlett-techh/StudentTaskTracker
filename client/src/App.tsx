@@ -4,12 +4,16 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
+import { HelmetProvider } from "react-helmet-async";
 
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import Notes from "@/pages/notes";
 import Resources from "@/pages/resources";
+import Portfolio from "@/pages/portfolio";
+import Share from "@/pages/share";
+import Parent from "@/pages/parent";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -31,6 +35,9 @@ function Router() {
             <Route path="/tasks" component={Tasks} />
             <Route path="/notes" component={Notes} />
             <Route path="/resources" component={Resources} />
+            <Route path="/portfolio" component={Portfolio} />
+            <Route path="/share" component={Share} />
+            <Route path="/parent" component={Parent} />
             <Route component={NotFound} />
           </Switch>
         </main>
@@ -43,12 +50,14 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }
 

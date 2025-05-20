@@ -1,5 +1,14 @@
 import { Link } from "wouter";
-import { LayoutDashboard, BookText, FileText, Image, Menu } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  BookText, 
+  FileText, 
+  BarChart2, 
+  Award, 
+  Send, 
+  Users, 
+  Menu 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
@@ -11,7 +20,10 @@ const MobileNav = ({ currentPath }: MobileNavProps) => {
     { href: "/", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
     { href: "/tasks", icon: <BookText className="h-5 w-5" />, label: "Tasks" },
     { href: "/notes", icon: <FileText className="h-5 w-5" />, label: "Notes" },
-    { href: "/resources", icon: <Image className="h-5 w-5" />, label: "Resources" },
+    { href: "/resources", icon: <BarChart2 className="h-5 w-5" />, label: "Resources" },
+    { href: "/portfolio", icon: <Award className="h-5 w-5" />, label: "Portfolio" },
+    { href: "/share", icon: <Send className="h-5 w-5" />, label: "Share" },
+    { href: "/parent", icon: <Users className="h-5 w-5" />, label: "Parent" },
   ];
 
   return (

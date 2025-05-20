@@ -1,5 +1,14 @@
 import { Link } from "wouter";
-import { LayoutDashboard, BookText, FileText, Image, BarChart2, Settings } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  BookText, 
+  FileText, 
+  Award, 
+  BarChart2, 
+  Settings, 
+  Send,
+  Users
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +26,9 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
     { href: "/tasks", icon: <BookText className="mr-3 h-5 w-5" />, label: "Tasks" },
     { href: "/notes", icon: <FileText className="mr-3 h-5 w-5" />, label: "Notes" },
     { href: "/resources", icon: <BarChart2 className="mr-3 h-5 w-5" />, label: "Learning Resources" },
+    { href: "/portfolio", icon: <Award className="mr-3 h-5 w-5" />, label: "Portfolio" },
+    { href: "/share", icon: <Send className="mr-3 h-5 w-5" />, label: "Share Work" },
+    { href: "/parent", icon: <Users className="mr-3 h-5 w-5" />, label: "Parent Access" },
     { href: "/settings", icon: <Settings className="mr-3 h-5 w-5" />, label: "Settings" },
   ];
 
