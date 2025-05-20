@@ -13,23 +13,14 @@ import {
   Paperclip
 } from "lucide-react";
 import ShareTaskModal from "./share-task-modal";
-import TaskAttachmentViewer from "./task-attachment-viewer";
+import TaskAttachmentSimple from "./task-attachment-simple";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import TaskForm from "@/components/forms/task-form";
 import { format } from "date-fns";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-
-interface TaskAttachment {
-  id: number;
-  taskId: number;
-  photoId?: number;
-  noteId?: number;
-  attachmentType: string;
-  createdAt: Date;
-}
 
 interface TaskCardProps {
   task: {
@@ -277,8 +268,13 @@ const TaskCard: FC<TaskCardProps> = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <p>Are you sure you want to delete this task? This action cannot be undone.</p>
+          
+          <p>Are you sure you want to delete this task?</p>
+          
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -299,9 +295,12 @@ const TaskCard: FC<TaskCardProps> = ({
 
       {/* Edit Task Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] dialog-content">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Make changes to your task here.
+            </DialogDescription>
           </DialogHeader>
           <TaskForm 
             task={{
@@ -326,8 +325,8 @@ const TaskCard: FC<TaskCardProps> = ({
         }}
       />
       
-      {/* Task Attachment Viewer */}
-      <TaskAttachmentViewer
+      {/* Task Attachment Dialog */}
+      <TaskAttachmentSimple
         open={attachmentDialogOpen}
         onOpenChange={setAttachmentDialogOpen}
         taskId={task.id}
