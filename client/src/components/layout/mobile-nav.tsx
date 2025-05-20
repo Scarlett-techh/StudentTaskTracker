@@ -11,7 +11,7 @@ const MobileNav = ({ currentPath }: MobileNavProps) => {
     { href: "/", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
     { href: "/tasks", icon: <BookText className="h-5 w-5" />, label: "Tasks" },
     { href: "/notes", icon: <FileText className="h-5 w-5" />, label: "Notes" },
-    { href: "/more", icon: <Menu className="h-5 w-5" />, label: "More" },
+    { href: "/settings", icon: <Menu className="h-5 w-5" />, label: "Settings" },
   ];
 
   return (
