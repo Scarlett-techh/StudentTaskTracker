@@ -252,7 +252,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
           <TabsContent value="current">
             <div className="space-y-4">
               {Array.isArray(attachments) && attachments.length > 0 ? (
-                <div className="h-[300px] overflow-auto rounded-md border p-4">
+                <div className="max-h-[300px] overflow-y-scroll rounded-md border p-4">
                   <div className="space-y-3">
                     {attachments.map((attachment: any) => {
                       const details = getAttachmentDetails(attachment);
@@ -390,7 +390,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
               
               <TabsContent value="photos">
                 {Array.isArray(photos) && photos.length > 0 ? (
-                  <div className="h-[300px] overflow-auto rounded-md border p-4">
+                  <div className="max-h-[300px] overflow-y-scroll rounded-md border p-4">
                     <div className="grid grid-cols-2 gap-4">
                       {photos.map((photo: any) => (
                         <div 
@@ -436,7 +436,7 @@ const TaskAttachmentDialog = ({ open, onOpenChange, taskId }: TaskAttachmentDial
               
               <TabsContent value="notes">
                 {Array.isArray(notes) && notes.length > 0 ? (
-                  <div className="h-[300px] overflow-auto rounded-md border p-4">
+                  <div className="max-h-[300px] overflow-y-scroll rounded-md border p-4">
                     <div className="space-y-3">
                       {notes.map((note: any) => (
                         <div 
