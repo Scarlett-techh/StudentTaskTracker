@@ -88,44 +88,114 @@ const Tasks = () => {
           </Button>
         </div>
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">All Tasks</h3>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
-                  <span className="mr-1 text-sm">Filter</span>
-                </Button>
-                <Button variant="outline" size="sm">
-                  <span className="mr-1 text-sm">Sort</span>
-                </Button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Brain Tasks */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">Brain Tasks</h3>
+                <div className="text-sm text-gray-500">Mental Focus</div>
               </div>
             </div>
+            
+            <div className="p-4">
+              {isLoading ? (
+                <div className="text-center py-4">Loading tasks...</div>
+              ) : tasks && tasks.filter((t: any) => t.category === 'brain').length > 0 ? (
+                <div className="space-y-3">
+                  {tasks.filter((task: any) => task.category === 'brain').map((task: any, index: number) => (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnter={() => handleDragEnter(index)}
+                      onDragEnd={handleDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                    >
+                      <TaskCard 
+                        task={task} 
+                        onTaskUpdate={refetch}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-gray-500">No brain tasks yet</p>
+                </div>
+              )}
+            </div>
           </div>
-          
-          {/* Task List */}
-          <div className="p-6">
-            {isLoading ? (
-              <div className="text-center py-8">Loading tasks...</div>
-            ) : tasks && tasks.length > 0 ? (
-              <div className="space-y-4">
-                {tasks.map((task: any, index: number) => (
-                  <div
-                    key={task.id}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragEnter={() => handleDragEnter(index)}
-                    onDragEnd={handleDrop}
-                    onDragOver={(e) => e.preventDefault()}
-                  >
-                    <TaskCard 
-                      task={task} 
-                      onTaskUpdate={refetch}
-                    />
-                  </div>
-                ))}
+
+          {/* Body Tasks */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">Body Tasks</h3>
+                <div className="text-sm text-gray-500">Physical Focus</div>
               </div>
-            ) : (
+            </div>
+            
+            <div className="p-4">
+              {isLoading ? (
+                <div className="text-center py-4">Loading tasks...</div>
+              ) : tasks && tasks.filter((t: any) => t.category === 'body').length > 0 ? (
+                <div className="space-y-3">
+                  {tasks.filter((task: any) => task.category === 'body').map((task: any, index: number) => (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnter={() => handleDragEnter(index)}
+                      onDragEnd={handleDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                    >
+                      <TaskCard 
+                        task={task} 
+                        onTaskUpdate={refetch}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-gray-500">No body tasks yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Space Tasks */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200 bg-purple-50">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">Space Tasks</h3>
+                <div className="text-sm text-gray-500">Environment Focus</div>
+              </div>
+            </div>
+            
+            <div className="p-4">
+              {isLoading ? (
+                <div className="text-center py-4">Loading tasks...</div>
+              ) : tasks && tasks.filter((t: any) => t.category === 'space').length > 0 ? (
+                <div className="space-y-3">
+                  {tasks.filter((task: any) => task.category === 'space').map((task: any, index: number) => (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnter={() => handleDragEnter(index)}
+                      onDragEnd={handleDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                    >
+                      <TaskCard 
+                        task={task} 
+                        onTaskUpdate={refetch}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="text-center py-12">
                 <svg 
                   className="mx-auto h-12 w-12 text-gray-300" 

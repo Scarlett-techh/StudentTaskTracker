@@ -24,6 +24,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   subject: text("subject"),
+  category: text("category").notNull().default("brain"), // "brain", "body", or "space"
   status: text("status").notNull().default("pending"),
   dueDate: text("due_date"),
   dueTime: text("due_time"),
@@ -36,6 +37,7 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   title: true,
   description: true,
   subject: true,
+  category: true,
   status: true,
   dueDate: true,
   dueTime: true,

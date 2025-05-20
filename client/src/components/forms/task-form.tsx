@@ -16,6 +16,7 @@ const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   subject: z.string().optional(),
+  category: z.enum(["brain", "body", "space"]).default("brain"),
   status: z.enum(["pending", "in-progress", "completed"]),
   dueDate: z.string().optional(),
   dueTime: z.string().optional(),
@@ -45,6 +46,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
       title: task?.title || "",
       description: task?.description || "",
       subject: task?.subject || "",
+      category: task?.category || "brain",
       status: task?.status || "pending",
       dueDate: task?.dueDate || "",
       dueTime: task?.dueTime || "",
@@ -118,7 +120,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
           )}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="subject"
@@ -127,7 +129,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
                 <FormLabel>Subject</FormLabel>
                 <Select 
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value || "none"}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -136,11 +138,37 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {subjects?.map((subject: any) => (
+                    {Array.isArray(subjects) && subjects.map((subject: any) => (
                       <SelectItem key={subject.id} value={subject.name}>
                         {subject.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <Select 
+                  onValueChange={field.onChange}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="brain">Brain (Mental)</SelectItem>
+                    <SelectItem value="body">Body (Physical)</SelectItem>
+                    <SelectItem value="space">Space (Environment)</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -156,7 +184,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
                 <FormLabel>Status</FormLabel>
                 <Select 
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
