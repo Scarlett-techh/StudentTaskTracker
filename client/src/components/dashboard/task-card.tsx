@@ -13,7 +13,7 @@ import {
   Paperclip
 } from "lucide-react";
 import ShareTaskModal from "./share-task-modal";
-import TaskAttachmentDialog from "./task-attachment-dialog";
+import TaskAttachmentViewer from "./task-attachment-viewer";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -326,8 +326,8 @@ const TaskCard: FC<TaskCardProps> = ({
         }}
       />
       
-      {/* Task Attachment Dialog */}
-      <TaskAttachmentDialog
+      {/* Task Attachment Viewer */}
+      <TaskAttachmentViewer
         open={attachmentDialogOpen}
         onOpenChange={setAttachmentDialogOpen}
         taskId={task.id}
