@@ -13,13 +13,13 @@ import {
   Paperclip
 } from "lucide-react";
 import ShareTaskModal from "./share-task-modal";
-import TaskAttachmentSection from "./task-attachment-section";
+import TaskAttachmentDialog from "./task-attachment-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import TaskForm from "@/components/forms/task-form";
 import { format } from "date-fns";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 interface TaskAttachment {
@@ -44,7 +44,6 @@ interface TaskCardProps {
     order: number;
   };
   onTaskUpdate?: () => void;
-  attachments?: TaskAttachment[] | null;
   isDraggable?: boolean;
 }
 
@@ -53,11 +52,11 @@ const TaskCard: FC<TaskCardProps> = ({
   onTaskUpdate,
   isDraggable = true
 }) => {
-  const [showAttachments, setShowAttachments] = useState(false);
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
 
   // Status badge configuration
   const statusConfig = {
@@ -175,14 +174,13 @@ const TaskCard: FC<TaskCardProps> = ({
         )}
         data-task-id={task.id}
       >
-        <div className="flex flex-col space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              {isDraggable && (
-                <div className="drag-handle mr-3 text-gray-400 hover:text-gray-600 hidden group-hover:flex items-center cursor-grab">
-                  <MenuIcon className="h-5 w-5" />
-                </div>
-              )}
+        <div className="flex items-start justify-between">
+          <div className="flex items-start">
+            {isDraggable && (
+              <div className="drag-handle mr-3 text-gray-400 hover:text-gray-600 hidden group-hover:flex items-center cursor-grab">
+                <MenuIcon className="h-5 w-5" />
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex items-center">
                 <div className="mr-3">
@@ -228,8 +226,6 @@ const TaskCard: FC<TaskCardProps> = ({
                   {task.description}
                 </div>
               )}
-              
-              {/* Removed the attachments display section to use a dedicated component */}
             </div>
           </div>
           
@@ -246,7 +242,7 @@ const TaskCard: FC<TaskCardProps> = ({
               )}
               <button 
                 className="text-gray-400 hover:text-indigo-600"
-                onClick={() => setShowAttachments(!showAttachments)}
+                onClick={() => setAttachmentDialogOpen(true)}
                 title="Manage attachments"
               >
                 <Paperclip className="h-4 w-4" />
@@ -308,7 +304,11 @@ const TaskCard: FC<TaskCardProps> = ({
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
           <TaskForm 
-            task={task} 
+            task={{
+              ...task,
+              status: task.status as "pending" | "in-progress" | "completed",
+              category: task.category as "brain" | "body" | "space"
+            }}
             onSuccess={handleEditSuccess} 
             onCancel={handleEditClose} 
           />
@@ -324,6 +324,13 @@ const TaskCard: FC<TaskCardProps> = ({
           description: task.description,
           category: task.category || 'task'
         }}
+      />
+      
+      {/* Task Attachment Dialog */}
+      <TaskAttachmentDialog
+        open={attachmentDialogOpen}
+        onOpenChange={setAttachmentDialogOpen}
+        taskId={task.id}
       />
     </>
   );
