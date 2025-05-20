@@ -289,6 +289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buffer: file.buffer ? "Buffer present" : "No buffer"
       });
       
+      console.log("Request body:", req.body);
+      
       const fileData = file.buffer.toString('base64');
       
       // In a real app, we would resize the image to create a thumbnail
