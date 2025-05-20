@@ -9,15 +9,17 @@ import {
   CheckCircle, 
   AlertCircle, 
   Menu as MenuIcon,
-  Share2
+  Share2,
+  Paperclip
 } from "lucide-react";
 import ShareTaskModal from "./share-task-modal";
+import TaskAttachmentSection from "./task-attachment-section";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import TaskForm from "@/components/forms/task-form";
 import { format } from "date-fns";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 interface TaskAttachment {
@@ -42,7 +44,7 @@ interface TaskCardProps {
     order: number;
   };
   onTaskUpdate?: () => void;
-  attachments?: TaskAttachment[];
+  attachments?: TaskAttachment[] | null;
   isDraggable?: boolean;
 }
 
@@ -51,6 +53,7 @@ const TaskCard: FC<TaskCardProps> = ({
   onTaskUpdate,
   isDraggable = true
 }) => {
+  const [showAttachments, setShowAttachments] = useState(false);
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -172,13 +175,14 @@ const TaskCard: FC<TaskCardProps> = ({
         )}
         data-task-id={task.id}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start">
-            {isDraggable && (
-              <div className="drag-handle mr-3 text-gray-400 hover:text-gray-600 hidden group-hover:flex items-center cursor-grab">
-                <MenuIcon className="h-5 w-5" />
-              </div>
-            )}
+        <div className="flex flex-col space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              {isDraggable && (
+                <div className="drag-handle mr-3 text-gray-400 hover:text-gray-600 hidden group-hover:flex items-center cursor-grab">
+                  <MenuIcon className="h-5 w-5" />
+                </div>
+              )}
             <div className="flex-1">
               <div className="flex items-center">
                 <div className="mr-3">
@@ -225,27 +229,7 @@ const TaskCard: FC<TaskCardProps> = ({
                 </div>
               )}
               
-              {/* Display attachments if there are any */}
-              {attachments && attachments.length > 0 && (
-                <div className="mt-2 pl-8">
-                  <div className="flex flex-wrap gap-2">
-                    {Array.isArray(attachments) && attachments.map((attachment: any) => (
-                      <div 
-                        key={attachment.id}
-                        className="bg-gray-100 rounded p-1 flex items-center text-xs"
-                      >
-                        <span className="mr-1">
-                          {attachment.attachmentType === 'photo' ? '📷' : '📝'}
-                        </span>
-                        <span className="truncate max-w-[120px]">
-                          {attachment.attachmentType === 'photo' ? 'Photo' : 'Note'} 
-                          #{attachment.photoId || attachment.noteId}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Removed the attachments display section to use a dedicated component */}
             </div>
           </div>
           
@@ -260,6 +244,13 @@ const TaskCard: FC<TaskCardProps> = ({
                   <Share2 className="h-4 w-4" />
                 </button>
               )}
+              <button 
+                className="text-gray-400 hover:text-indigo-600"
+                onClick={() => setShowAttachments(!showAttachments)}
+                title="Manage attachments"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
               <button 
                 className="text-gray-400 hover:text-gray-600"
                 onClick={handleEditClick}
