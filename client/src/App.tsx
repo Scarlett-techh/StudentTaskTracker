@@ -9,7 +9,6 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import Notes from "@/pages/notes";
-import Photos from "@/pages/photos";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -30,7 +29,6 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/tasks" component={Tasks} />
             <Route path="/notes" component={Notes} />
-            <Route path="/photos" component={Photos} />
             <Route component={NotFound} />
           </Switch>
         </main>
