@@ -8,8 +8,10 @@ import {
   Clock, 
   CheckCircle, 
   AlertCircle, 
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Share2
 } from "lucide-react";
+import ShareTaskModal from "./share-task-modal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ interface TaskCardProps {
     title: string;
     description?: string;
     status: string;
+    category?: string;
     subject?: string;
     dueDate?: string;
     dueTime?: string;
@@ -51,23 +54,24 @@ const TaskCard: FC<TaskCardProps> = ({
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Status badge configuration
   const statusConfig = {
     pending: {
       icon: <Clock className="mr-1 h-3 w-3" />,
       label: "Pending",
-      variant: "gray" as const
+      variant: "secondary" as const
     },
     "in-progress": {
       icon: <AlertCircle className="mr-1 h-3 w-3" />,
       label: "In Progress",
-      variant: "yellow" as const
+      variant: "outline" as const
     },
     completed: {
       icon: <CheckCircle className="mr-1 h-3 w-3" />,
       label: "Completed",
-      variant: "green" as const
+      variant: "default" as const
     }
   };
   
@@ -227,6 +231,15 @@ const TaskCard: FC<TaskCardProps> = ({
           
           <div className="flex flex-col items-end ml-4">
             <div className="flex space-x-1">
+              {task.status === 'completed' && (
+                <button 
+                  className="text-gray-400 hover:text-blue-600"
+                  onClick={() => setShareDialogOpen(true)}
+                  title="Share completed task"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
+              )}
               <button 
                 className="text-gray-400 hover:text-gray-600"
                 onClick={handleEditClick}
@@ -290,6 +303,17 @@ const TaskCard: FC<TaskCardProps> = ({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Share Task Dialog */}
+      <ShareTaskModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        task={{
+          title: task.title,
+          description: task.description,
+          category: task.category || 'task'
+        }}
+      />
     </>
   );
 };
