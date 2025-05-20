@@ -11,6 +11,7 @@ import { Helmet } from "react-helmet-async";
 
 const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
+  const [initialCategory, setInitialCategory] = useState<'brain' | 'body' | 'space' | undefined>(undefined);
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -133,7 +134,20 @@ const Tasks = () => {
               <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">Brain Tasks</h3>
-                  <div className="text-sm text-gray-500">Mental Focus</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-gray-500">Mental Focus</div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 px-2"
+                      onClick={() => {
+                        setInitialCategory('brain');
+                        setNewTaskDialogOpen(true);
+                      }}
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               
@@ -169,7 +183,19 @@ const Tasks = () => {
               <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">Body Tasks</h3>
-                  <div className="text-sm text-gray-500">Physical Focus</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-gray-500">Physical Focus</div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 px-2"
+                      onClick={() => {
+                        setNewTaskDialogOpen(true);
+                      }}
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               
@@ -205,7 +231,19 @@ const Tasks = () => {
               <div className="px-6 py-4 border-b border-gray-200 bg-purple-50">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">Space Tasks</h3>
-                  <div className="text-sm text-gray-500">Environment Focus</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-gray-500">Environment Focus</div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 px-2"
+                      onClick={() => {
+                        setNewTaskDialogOpen(true);
+                      }}
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               
