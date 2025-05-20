@@ -16,6 +16,7 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
     { href: "/", icon: <LayoutDashboard className="mr-3 h-5 w-5" />, label: "Dashboard" },
     { href: "/tasks", icon: <BookText className="mr-3 h-5 w-5" />, label: "Tasks" },
     { href: "/notes", icon: <FileText className="mr-3 h-5 w-5" />, label: "Notes" },
+    { href: "/resources", icon: <BarChart2 className="mr-3 h-5 w-5" />, label: "Learning Resources" },
     { href: "/settings", icon: <Settings className="mr-3 h-5 w-5" />, label: "Settings" },
   ];
 
