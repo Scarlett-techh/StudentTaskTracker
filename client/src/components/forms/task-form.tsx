@@ -26,11 +26,12 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 interface TaskFormProps {
   task?: TaskFormValues & { id: number };
+  initialCategory?: 'brain' | 'body' | 'space';
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
+const TaskForm: FC<TaskFormProps> = ({ task, initialCategory, onSuccess, onCancel }) => {
   const { toast } = useToast();
   const isEditing = !!task;
 
@@ -46,7 +47,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
       title: task?.title || "",
       description: task?.description || "",
       subject: task?.subject || "",
-      category: task?.category || "brain",
+      category: task?.category || initialCategory || "brain",
       status: task?.status || "pending",
       dueDate: task?.dueDate || "",
       dueTime: task?.dueTime || "",

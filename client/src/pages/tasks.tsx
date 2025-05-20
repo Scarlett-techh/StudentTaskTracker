@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PlusIcon } from "lucide-react";
 import TaskCard from "@/components/dashboard/task-card";
 import TaskForm from "@/components/forms/task-form";
@@ -26,6 +26,12 @@ const Tasks = () => {
     queryKey: ["/api/tasks/attachments"],
     enabled: tasks.length > 0,
   });
+
+  // Open task creation dialog with specific category
+  const openNewTaskDialog = (category?: 'brain' | 'body' | 'space') => {
+    setInitialCategory(category);
+    setNewTaskDialogOpen(true);
+  };
 
   // Handle drag-and-drop reordering
   const handleDragStart = (position: number) => {
@@ -93,7 +99,7 @@ const Tasks = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-800">Tasks</h2>
-          <Button onClick={() => setNewTaskDialogOpen(true)}>
+          <Button onClick={() => openNewTaskDialog()}>
             <PlusIcon className="mr-2 h-4 w-4" />
             New Task
           </Button>
@@ -120,7 +126,7 @@ const Tasks = () => {
             <h3 className="mt-2 text-lg font-medium text-gray-900">No tasks yet</h3>
             <p className="text-gray-500 mt-1">Add a new task to get started</p>
             <Button 
-              onClick={() => setNewTaskDialogOpen(true)}
+              onClick={() => openNewTaskDialog()}
               className="mt-4"
             >
               <PlusIcon className="mr-2 h-4 w-4" />
@@ -140,10 +146,8 @@ const Tasks = () => {
                       size="sm" 
                       variant="ghost" 
                       className="h-8 px-2"
-                      onClick={() => {
-                        setInitialCategory('brain');
-                        setNewTaskDialogOpen(true);
-                      }}
+                      onClick={() => openNewTaskDialog('brain')}
+                      title="Add brain task"
                     >
                       <PlusIcon className="h-4 w-4" />
                     </Button>
@@ -173,6 +177,15 @@ const Tasks = () => {
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-gray-500">No brain tasks yet</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => openNewTaskDialog('brain')}
+                    >
+                      <PlusIcon className="mr-1 h-4 w-4" />
+                      Add brain task
+                    </Button>
                   </div>
                 )}
               </div>
@@ -189,9 +202,8 @@ const Tasks = () => {
                       size="sm" 
                       variant="ghost" 
                       className="h-8 px-2"
-                      onClick={() => {
-                        setNewTaskDialogOpen(true);
-                      }}
+                      onClick={() => openNewTaskDialog('body')}
+                      title="Add body task"
                     >
                       <PlusIcon className="h-4 w-4" />
                     </Button>
@@ -221,6 +233,15 @@ const Tasks = () => {
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-gray-500">No body tasks yet</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => openNewTaskDialog('body')}
+                    >
+                      <PlusIcon className="mr-1 h-4 w-4" />
+                      Add body task
+                    </Button>
                   </div>
                 )}
               </div>
@@ -237,9 +258,8 @@ const Tasks = () => {
                       size="sm" 
                       variant="ghost" 
                       className="h-8 px-2"
-                      onClick={() => {
-                        setNewTaskDialogOpen(true);
-                      }}
+                      onClick={() => openNewTaskDialog('space')}
+                      title="Add space task"
                     >
                       <PlusIcon className="h-4 w-4" />
                     </Button>
@@ -269,6 +289,15 @@ const Tasks = () => {
                 ) : (
                   <div className="text-center py-6">
                     <p className="text-gray-500">No space tasks yet</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => openNewTaskDialog('space')}
+                    >
+                      <PlusIcon className="mr-1 h-4 w-4" />
+                      Add space task
+                    </Button>
                   </div>
                 )}
               </div>
@@ -282,13 +311,21 @@ const Tasks = () => {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
+            <DialogDescription>
+              Create a new task for your {initialCategory || ''} focus area.
+            </DialogDescription>
           </DialogHeader>
           <TaskForm 
+            initialCategory={initialCategory}
             onSuccess={() => {
               setNewTaskDialogOpen(false);
+              setInitialCategory(undefined);
               refetch();
             }} 
-            onCancel={() => setNewTaskDialogOpen(false)} 
+            onCancel={() => {
+              setNewTaskDialogOpen(false);
+              setInitialCategory(undefined);
+            }} 
           />
         </DialogContent>
       </Dialog>
