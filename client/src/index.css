@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global scrolling fixes */
+html, body {
+  height: 100%;
+  overflow-y: auto;
+}
+
+body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for dialogs and modals to ensure they're scrollable */
+.dialog-content {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
 :root {
       --background: 0 0% 100%;
 --foreground: 20 14.3% 4.1%;

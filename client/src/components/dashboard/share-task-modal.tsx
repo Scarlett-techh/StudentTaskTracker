@@ -78,7 +78,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] dialog-content">
         <DialogHeader>
           <DialogTitle>Share Your Accomplishment</DialogTitle>
         </DialogHeader>

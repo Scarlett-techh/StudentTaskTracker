@@ -292,7 +292,7 @@ const TaskCard: FC<TaskCardProps> = ({
 
       {/* Edit Task Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] dialog-content">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
           </DialogHeader>
