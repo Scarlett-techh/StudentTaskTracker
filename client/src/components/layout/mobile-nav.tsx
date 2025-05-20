@@ -6,8 +6,7 @@ import {
   BarChart2, 
   Award, 
   Send, 
-  Users, 
-  Menu 
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
