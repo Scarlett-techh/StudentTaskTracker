@@ -3,8 +3,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Paperclip, Image, FileText, X } from 'lucide-react';
+import { Paperclip, Image, FileText, X, Upload } from 'lucide-react';
 import { queryClient, apiRequest } from '@/lib/queryClient';
+import FilePreview from './file-preview';
 
 interface TaskAttachmentSimpleProps {
   taskId: number;
@@ -20,6 +21,7 @@ export default function TaskAttachmentSimple({
   const { toast } = useToast();
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<any>(null);
 
   // Fetch existing attachments
   const { data: attachments = [], refetch } = useQuery({
@@ -106,7 +108,7 @@ export default function TaskAttachmentSimple({
               className="hidden"
               ref={fileInputRef}
               onChange={handleFileSelect}
-              accept="image/*"
+              accept="image/*,application/pdf,.doc,.docx,.txt"
             />
             <Button onClick={triggerFileInput} size="sm">
               Select File
@@ -125,6 +127,29 @@ export default function TaskAttachmentSimple({
             )}
           </div>
 
+          {/* File Preview Section */}
+          {selectedAttachment && (
+            <div className="border rounded-md overflow-hidden">
+              <div className="bg-gray-50 p-2 border-b flex justify-between items-center">
+                <h3 className="font-medium text-sm">File Preview</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 w-7 p-0"
+                  onClick={() => setSelectedAttachment(null)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              <FilePreview 
+                attachmentId={selectedAttachment.id}
+                photoId={selectedAttachment.photoId}
+                noteId={selectedAttachment.noteId}
+                attachmentType={selectedAttachment.attachmentType}
+              />
+            </div>
+          )}
+
           {/* Attachment list */}
           <div className="border rounded-md">
             <h3 className="font-medium text-sm p-3 border-b bg-gray-50">Current Attachments</h3>
@@ -134,7 +159,10 @@ export default function TaskAttachmentSimple({
                 <div className="divide-y">
                   {attachments.map((attachment: any) => (
                     <div key={attachment.id} className="p-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div 
+                        className="flex items-center gap-2 flex-1 cursor-pointer" 
+                        onClick={() => setSelectedAttachment(attachment)}
+                      >
                         {attachment.attachmentType === 'photo' ? (
                           <Image className="h-4 w-4 text-blue-500" />
                         ) : (
