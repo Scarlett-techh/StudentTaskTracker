@@ -91,6 +91,7 @@ const Portfolio = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [newItemDialogOpen, setNewItemDialogOpen] = useState(false);
   const [newTestDialogOpen, setNewTestDialogOpen] = useState(false);
+  const [addExistingWorkDialogOpen, setAddExistingWorkDialogOpen] = useState(false);
   
   // Form state for new portfolio item
   const [formData, setFormData] = useState({
@@ -297,7 +298,7 @@ const Portfolio = () => {
               <BarChart className="mr-2 h-4 w-4" />
               Add Test Score
             </Button>
-            <Button>
+            <Button onClick={() => setAddExistingWorkDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Existing Work
             </Button>
@@ -543,7 +544,7 @@ const Portfolio = () => {
       </Dialog>
       
       {/* Dialog for adding existing work to portfolio */}
-      <Dialog>
+      <Dialog open={addExistingWorkDialogOpen} onOpenChange={setAddExistingWorkDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add to Portfolio</DialogTitle>
@@ -651,7 +652,7 @@ const Portfolio = () => {
           </Tabs>
           
           <DialogFooter>
-            <Button variant="outline">Close</Button>
+            <Button variant="outline" onClick={() => setAddExistingWorkDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
