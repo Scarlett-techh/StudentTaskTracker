@@ -9,6 +9,7 @@ import TaskCard from "@/components/dashboard/task-card";
 import NoteCard from "@/components/dashboard/note-card";
 import PhotoThumbnail from "@/components/dashboard/photo-thumbnail";
 import UserStats from "@/components/dashboard/user-stats";
+import LearningWallet from "@/components/dashboard/learning-wallet";
 import TaskForm from "@/components/forms/task-form";
 import NoteForm from "@/components/forms/note-form";
 import PhotoUpload from "@/components/forms/photo-upload";
@@ -241,8 +242,9 @@ const Dashboard = () => {
           </div>
 
           {/* User Stats & Achievements Section */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <UserStats />
+            <LearningWallet />
           </div>
         </div>
       </div>
