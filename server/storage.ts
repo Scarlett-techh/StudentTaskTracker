@@ -107,6 +107,9 @@ export class MemStorage implements IStorage {
     this.userAchievementCurrentId = 1;
     this.pointsHistoryCurrentId = 1;
     
+    // Initialize default achievements
+    this.initializeAchievements();
+    
     // Create demo user
     this.createUser({
       username: 'emma',
@@ -382,75 +385,198 @@ export class MemStorage implements IStorage {
   async deleteSubject(id: number): Promise<boolean> {
     return this.subjects.delete(id);
   }
-}
-
-
-}
-
-// Create default achievements
-const initializeAchievements = async (storage: MemStorage) => {
-  const defaultAchievements = [
-    {
-      title: "Task Master",
-      description: "Complete 10 tasks",
-      icon: "trophy",
-      pointsRequired: 100,
-      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2583/2583344.png"
-    },
-    {
-      title: "Note Taker",
-      description: "Create 5 notes",
-      icon: "notebook",
-      pointsRequired: 50,
-      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075908.png"
-    },
-    {
-      title: "Photographer",
-      description: "Upload 3 photos",
-      icon: "camera",
-      pointsRequired: 30,
-      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png"
-    },
-    {
-      title: "Streak Master",
-      description: "Keep a 7-day streak",
-      icon: "calendar",
-      pointsRequired: 70,
-      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/6358/6358101.png"
-    },
-    {
-      title: "Subject Expert",
-      description: "Complete 5 tasks in the same subject",
-      icon: "book",
-      pointsRequired: 50,
-      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2232/2232688.png"
-    }
-  ];
   
-  for (const achievement of defaultAchievements) {
-    await storage["createAchievement"](achievement);
+  // Gamification methods
+  async getAchievements(): Promise<Achievement[]> {
+    return Array.from(this.achievements.values());
   }
-};
-
-// Create method to initialize achievements (this would be private in the class)
-MemStorage.prototype["createAchievement"] = async function(achievement: InsertAchievement): Promise<Achievement> {
-  const id = this.achievementCurrentId++;
   
-  const newAchievement: Achievement = {
-    id,
-    title: achievement.title,
-    description: achievement.description || null,
-    icon: achievement.icon || null,
-    pointsRequired: achievement.pointsRequired,
-    badgeImageUrl: achievement.badgeImageUrl || null,
-    createdAt: new Date()
-  };
+  async getUserAchievements(userId: number): Promise<(UserAchievement & { achievement: Achievement })[]> {
+    const userAchievements = Array.from(this.userAchievements.values())
+      .filter(ua => ua.userId === userId);
+      
+    return userAchievements.map(ua => {
+      const achievement = this.achievements.get(ua.achievementId);
+      return {
+        ...ua,
+        achievement: achievement as Achievement
+      };
+    });
+  }
   
-  this.achievements.set(id, newAchievement);
-  return newAchievement;
-};
+  async awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
+    const id = this.userAchievementCurrentId++;
+    
+    const newUserAchievement: UserAchievement = {
+      id,
+      userId: userAchievement.userId,
+      achievementId: userAchievement.achievementId,
+      achievedAt: new Date()
+    };
+    
+    this.userAchievements.set(id, newUserAchievement);
+    return newUserAchievement;
+  }
+  
+  async addPoints(pointsData: InsertPointsHistory): Promise<PointsHistory> {
+    const id = this.pointsHistoryCurrentId++;
+    
+    const pointsRecord: PointsHistory = {
+      id,
+      userId: pointsData.userId,
+      amount: pointsData.amount,
+      reason: pointsData.reason,
+      taskId: pointsData.taskId,
+      createdAt: new Date()
+    };
+    
+    this.pointsHistory.set(id, pointsRecord);
+    
+    // Update user's points total
+    const user = await this.getUser(pointsData.userId);
+    if (user) {
+      const currentPoints = user.points || 0;
+      const newPoints = currentPoints + pointsData.amount;
+      
+      // Calculate level (1 level per 100 points)
+      const newLevel = Math.max(1, Math.floor(newPoints / 100) + 1);
+      
+      await this.updateUser(user.id, {
+        points: newPoints,
+        level: newLevel
+      } as any);
+    }
+    
+    return pointsRecord;
+  }
+  
+  async getPointsHistory(userId: number): Promise<PointsHistory[]> {
+    return Array.from(this.pointsHistory.values())
+      .filter(record => record.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by most recent first
+  }
+  
+  async updateUserStreak(userId: number): Promise<User | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    
+    const lastActive = user.lastActiveDate ? new Date(user.lastActiveDate) : null;
+    if (lastActive) {
+      lastActive.setHours(0, 0, 0, 0); // Normalize to start of day
+      
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      // If last active was yesterday, increment streak
+      if (lastActive.getTime() === yesterday.getTime()) {
+        await this.updateUser(userId, {
+          streak: (user.streak || 0) + 1,
+          lastActiveDate: new Date()
+        } as any);
+      } 
+      // If last active was before yesterday, reset streak to 1
+      else if (lastActive.getTime() < yesterday.getTime()) {
+        await this.updateUser(userId, {
+          streak: 1,
+          lastActiveDate: new Date()
+        } as any);
+      }
+      // If last active was today, don't change streak but update timestamp
+      else if (lastActive.getTime() !== today.getTime()) {
+        await this.updateUser(userId, {
+          lastActiveDate: new Date()
+        } as any);
+      }
+    } else {
+      // First time user is active, set streak to 1
+      await this.updateUser(userId, {
+        streak: 1,
+        lastActiveDate: new Date()
+      } as any);
+    }
+    
+    return this.getUser(userId);
+  }
+  
+  async getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }> {
+    const user = await this.getUser(userId);
+    
+    if (!user) {
+      return { points: 0, level: 1, streak: 0 };
+    }
+    
+    return {
+      points: user.points || 0,
+      level: user.level || 1,
+      streak: user.streak || 0
+    };
+  }
+  
+  // Method to add achievements to the system
+  private async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
+    const id = this.achievementCurrentId++;
+    
+    const newAchievement: Achievement = {
+      id,
+      title: achievement.title,
+      description: achievement.description || null,
+      icon: achievement.icon || null,
+      pointsRequired: achievement.pointsRequired,
+      badgeImageUrl: achievement.badgeImageUrl || null,
+      createdAt: new Date()
+    };
+    
+    this.achievements.set(id, newAchievement);
+    return newAchievement;
+  }
+  
+  // Method to initialize default achievements
+  private async initializeAchievements(): Promise<void> {
+    const defaultAchievements = [
+      {
+        title: "Task Master",
+        description: "Complete 10 tasks",
+        icon: "trophy",
+        pointsRequired: 100,
+        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2583/2583344.png"
+      },
+      {
+        title: "Note Taker",
+        description: "Create 5 notes",
+        icon: "notebook",
+        pointsRequired: 50,
+        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075908.png"
+      },
+      {
+        title: "Photographer",
+        description: "Upload 3 photos",
+        icon: "camera",
+        pointsRequired: 30,
+        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png"
+      },
+      {
+        title: "Streak Master",
+        description: "Keep a 7-day streak",
+        icon: "calendar",
+        pointsRequired: 70,
+        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/6358/6358101.png"
+      },
+      {
+        title: "Subject Expert",
+        description: "Complete 5 tasks in the same subject",
+        icon: "book",
+        pointsRequired: 50,
+        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2232/2232688.png"
+      }
+    ];
+    
+    for (const achievement of defaultAchievements) {
+      await this.createAchievement(achievement);
+    }
+  }
+}
 
 export const storage = new MemStorage();
-
-// Initialize default achievements
-initializeAchievements(storage);

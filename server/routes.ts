@@ -576,6 +576,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       handleError(err, res);
     }
   });
+  
+  // === Gamification Routes ===
+  
+  // Get user achievements
+  app.get("/api/achievements", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
+  // Get user's earned achievements
+  app.get("/api/user-achievements", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const userAchievements = await storage.getUserAchievements(userId);
+      res.json(userAchievements);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
+  // Get user stats (points, level, streak)
+  app.get("/api/user-stats", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const stats = await storage.getUserStats(userId);
+      res.json(stats);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
+  // Get user points history
+  app.get("/api/points-history", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const pointsHistory = await storage.getPointsHistory(userId);
+      res.json(pointsHistory);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
+  // Update user streak (called when user logs in or completes a task)
+  app.post("/api/update-streak", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const user = await storage.updateUserStreak(userId);
+      res.json({ success: true, streak: user?.streak || 0 });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
