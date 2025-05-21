@@ -164,13 +164,88 @@ export default function LearningWallet() {
         setTimeout(() => {
           const reward = availableRewards.find(r => r.id === rewardId);
           
-          // For certificate rewards, trigger certificate download
+          // For certificate rewards, create and download an actual certificate
           if (reward?.category === 'certificate') {
-            // In a real implementation, this would generate and download a PDF certificate
+            // Create a simple HTML certificate that we'll convert to a data URL
+            const certificateHTML = `
+              <html>
+                <head>
+                  <style>
+                    body {
+                      font-family: Arial, sans-serif;
+                      text-align: center;
+                      padding: 40px;
+                      border: 15px solid #8b5cf6;
+                      margin: 0;
+                      height: 100vh;
+                      box-sizing: border-box;
+                      display: flex;
+                      flex-direction: column;
+                      justify-content: center;
+                      background-color: #f9fafb;
+                    }
+                    h1 {
+                      color: #6d28d9;
+                      font-size: 36px;
+                      margin-bottom: 10px;
+                    }
+                    .certificate-title {
+                      font-size: 24px;
+                      margin-bottom: 30px;
+                      color: #4c1d95;
+                    }
+                    .student-name {
+                      font-size: 30px;
+                      border-bottom: 2px solid #8b5cf6;
+                      padding-bottom: 10px;
+                      margin-bottom: 30px;
+                      display: inline-block;
+                    }
+                    .description {
+                      font-size: 18px;
+                      margin-bottom: 30px;
+                      max-width: 600px;
+                      margin-left: auto;
+                      margin-right: auto;
+                    }
+                    .date {
+                      font-size: 16px;
+                      margin-top: 40px;
+                    }
+                    .signature {
+                      margin-top: 60px;
+                      border-top: 1px solid #d1d5db;
+                      padding-top: 10px;
+                      display: inline-block;
+                      width: 200px;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <h1>Certificate of ${reward.id.includes('excellence') ? 'Excellence' : 'Achievement'}</h1>
+                  <div class="certificate-title">${reward.name}</div>
+                  <div class="student-name">Emma Wilson</div>
+                  <div class="description">
+                    This certificate is awarded for outstanding achievements in learning and demonstrating exceptional dedication to personal development.
+                  </div>
+                  <div class="date">Awarded on ${new Date().toLocaleDateString()}</div>
+                  <div class="signature">Aliud Learning Coach</div>
+                </body>
+              </html>
+            `;
+            
+            // Convert the HTML to a data URL
+            const blob = new Blob([certificateHTML], { type: 'text/html' });
+            const dataUrl = URL.createObjectURL(blob);
+            
+            // Create a link and trigger download
             const a = document.createElement('a');
-            a.href = '#';
-            a.download = `${reward.name.replace(/\s+/g, '_')}.pdf`;
+            a.href = dataUrl;
+            a.download = `${reward.name.replace(/\s+/g, '_')}.html`;
             a.click();
+            
+            // Clean up
+            setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
           }
           
           resolve({ success: true, reward });
