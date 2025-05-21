@@ -115,7 +115,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the update data
       const updateData = insertTaskSchema.partial().parse(req.body);
       
+      // Check if task is being marked as completed
+      const statusChangingToCompleted = existingTask.status !== "completed" && updateData.status === "completed";
+      
       const updatedTask = await storage.updateTask(taskId, updateData);
+      
+      // If task is being marked as completed, award points and check for achievements
+      if (statusChangingToCompleted) {
+        const userId = updatedTask.userId;
+        
+        // Award points based on task type
+        let pointsToAward = 10; // Base points for completing any task
+        
+        // Give bonus points for different categories
+        if (updatedTask.category === "brain") pointsToAward += 5;
+        if (updatedTask.category === "body") pointsToAward += 5;
+        if (updatedTask.category === "space") pointsToAward += 5;
+        
+        // Award points 
+        await storage.addPoints({
+          userId,
+          amount: pointsToAward,
+          reason: `Completed task: ${updatedTask.title}`,
+          taskId: updatedTask.id
+        });
+        
+        // Update user streak
+        await storage.updateUserStreak(userId);
+        
+        // Get user's current stats
+        const completedTaskCount = (await storage.getTasksByStatus(userId, "completed")).length;
+        
+        // Check for eligible achievements
+        if (completedTaskCount >= 10) {
+          // Find the Task Master achievement
+          const achievements = await storage.getAchievements();
+          const taskMasterAchievement = achievements.find(a => a.title === "Task Master");
+          
+          if (taskMasterAchievement) {
+            // Check if user already has this achievement
+            const userAchievements = await storage.getUserAchievements(userId);
+            const alreadyHasAchievement = userAchievements.some(ua => ua.achievementId === taskMasterAchievement.id);
+            
+            // If not, award it
+            if (!alreadyHasAchievement) {
+              await storage.awardAchievement({
+                userId,
+                achievementId: taskMasterAchievement.id
+              });
+            }
+          }
+        }
+      }
+      
       res.json(updatedTask);
     } catch (err: any) {
       handleError(err, res);
