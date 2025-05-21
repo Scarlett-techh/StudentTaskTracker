@@ -19,7 +19,7 @@ import Calendar from "@/pages/calendar";
 import Profile from "@/pages/profile";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
-import Analytics from "@/pages/analytics";
+import Analytics from "@/pages/analytics-new";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
