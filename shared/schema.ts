@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name"),
   avatar: text("avatar"),
+  email: text("email"),
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -16,6 +19,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   name: true,
   avatar: true,
+  email: true,
 });
 
 // Task schema

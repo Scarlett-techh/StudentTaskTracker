@@ -12,6 +12,8 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   
@@ -116,13 +118,16 @@ export class MemStorage implements IStorage {
       ...insertUser, 
       id,
       name: insertUser.name || null,
-      avatar: insertUser.avatar || null
+      avatar: insertUser.avatar || null,
+      email: insertUser.email || null,
+      resetToken: null,
+      resetTokenExpiry: null
     };
     this.users.set(id, user);
     return user;
   }
   
-  async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: number, updateData: Partial<InsertUser> & { resetToken?: string | null, resetTokenExpiry?: Date | null }): Promise<User | undefined> {
     const user = this.users.get(id);
     
     if (!user) {
@@ -133,11 +138,26 @@ export class MemStorage implements IStorage {
       ...user,
       ...updateData,
       name: updateData.name !== undefined ? updateData.name : user.name,
-      avatar: updateData.avatar !== undefined ? updateData.avatar : user.avatar
+      avatar: updateData.avatar !== undefined ? updateData.avatar : user.avatar,
+      email: updateData.email !== undefined ? updateData.email : user.email,
+      resetToken: updateData.resetToken !== undefined ? updateData.resetToken : user.resetToken,
+      resetTokenExpiry: updateData.resetTokenExpiry !== undefined ? updateData.resetTokenExpiry : user.resetTokenExpiry
     };
     
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email
+    );
+  }
+  
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.resetToken === token
+    );
   }
   
   // Task methods

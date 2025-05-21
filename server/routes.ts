@@ -463,7 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Don't return the password
-      const { password, ...userWithoutPassword } = user;
+      const { password, resetToken, resetTokenExpiry, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (err: any) {
       handleError(err, res);
@@ -474,13 +474,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user", upload.single('avatar'), async (req: Request, res: Response) => {
     try {
       const userId = 1; // Hardcoded for demo
-      const { name } = req.body;
+      const { name, email } = req.body;
       
       // Prepare update data
       const updateData: any = {};
       
       if (name) {
         updateData.name = name;
+      }
+      
+      if (email) {
+        updateData.email = email;
       }
       
       // If there's a file upload, process it
@@ -498,9 +502,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Don't return the password
-      const { password, ...userWithoutPassword } = updatedUser;
+      // Don't return the password or reset tokens
+      const { password, resetToken, resetTokenExpiry, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
+  // Request password reset
+  app.post("/api/password-reset/request", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Import email functions
+      const { createPasswordResetToken, sendPasswordResetEmail } = await import('./email');
+      
+      // Create password reset token
+      const resetToken = await createPasswordResetToken(email);
+      
+      if (!resetToken) {
+        // Don't reveal if the email exists or not for security reasons
+        return res.json({ success: true, message: "If an account with that email exists, a password reset link has been sent." });
+      }
+      
+      // Create reset URL - in production this would be your actual domain
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
+      
+      // Send password reset email
+      await sendPasswordResetEmail(email, resetUrl);
+      
+      // Return success message
+      return res.json({ success: true, message: "If an account with that email exists, a password reset link has been sent." });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
+  // Reset password with token
+  app.post("/api/password-reset/reset", async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+      
+      // Import verification function
+      const { verifyPasswordResetToken } = await import('./email');
+      
+      // Verify the token and get the user ID
+      const userId = await verifyPasswordResetToken(token);
+      
+      if (!userId) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+      
+      // Update user's password and clear reset token
+      await storage.updateUser(userId, {
+        password: newPassword,
+        resetToken: null,
+        resetTokenExpiry: null
+      });
+      
+      // Return success message
+      return res.json({ success: true, message: "Password has been reset successfully" });
     } catch (err: any) {
       handleError(err, res);
     }
