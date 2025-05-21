@@ -16,7 +16,7 @@ const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   subject: z.string().optional(),
-  category: z.enum(["brain", "body", "space"]).default("brain"),
+  // Remove category field
   status: z.enum(["pending", "in-progress", "completed"]),
   dueDate: z.string().optional(),
   dueTime: z.string().optional(),
@@ -31,7 +31,7 @@ interface TaskFormProps {
   onCancel?: () => void;
 }
 
-const TaskForm: FC<TaskFormProps> = ({ task, initialCategory, onSuccess, onCancel }) => {
+const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
   const { toast } = useToast();
   const isEditing = !!task;
 
@@ -47,7 +47,6 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialCategory, onSuccess, onCance
       title: task?.title || "",
       description: task?.description || "",
       subject: task?.subject || "",
-      category: task?.category || initialCategory || "brain",
       status: task?.status || "pending",
       dueDate: task?.dueDate || "",
       dueTime: task?.dueTime || "",
