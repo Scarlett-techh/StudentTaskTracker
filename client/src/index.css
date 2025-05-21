@@ -41,7 +41,8 @@ body {
   --ring: 215 20.2% 65.1%;
   --radius: 1rem;
 }
-  .dark {
+
+.theme-dark {
   --background: 233 27% 13%;
   --foreground: 213 31% 91%;
   --muted: 233 14% 26%;
@@ -61,6 +62,29 @@ body {
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --ring: 215 20.2% 65.1%;
+  --radius: 1rem;
+}
+
+.theme-ocean {
+  --background: 195 70% 97%;
+  --foreground: 222 47% 11%;
+  --muted: 195 50% 93%;
+  --muted-foreground: 215 16% 47%;
+  --popover: 195 70% 100%;
+  --popover-foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --border: 195 50% 85%;
+  --input: 195 50% 85%;
+  --primary: 195 80% 40%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 195 70% 50%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 215 80% 58%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 195 80% 40%;
   --radius: 1rem;
 }
 

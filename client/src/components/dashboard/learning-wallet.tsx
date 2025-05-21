@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTheme } from "@/hooks/use-theme";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ interface RewardItem {
 
 export default function LearningWallet() {
   const { toast } = useToast();
+  const { setTheme } = useTheme();
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [selectedReward, setSelectedReward] = useState<RewardItem | null>(null);
 
@@ -255,9 +257,11 @@ export default function LearningWallet() {
     onSuccess: (_, rewardId) => {
       setPurchasedRewards([...purchasedRewards, rewardId]);
       
+      // Get the purchased reward
+      const reward = availableRewards.find(r => r.id === rewardId);
+      
       // Update points locally for demo
       queryClient.setQueryData(["/api/user-stats"], (oldData: any) => {
-        const reward = availableRewards.find(r => r.id === rewardId);
         if (!reward) return oldData;
         
         return {
@@ -266,11 +270,30 @@ export default function LearningWallet() {
         };
       });
       
-      toast({
-        title: "Reward Purchased!",
-        description: "You've successfully unlocked a new reward.",
-        variant: "default",
-      });
+      // Apply theme changes if a theme was purchased
+      if (reward?.category === 'theme') {
+        if (reward.id === 'theme_dark') {
+          setTheme('dark');
+          toast({
+            title: "Dark Theme Applied!",
+            description: "Your new dark theme has been activated.",
+            variant: "default",
+          });
+        } else if (reward.id === 'theme_ocean') {
+          setTheme('ocean');
+          toast({
+            title: "Ocean Theme Applied!",
+            description: "Your new ocean theme has been activated.",
+            variant: "default",
+          });
+        }
+      } else {
+        toast({
+          title: "Reward Purchased!",
+          description: "You've successfully unlocked a new reward.",
+          variant: "default",
+        });
+      }
       
       setPurchaseDialogOpen(false);
     }
