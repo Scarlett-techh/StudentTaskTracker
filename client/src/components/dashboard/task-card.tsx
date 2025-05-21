@@ -292,20 +292,23 @@ const TaskCard: FC<TaskCardProps> = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white border-0 rounded-xl shadow-lg">
           <DialogHeader>
-            <DialogTitle>Delete Task</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold text-primary">Delete Task</DialogTitle>
+            <DialogDescription className="text-gray-600">
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           
-          <p>Are you sure you want to delete this task?</p>
+          <div className="bg-red-50 p-4 rounded-lg my-2 border border-red-100">
+            <p className="text-sm text-red-800">Are you sure you want to delete this task?</p>
+          </div>
           
-          <DialogFooter>
+          <DialogFooter className="gap-2 mt-2">
             <Button 
               variant="outline" 
               onClick={() => setDeleteDialogOpen(false)}
+              className="btn-bounce border-gray-300 hover:bg-gray-100"
             >
               Cancel
             </Button>
@@ -313,6 +316,7 @@ const TaskCard: FC<TaskCardProps> = ({
               variant="destructive" 
               onClick={handleDeleteTask}
               disabled={deleteTaskMutation.isPending}
+              className="btn-bounce"
             >
               {deleteTaskMutation.isPending ? "Deleting..." : "Delete Task"}
             </Button>
@@ -322,10 +326,10 @@ const TaskCard: FC<TaskCardProps> = ({
 
       {/* Edit Task Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white border-0 rounded-xl shadow-lg">
           <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold gradient-heading">Edit Task</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Make changes to your task here.
             </DialogDescription>
           </DialogHeader>
@@ -333,7 +337,6 @@ const TaskCard: FC<TaskCardProps> = ({
             task={{
               ...task,
               status: task.status as "pending" | "in-progress" | "completed",
-              category: task.category as "brain" | "body" | "space"
             }}
             onSuccess={handleEditSuccess} 
             onCancel={handleEditClose} 
@@ -348,7 +351,7 @@ const TaskCard: FC<TaskCardProps> = ({
         task={{
           title: task.title,
           description: task.description,
-          category: task.category || 'task'
+          category: 'task'
         }}
       />
       

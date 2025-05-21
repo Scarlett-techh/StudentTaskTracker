@@ -92,10 +92,10 @@ export default function TaskAttachmentSimple({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-white border-0 rounded-xl shadow-lg">
         <DialogHeader>
-          <DialogTitle>Task Attachments</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-xl font-bold gradient-heading">Task Attachments</DialogTitle>
+          <DialogDescription className="text-gray-600">
             Add files to your task or view existing attachments
           </DialogDescription>
         </DialogHeader>
@@ -110,16 +110,29 @@ export default function TaskAttachmentSimple({
               onChange={handleFileSelect}
               accept="image/*,application/pdf,.doc,.docx,.txt"
             />
-            <Button onClick={triggerFileInput} size="sm">
-              Select File
-            </Button>
+            <div 
+              className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:bg-primary/5 cursor-pointer transition-colors"
+              onClick={triggerFileInput}
+            >
+              <Upload className="h-10 w-10 mx-auto mb-2 text-primary" />
+              <p className="text-sm font-medium text-gray-700">Click to select a file</p>
+              <p className="text-xs text-gray-500 mt-1">Upload photos, PDFs or documents</p>
+            </div>
             {fileToUpload && (
-              <div className="flex justify-between items-center border rounded-md p-2">
-                <span className="text-sm truncate">{fileToUpload.name}</span>
+              <div className="flex justify-between items-center bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                <div className="flex items-center gap-2">
+                  {fileToUpload.type.includes('image') ? (
+                    <Image className="h-5 w-5 text-primary" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-secondary" />
+                  )}
+                  <span className="text-sm font-medium truncate">{fileToUpload.name}</span>
+                </div>
                 <Button 
                   onClick={handleUpload} 
                   disabled={uploadFile.isPending}
                   size="sm"
+                  className="btn-bounce bg-primary hover:bg-primary/90"
                 >
                   {uploadFile.isPending ? 'Uploading...' : 'Upload'}
                 </Button>
