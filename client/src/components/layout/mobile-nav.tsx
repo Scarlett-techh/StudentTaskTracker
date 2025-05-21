@@ -19,11 +19,11 @@ const MobileNav = ({ currentPath }: MobileNavProps) => {
   const navItems = [
     { href: "/", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
     { href: "/tasks", icon: <BookText className="h-5 w-5" />, label: "Tasks" },
+    { href: "/calendar", icon: <Calendar className="h-5 w-5" />, label: "Calendar" },
     { href: "/notes", icon: <FileText className="h-5 w-5" />, label: "Notes" },
     { href: "/resources", icon: <BarChart2 className="h-5 w-5" />, label: "Resources" },
     { href: "/portfolio", icon: <Award className="h-5 w-5" />, label: "Portfolio" },
     { href: "/share", icon: <Send className="h-5 w-5" />, label: "Share" },
-    { href: "/parent", icon: <Users className="h-5 w-5" />, label: "Parent" },
   ];
 
   return (

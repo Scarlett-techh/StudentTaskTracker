@@ -288,7 +288,7 @@ export default function Calendar() {
         </DialogContent>
       </Dialog>
 
-      <style jsx global>{`
+      <style>{`
         .fc-daygrid-day.fc-day-today {
           background-color: rgba(99, 102, 241, 0.1);
         }

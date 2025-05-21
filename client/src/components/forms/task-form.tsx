@@ -26,11 +26,12 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 interface TaskFormProps {
   task?: TaskFormValues & { id: number };
+  initialValues?: Partial<TaskFormValues>;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
+const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel }) => {
   const { toast } = useToast();
   const isEditing = !!task;
 
@@ -39,16 +40,16 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
     queryKey: ["/api/subjects"],
   });
 
-  // Initialize form with default values or existing task
+  // Initialize form with default values, initial values, or existing task
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      subject: task?.subject || "",
-      status: task?.status || "pending",
-      dueDate: task?.dueDate || "",
-      dueTime: task?.dueTime || "",
+      title: task?.title || initialValues?.title || "",
+      description: task?.description || initialValues?.description || "",
+      subject: task?.subject || initialValues?.subject || "",
+      status: task?.status || initialValues?.status || "pending",
+      dueDate: task?.dueDate || initialValues?.dueDate || "",
+      dueTime: task?.dueTime || initialValues?.dueTime || "",
     },
   });
 
