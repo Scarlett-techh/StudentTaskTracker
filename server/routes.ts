@@ -708,6 +708,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get personalized learning recommendations based on completed tasks
+  app.get("/api/recommendations", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const recommendations = await generateRecommendations(userId);
+      res.json(recommendations);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  
   // Get user points history
   app.get("/api/points-history", async (req: Request, res: Response) => {
     try {

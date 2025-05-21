@@ -10,6 +10,7 @@ import NoteCard from "@/components/dashboard/note-card";
 import PhotoThumbnail from "@/components/dashboard/photo-thumbnail";
 import UserStats from "@/components/dashboard/user-stats";
 import LearningWallet from "@/components/dashboard/learning-wallet";
+import LearningRecommendations from "@/components/dashboard/learning-recommendations";
 import TaskForm from "@/components/forms/task-form";
 import NoteForm from "@/components/forms/note-form";
 import PhotoUpload from "@/components/forms/photo-upload";
@@ -165,6 +166,11 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Learning Recommendations Section */}
+        <div className="bg-white rounded-lg shadow">
+          <LearningRecommendations />
         </div>
 
         {/* Notes, Photos, and Rewards Section */}
