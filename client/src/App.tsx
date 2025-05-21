@@ -14,6 +14,7 @@ import Resources from "@/pages/resources";
 import Portfolio from "@/pages/portfolio";
 import Share from "@/pages/share";
 import Parent from "@/pages/parent";
+import Calendar from "@/pages/calendar";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -33,6 +34,7 @@ function Router() {
           <Switch>
             <Route path="/" component={Dashboard} />
             <Route path="/tasks" component={Tasks} />
+            <Route path="/calendar" component={Calendar} />
             <Route path="/notes" component={Notes} />
             <Route path="/resources" component={Resources} />
             <Route path="/portfolio" component={Portfolio} />
