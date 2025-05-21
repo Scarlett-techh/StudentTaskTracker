@@ -11,7 +11,7 @@ import { Helmet } from "react-helmet-async";
 
 const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
-  const [initialCategory, setInitialCategory] = useState<'brain' | 'body' | 'space' | undefined>(undefined);
+  // Removed category states
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -27,9 +27,8 @@ const Tasks = () => {
     enabled: tasks.length > 0,
   });
 
-  // Open task creation dialog with specific category
-  const openNewTaskDialog = (category?: 'brain' | 'body' | 'space') => {
-    setInitialCategory(category);
+  // Open task creation dialog
+  const openNewTaskDialog = () => {
     setNewTaskDialogOpen(true);
   };
 
@@ -82,9 +81,7 @@ const Tasks = () => {
     }
   };
 
-  const brainTasks = tasks.filter((task: any) => task.category === 'brain');
-  const bodyTasks = tasks.filter((task: any) => task.category === 'body');
-  const spaceTasks = tasks.filter((task: any) => task.category === 'space');
+  // No longer filtering tasks by category
 
   return (
     <>
@@ -134,173 +131,53 @@ const Tasks = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Brain Tasks */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Brain Tasks</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-gray-500">Mental Focus</div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-8 px-2"
-                      onClick={() => openNewTaskDialog('brain')}
-                      title="Add brain task"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-4">
-                {brainTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {brainTasks.map((task: any, index: number) => (
-                      <div
-                        key={task.id}
-                        draggable
-                        onDragStart={() => handleDragStart(index)}
-                        onDragEnter={() => handleDragEnter(index)}
-                        onDragEnd={handleDrop}
-                        onDragOver={(e) => e.preventDefault()}
-                      >
-                        <TaskCard 
-                          task={task} 
-                          onTaskUpdate={refetch}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-gray-500">No brain tasks yet</p>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-2"
-                      onClick={() => openNewTaskDialog('brain')}
-                    >
-                      <PlusIcon className="mr-1 h-4 w-4" />
-                      Add brain task
-                    </Button>
-                  </div>
-                )}
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">Task List</h3>
+                <Button 
+                  size="sm" 
+                  onClick={() => openNewTaskDialog()}
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Add Task
+                </Button>
               </div>
             </div>
-
-            {/* Body Tasks */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Body Tasks</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-gray-500">Physical Focus</div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-8 px-2"
-                      onClick={() => openNewTaskDialog('body')}
-                      title="Add body task"
+            
+            <div className="p-4">
+              {tasks.length > 0 ? (
+                <div className="space-y-3">
+                  {Array.isArray(tasks) && tasks.map((task: any, index: number) => (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnter={() => handleDragEnter(index)}
+                      onDragEnd={handleDrop}
+                      onDragOver={(e) => e.preventDefault()}
                     >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      <TaskCard 
+                        task={task} 
+                        onTaskUpdate={refetch}
+                      />
+                    </div>
+                  ))}
                 </div>
-              </div>
-              
-              <div className="p-4">
-                {bodyTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {bodyTasks.map((task: any, index: number) => (
-                      <div
-                        key={task.id}
-                        draggable
-                        onDragStart={() => handleDragStart(index)}
-                        onDragEnter={() => handleDragEnter(index)}
-                        onDragEnd={handleDrop}
-                        onDragOver={(e) => e.preventDefault()}
-                      >
-                        <TaskCard 
-                          task={task} 
-                          onTaskUpdate={refetch}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-gray-500">No body tasks yet</p>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-2"
-                      onClick={() => openNewTaskDialog('body')}
-                    >
-                      <PlusIcon className="mr-1 h-4 w-4" />
-                      Add body task
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Space Tasks */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200 bg-purple-50">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-900">Space Tasks</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-gray-500">Environment Focus</div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-8 px-2"
-                      onClick={() => openNewTaskDialog('space')}
-                      title="Add space task"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-gray-500">No tasks yet</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => openNewTaskDialog()}
+                  >
+                    <PlusIcon className="mr-1 h-4 w-4" />
+                    Add your first task
+                  </Button>
                 </div>
-              </div>
-              
-              <div className="p-4">
-                {spaceTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {spaceTasks.map((task: any, index: number) => (
-                      <div
-                        key={task.id}
-                        draggable
-                        onDragStart={() => handleDragStart(index)}
-                        onDragEnter={() => handleDragEnter(index)}
-                        onDragEnd={handleDrop}
-                        onDragOver={(e) => e.preventDefault()}
-                      >
-                        <TaskCard 
-                          task={task} 
-                          onTaskUpdate={refetch}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-gray-500">No space tasks yet</p>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-2"
-                      onClick={() => openNewTaskDialog('space')}
-                    >
-                      <PlusIcon className="mr-1 h-4 w-4" />
-                      Add space task
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -312,19 +189,16 @@ const Tasks = () => {
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
             <DialogDescription>
-              Create a new task for your {initialCategory || ''} focus area.
+              Create a new task to track your work.
             </DialogDescription>
           </DialogHeader>
           <TaskForm 
-            initialCategory={initialCategory}
             onSuccess={() => {
               setNewTaskDialogOpen(false);
-              setInitialCategory(undefined);
               refetch();
             }} 
             onCancel={() => {
               setNewTaskDialogOpen(false);
-              setInitialCategory(undefined);
             }} 
           />
         </DialogContent>
