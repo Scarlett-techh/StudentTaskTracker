@@ -275,8 +275,8 @@ async function generateChallengeRecommendations(
 ): Promise<LearningRecommendation[]> {
   const recommendations: LearningRecommendation[] = [];
   
-  // For users who have completed at least 10 tasks
-  if (completedTasks.length >= 10) {
+  // For users who have completed at least 1 task
+  if (completedTasks.length >= 1) {
     // Find the most common subject
     const subjectCounts: Record<string, number> = {};
     
@@ -382,6 +382,11 @@ function getSkillRecommendationText(subject: string): {
   suggestedTask: string 
 } {
   const skillRecommendations: Record<string, any> = {
+    "Interest / Passion": {
+      description: "Expand your Minecraft building skills with historical architecture projects.",
+      reason: "You've shown a passion for Minecraft building. Exploring historical structures can combine creativity with learning.",
+      suggestedTask: "Build an Egyptian pyramid in Minecraft, complete with interior chambers and hieroglyphics."
+    },
     "Mathematics": {
       description: "Take your math skills to the next level with more challenging problems.",
       reason: "You've shown consistent interest in mathematics. Developing advanced skills will help with complex problem-solving.",
@@ -437,6 +442,23 @@ function getSkillRecommendationText(subject: string): {
  */
 function getSubjectResources(subject: string): Array<{ title: string, url: string, description: string }> {
   const resourceMap: Record<string, Array<{ title: string, url: string, description: string }>> = {
+    "Interest / Passion": [
+      {
+        title: "Minecraft Ancient Egypt Tutorial",
+        url: "https://www.youtube.com/watch?v=pOfX8Mw-5bY",
+        description: "Step-by-step tutorial on building Egyptian structures in Minecraft"
+      },
+      {
+        title: "Egyptian Architecture Guide",
+        url: "https://www.worldhistory.org/Egyptian_Architecture/",
+        description: "Learn about authentic Egyptian architecture to inspire your builds"
+      },
+      {
+        title: "Planet Minecraft - Egyptian Builds",
+        url: "https://www.planetminecraft.com/projects/tag/egyptian/",
+        description: "Community builds and inspiration for Egyptian-themed Minecraft projects"
+      }
+    ],
     "Mathematics": [
       {
         title: "Khan Academy - Mathematics",
