@@ -91,7 +91,7 @@ export default function Analytics() {
   // Filter completed tasks
   const completedTasks = tasks ? tasks.filter((task: any) => task.status === 'completed') : [];
   
-  // Group tasks by subject
+  // Group tasks by subject - this will be used across the component
   const tasksBySubject = completedTasks.reduce((acc: any, task: any) => {
     const subject = task.subject || 'Unassigned';
     if (!acc[subject]) {
@@ -186,6 +186,9 @@ export default function Analytics() {
     
     return colorMap[subjectName] || '#94A3B8';
   }
+  
+  // We're already using the tasksBySubject mapping defined above
+  // No need to create it again
   
   // Generate AI content for parent reports
   const studentLearningReport = {
@@ -670,7 +673,7 @@ export default function Analytics() {
                               <div className="flex items-center">
                                 <div 
                                   className="w-3 h-3 rounded-full mr-2" 
-                                  style={{ backgroundColor: getSubjectColor(subject, subjects) }}
+                                  style={{ backgroundColor: getSubjectColor(subject, subjects || []) }}
                                 />
                                 <CardTitle className="text-md">{subject}</CardTitle>
                               </div>
@@ -679,27 +682,19 @@ export default function Analytics() {
                               } tasks</Badge>
                             </div>
                           </CardHeader>
-                          <CardContent className="p-4 text-sm">
-                            <Accordion type="single" collapsible className="w-full">
-                              <AccordionItem value="strengths">
-                                <AccordionTrigger className="text-sm py-2">Strengths</AccordionTrigger>
-                                <AccordionContent className="text-gray-600">
-                                  {data.strengths}
-                                </AccordionContent>
-                              </AccordionItem>
-                              <AccordionItem value="growth">
-                                <AccordionTrigger className="text-sm py-2">Areas for Growth</AccordionTrigger>
-                                <AccordionContent className="text-gray-600">
-                                  {data.areas_for_growth}
-                                </AccordionContent>
-                              </AccordionItem>
-                              <AccordionItem value="connections">
-                                <AccordionTrigger className="text-sm py-2">Subject Connections</AccordionTrigger>
-                                <AccordionContent className="text-gray-600">
-                                  {data.connections}
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
+                          <CardContent className="p-4 text-sm space-y-2">
+                            <div>
+                              <h4 className="font-medium mb-1">Strengths:</h4>
+                              <p className="text-gray-600">{data.strengths}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-medium mb-1">Areas for Growth:</h4>
+                              <p className="text-gray-600">{data.areas_for_growth}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-medium mb-1">Subject Connections:</h4>
+                              <p className="text-gray-600">{data.connections}</p>
+                            </div>
                           </CardContent>
                         </Card>
                       ))}
