@@ -7,7 +7,12 @@ import AvatarFallback from "@/components/ui/avatar-fallback";
 import { Link, useLocation } from "wouter";
 
 const Header = () => {
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading } = useQuery<{
+    id: number;
+    username: string;
+    name: string | null;
+    avatar: string | null;
+  }>({
     queryKey: ["/api/user"],
   });
 

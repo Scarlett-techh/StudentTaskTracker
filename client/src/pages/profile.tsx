@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -18,7 +18,12 @@ export default function Profile() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   
   // Fetch user data
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading } = useQuery<{
+    id: number;
+    username: string;
+    name: string | null;
+    avatar: string | null;
+  }>({
     queryKey: ['/api/user']
   });
   
