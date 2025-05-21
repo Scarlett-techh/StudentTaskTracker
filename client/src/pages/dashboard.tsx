@@ -8,6 +8,7 @@ import ProgressCard from "@/components/dashboard/progress-card";
 import TaskCard from "@/components/dashboard/task-card";
 import NoteCard from "@/components/dashboard/note-card";
 import PhotoThumbnail from "@/components/dashboard/photo-thumbnail";
+import UserStats from "@/components/dashboard/user-stats";
 import TaskForm from "@/components/forms/task-form";
 import NoteForm from "@/components/forms/note-form";
 import PhotoUpload from "@/components/forms/photo-upload";
@@ -165,10 +166,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Notes and Photos Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Notes, Photos, and Rewards Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Notes Section */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow lg:col-span-1">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium text-gray-900">Recent Notes</h3>
@@ -204,7 +205,7 @@ const Dashboard = () => {
           </div>
           
           {/* Photos Section */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow lg:col-span-1">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium text-gray-900">Recent Photos</h3>
@@ -222,7 +223,7 @@ const Dashboard = () => {
               {isLoadingPhotos ? (
                 <div className="text-center py-8">Loading photos...</div>
               ) : photos && photos.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {photos.slice(0, 4).map((photo: any) => (
                     <PhotoThumbnail 
                       key={photo.id} 
@@ -237,6 +238,11 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* User Stats & Achievements Section */}
+          <div className="lg:col-span-1">
+            <UserStats />
           </div>
         </div>
       </div>

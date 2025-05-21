@@ -75,13 +75,32 @@ const TaskCard: FC<TaskCardProps> = ({
     mutationFn: async (newStatus: string) => {
       return apiRequest("PATCH", `/api/tasks/${task.id}`, { status: newStatus });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-achievements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/points-history"] });
+      
       if (onTaskUpdate) onTaskUpdate();
-      toast({
-        title: "Task updated",
-        description: "Task status has been updated successfully.",
-      });
+      
+      // Show special toast when completing a task (earning points)
+      if (variables === 'completed') {
+        // Base points + category bonus
+        const basePoints = 10;
+        const categoryBonus = task.category ? 5 : 0;
+        const totalPoints = basePoints + categoryBonus;
+        
+        toast({
+          title: "Task completed! 🎉",
+          description: `You earned ${totalPoints} points for completing this task!`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Task updated",
+          description: "Task status has been updated successfully.",
+        });
+      }
     },
     onError: (error) => {
       toast({
