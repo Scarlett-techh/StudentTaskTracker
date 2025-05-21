@@ -19,6 +19,7 @@ import Calendar from "@/pages/calendar";
 import Profile from "@/pages/profile";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import Analytics from "@/pages/analytics";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -43,6 +44,7 @@ function Router() {
             <Route path="/notes" component={Notes} />
             <Route path="/resources" component={Resources} />
             <Route path="/portfolio" component={Portfolio} />
+            <Route path="/analytics" component={Analytics} />
             <Route path="/share" component={Share} />
             <Route path="/parent" component={Parent} />
             <Route path="/profile" component={Profile} />
