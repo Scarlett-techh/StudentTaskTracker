@@ -5,6 +5,7 @@ import { insertTaskSchema, insertNoteSchema, insertPhotoSchema, insertTaskAttach
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
+import { generateRecommendations } from "./recommendation-engine";
 import { v4 as uuidv4 } from "uuid";
 
 // Configure multer for memory storage (we'll store files as base64)

@@ -198,7 +198,19 @@ async function generateBalanceRecommendations(
         description: "You've been focusing on practical skills and interests, which is great! Consider adding some academic subjects to round out your learning.",
         reason: "Only " + Math.round(knowledgePercent) + "% of your completed tasks are in knowledge areas.",
         suggestedTask: "Try a math puzzle, science experiment, or reading assignment.",
-        priority: 6
+        priority: 6,
+        resources: [
+          {
+            title: "Khan Academy - All Subjects",
+            url: "https://www.khanacademy.org/",
+            description: "Free courses covering all academic subjects at different levels"
+          },
+          {
+            title: "Crash Course",
+            url: "https://www.youtube.com/user/crashcourse",
+            description: "Educational videos on subjects like math, science, history, and literature"
+          }
+        ]
       });
     }
     
@@ -210,7 +222,19 @@ async function generateBalanceRecommendations(
         description: "You've been doing well with academic subjects! Consider adding some practical life skills to your learning.",
         reason: "Only " + Math.round(skillsPercent) + "% of your completed tasks involve practical skills.",
         suggestedTask: "Try a cooking project, budgeting exercise, or physical activity.",
-        priority: 6
+        priority: 6,
+        resources: [
+          {
+            title: "Practical Life Skills",
+            url: "https://www.wikihow.com/Category:Home-and-Garden",
+            description: "Guides for practical home and life skills with step-by-step instructions"
+          },
+          {
+            title: "Fitness Blender",
+            url: "https://www.fitnessblender.com/videos",
+            description: "Free workout videos for all fitness levels"
+          }
+        ]
       });
     }
     
@@ -222,7 +246,19 @@ async function generateBalanceRecommendations(
         description: "Learning is more engaging when you include topics you're passionate about! Try adding some interest-driven activities.",
         reason: "Only " + Math.round(interestsPercent) + "% of your completed tasks are based on personal interests.",
         suggestedTask: "Add a task related to a hobby, creative project, or topic you're curious about.",
-        priority: 5
+        priority: 5,
+        resources: [
+          {
+            title: "DIY Projects for Teens",
+            url: "https://www.instructables.com/",
+            description: "Thousands of do-it-yourself projects across many different interests"
+          },
+          {
+            title: "Skillshare",
+            url: "https://www.skillshare.com/",
+            description: "Classes for creative and curious people on everything from illustration to music"
+          }
+        ]
       });
     }
   }
@@ -272,7 +308,8 @@ async function generateChallengeRecommendations(
         reason: `You've completed ${highestCount} tasks in ${mostCommonSubject}, showing strong progress in this area!`,
         suggestedTask: challengeText.suggestedTask,
         relatedSubject: mostCommonSubject,
-        priority: 9
+        priority: 9,
+        resources: getSubjectResources(mostCommonSubject)
       });
     }
   }
