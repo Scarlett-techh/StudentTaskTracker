@@ -12,6 +12,11 @@ export const users = pgTable("users", {
   email: text("email"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  points: integer("points").notNull().default(0),
+  level: integer("level").notNull().default(1),
+  streak: integer("streak").notNull().default(0),
+  lastActiveDate: timestamp("last_active_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -125,6 +130,55 @@ export const insertSubjectSchema = createInsertSchema(subjects).pick({
   userId: true,
 });
 
+// Achievements schema
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  pointsRequired: integer("points_required").notNull(),
+  badgeImageUrl: text("badge_image_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAchievementSchema = createInsertSchema(achievements).pick({
+  title: true,
+  description: true,
+  icon: true,
+  pointsRequired: true,
+  badgeImageUrl: true,
+});
+
+// User achievements (junction table between users and achievements)
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  achievementId: integer("achievement_id").notNull(),
+  achievedAt: timestamp("achieved_at").notNull().defaultNow(),
+});
+
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).pick({
+  userId: true,
+  achievementId: true,
+});
+
+// User points history (for tracking point transactions)
+export const pointsHistory = pgTable("points_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  amount: integer("amount").notNull(),
+  reason: text("reason").notNull(),
+  taskId: integer("task_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick({
+  userId: true,
+  amount: true,
+  reason: true,
+  taskId: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -143,3 +197,12 @@ export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
 
 export type Subject = typeof subjects.$inferSelect;
 export type InsertSubject = z.infer<typeof insertSubjectSchema>;
+
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+
+export type PointsHistory = typeof pointsHistory.$inferSelect;
+export type InsertPointsHistory = z.infer<typeof insertPointsHistorySchema>;

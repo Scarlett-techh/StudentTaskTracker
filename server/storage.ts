@@ -1,11 +1,15 @@
 import {
-  users, tasks, notes, photos, taskAttachments, subjects,
+  users, tasks, notes, photos, taskAttachments, subjects, 
+  achievements, userAchievements, pointsHistory,
   type User, type InsertUser,
   type Task, type InsertTask,
   type Note, type InsertNote,
   type Photo, type InsertPhoto,
   type TaskAttachment, type InsertTaskAttachment,
-  type Subject, type InsertSubject
+  type Subject, type InsertSubject,
+  type Achievement, type InsertAchievement,
+  type UserAchievement, type InsertUserAchievement,
+  type PointsHistory, type InsertPointsHistory
 } from "@shared/schema";
 
 export interface IStorage {
@@ -50,6 +54,15 @@ export interface IStorage {
   createSubject(subject: InsertSubject): Promise<Subject>;
   updateSubject(id: number, subject: Partial<InsertSubject>): Promise<Subject | undefined>;
   deleteSubject(id: number): Promise<boolean>;
+  
+  // Gamification methods
+  getAchievements(): Promise<Achievement[]>;
+  getUserAchievements(userId: number): Promise<(UserAchievement & { achievement: Achievement })[]>;
+  awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
+  addPoints(pointsHistory: InsertPointsHistory): Promise<PointsHistory>;
+  getPointsHistory(userId: number): Promise<PointsHistory[]>;
+  updateUserStreak(userId: number): Promise<User | undefined>;
+  getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }>;
 }
 
 export class MemStorage implements IStorage {
@@ -59,6 +72,9 @@ export class MemStorage implements IStorage {
   private photos: Map<number, Photo>;
   private taskAttachments: Map<number, TaskAttachment>;
   private subjects: Map<number, Subject>;
+  private achievements: Map<number, Achievement>;
+  private userAchievements: Map<number, UserAchievement>;
+  private pointsHistory: Map<number, PointsHistory>;
   
   private userCurrentId: number;
   private taskCurrentId: number;
@@ -66,6 +82,9 @@ export class MemStorage implements IStorage {
   private photoCurrentId: number;
   private taskAttachmentCurrentId: number;
   private subjectCurrentId: number;
+  private achievementCurrentId: number;
+  private userAchievementCurrentId: number;
+  private pointsHistoryCurrentId: number;
 
   constructor() {
     this.users = new Map();
