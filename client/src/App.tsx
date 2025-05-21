@@ -20,6 +20,7 @@ import Profile from "@/pages/profile";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import MobileNav from "@/components/layout/mobile-nav";
+import Footer from "@/components/layout/footer";
 
 function Router() {
   const [location] = useLocation();
@@ -47,6 +48,7 @@ function Router() {
         </main>
       </div>
       
+      <Footer />
       <MobileNav currentPath={location} />
     </div>
   );
