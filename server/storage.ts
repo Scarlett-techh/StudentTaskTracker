@@ -93,6 +93,9 @@ export class MemStorage implements IStorage {
     this.photos = new Map();
     this.taskAttachments = new Map();
     this.subjects = new Map();
+    this.achievements = new Map();
+    this.userAchievements = new Map();
+    this.pointsHistory = new Map();
     
     this.userCurrentId = 1;
     this.taskCurrentId = 1;
@@ -100,6 +103,9 @@ export class MemStorage implements IStorage {
     this.photoCurrentId = 1;
     this.taskAttachmentCurrentId = 1;
     this.subjectCurrentId = 1;
+    this.achievementCurrentId = 1;
+    this.userAchievementCurrentId = 1;
+    this.pointsHistoryCurrentId = 1;
     
     // Create demo user
     this.createUser({
@@ -140,7 +146,12 @@ export class MemStorage implements IStorage {
       avatar: insertUser.avatar || null,
       email: insertUser.email || null,
       resetToken: null,
-      resetTokenExpiry: null
+      resetTokenExpiry: null,
+      points: 0,
+      level: 1,
+      streak: 0,
+      lastActiveDate: null,
+      createdAt: new Date()
     };
     this.users.set(id, user);
     return user;
@@ -373,4 +384,73 @@ export class MemStorage implements IStorage {
   }
 }
 
+
+}
+
+// Create default achievements
+const initializeAchievements = async (storage: MemStorage) => {
+  const defaultAchievements = [
+    {
+      title: "Task Master",
+      description: "Complete 10 tasks",
+      icon: "trophy",
+      pointsRequired: 100,
+      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2583/2583344.png"
+    },
+    {
+      title: "Note Taker",
+      description: "Create 5 notes",
+      icon: "notebook",
+      pointsRequired: 50,
+      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075908.png"
+    },
+    {
+      title: "Photographer",
+      description: "Upload 3 photos",
+      icon: "camera",
+      pointsRequired: 30,
+      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png"
+    },
+    {
+      title: "Streak Master",
+      description: "Keep a 7-day streak",
+      icon: "calendar",
+      pointsRequired: 70,
+      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/6358/6358101.png"
+    },
+    {
+      title: "Subject Expert",
+      description: "Complete 5 tasks in the same subject",
+      icon: "book",
+      pointsRequired: 50,
+      badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2232/2232688.png"
+    }
+  ];
+  
+  for (const achievement of defaultAchievements) {
+    await storage["createAchievement"](achievement);
+  }
+};
+
+// Create method to initialize achievements (this would be private in the class)
+MemStorage.prototype["createAchievement"] = async function(achievement: InsertAchievement): Promise<Achievement> {
+  const id = this.achievementCurrentId++;
+  
+  const newAchievement: Achievement = {
+    id,
+    title: achievement.title,
+    description: achievement.description || null,
+    icon: achievement.icon || null,
+    pointsRequired: achievement.pointsRequired,
+    badgeImageUrl: achievement.badgeImageUrl || null,
+    createdAt: new Date()
+  };
+  
+  this.achievements.set(id, newAchievement);
+  return newAchievement;
+};
+
 export const storage = new MemStorage();
+
+// Initialize default achievements
+initializeAchievements(storage);
