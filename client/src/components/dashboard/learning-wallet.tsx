@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/use-theme";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +36,6 @@ interface RewardItem {
 
 export default function LearningWallet() {
   const { toast } = useToast();
-  const { setTheme } = useTheme();
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [selectedReward, setSelectedReward] = useState<RewardItem | null>(null);
 
@@ -270,17 +268,20 @@ export default function LearningWallet() {
         };
       });
       
-      // Apply theme changes if a theme was purchased
+      // For theme rewards, show a special notification
       if (reward?.category === 'theme') {
+        // In a real app, we would apply the theme change here
         if (reward.id === 'theme_dark') {
-          setTheme('dark');
+          // Simulate theme change
+          document.documentElement.classList.add('simulate-dark-theme');
           toast({
             title: "Dark Theme Applied!",
             description: "Your new dark theme has been activated.",
             variant: "default",
           });
         } else if (reward.id === 'theme_ocean') {
-          setTheme('ocean');
+          // Simulate theme change
+          document.documentElement.classList.add('simulate-ocean-theme');
           toast({
             title: "Ocean Theme Applied!",
             description: "Your new ocean theme has been activated.",
