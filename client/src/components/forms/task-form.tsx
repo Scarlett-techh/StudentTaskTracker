@@ -26,7 +26,6 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 interface TaskFormProps {
   task?: TaskFormValues & { id: number };
-  initialCategory?: 'brain' | 'body' | 'space';
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -150,31 +149,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <Select 
-                  onValueChange={field.onChange}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="brain">Brain (Mental)</SelectItem>
-                    <SelectItem value="body">Body (Physical)</SelectItem>
-                    <SelectItem value="space">Space (Environment)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Category field removed */}
 
           <FormField
             control={form.control}
