@@ -89,8 +89,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? Math.max(...existingTasks.map(t => t.order))
         : -1;
       
+      // Make a copy of the request body for potential AI modification
+      const requestBody = { ...req.body };
+      
+      // If subject is not explicitly set, try to automatically categorize using AI
+      if (!requestBody.subject) {
+        try {
+          // Import the categorization service
+          const { categorizeTask } = await import('./ai-categorization');
+          
+          // Use AI to suggest a subject based on title and description
+          const suggestedSubject = await categorizeTask(requestBody.title, requestBody.description);
+          if (suggestedSubject) {
+            console.log(`AI categorized task "${requestBody.title}" as: ${suggestedSubject}`);
+            requestBody.subject = suggestedSubject;
+          }
+        } catch (aiError) {
+          // If AI categorization fails, log but continue with task creation
+          console.error("AI categorization error:", aiError);
+        }
+      }
+      
       const taskData = insertTaskSchema.parse({
-        ...req.body,
+        ...requestBody,
         userId,
         order: maxOrder + 1
       });
@@ -112,8 +133,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
       
+      // Make a copy of the request body for potential AI modification
+      const requestBody = { ...req.body };
+      
+      // If title is being updated but subject isn't explicitly set, consider recategorizing
+      if (requestBody.title && !requestBody.subject && (!existingTask.subject || req.query.recategorize === 'true')) {
+        try {
+          // Import the categorization service
+          const { categorizeTask } = await import('./ai-categorization');
+          
+          // Use AI to suggest a subject based on the new title and description
+          const description = requestBody.description !== undefined ? requestBody.description : existingTask.description;
+          const suggestedSubject = await categorizeTask(requestBody.title, description);
+          if (suggestedSubject) {
+            console.log(`AI recategorized task "${requestBody.title}" as: ${suggestedSubject}`);
+            requestBody.subject = suggestedSubject;
+          }
+        } catch (aiError) {
+          // If AI categorization fails, log but continue with task update
+          console.error("AI categorization error:", aiError);
+        }
+      }
+      
       // Validate the update data
-      const updateData = insertTaskSchema.partial().parse(req.body);
+      const updateData = insertTaskSchema.partial().parse(requestBody);
       
       // Check if task is being marked as completed
       const statusChangingToCompleted = existingTask.status !== "completed" && updateData.status === "completed";
