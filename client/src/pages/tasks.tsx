@@ -11,7 +11,6 @@ import { Helmet } from "react-helmet-async";
 
 const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
-  // Removed category states
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -24,7 +23,7 @@ const Tasks = () => {
   // Fetch task attachments for all tasks
   const { data: allAttachments = [] } = useQuery({
     queryKey: ["/api/tasks/attachments"],
-    enabled: tasks.length > 0,
+    enabled: Array.isArray(tasks) && tasks.length > 0,
   });
 
   // Open task creation dialog
@@ -42,7 +41,7 @@ const Tasks = () => {
   };
 
   const handleDrop = async () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
+    if (dragItem.current === null || dragOverItem.current === null || !Array.isArray(tasks)) return;
     
     // Make a copy of the tasks array
     const _tasks = [...tasks];
@@ -81,8 +80,6 @@ const Tasks = () => {
     }
   };
 
-  // No longer filtering tasks by category
-
   return (
     <>
       <Helmet>
@@ -96,7 +93,7 @@ const Tasks = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-800">Tasks</h2>
-          <Button onClick={() => openNewTaskDialog()}>
+          <Button onClick={openNewTaskDialog}>
             <PlusIcon className="mr-2 h-4 w-4" />
             New Task
           </Button>
@@ -104,7 +101,7 @@ const Tasks = () => {
 
         {isLoading ? (
           <div className="text-center py-12">Loading tasks...</div>
-        ) : tasks.length === 0 ? (
+        ) : !Array.isArray(tasks) || tasks.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <svg 
               className="mx-auto h-12 w-12 text-gray-300" 
@@ -123,7 +120,7 @@ const Tasks = () => {
             <h3 className="mt-2 text-lg font-medium text-gray-900">No tasks yet</h3>
             <p className="text-gray-500 mt-1">Add a new task to get started</p>
             <Button 
-              onClick={() => openNewTaskDialog()}
+              onClick={openNewTaskDialog}
               className="mt-4"
             >
               <PlusIcon className="mr-2 h-4 w-4" />
@@ -137,7 +134,7 @@ const Tasks = () => {
                 <h3 className="text-lg font-medium text-gray-900">Task List</h3>
                 <Button 
                   size="sm" 
-                  onClick={() => openNewTaskDialog()}
+                  onClick={openNewTaskDialog}
                 >
                   <PlusIcon className="mr-2 h-4 w-4" />
                   Add Task
@@ -146,38 +143,23 @@ const Tasks = () => {
             </div>
             
             <div className="p-4">
-              {tasks.length > 0 ? (
-                <div className="space-y-3">
-                  {Array.isArray(tasks) && tasks.map((task: any, index: number) => (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragEnter={() => handleDragEnter(index)}
-                      onDragEnd={handleDrop}
-                      onDragOver={(e) => e.preventDefault()}
-                    >
-                      <TaskCard 
-                        task={task} 
-                        onTaskUpdate={refetch}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-gray-500">No tasks yet</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-2"
-                    onClick={() => openNewTaskDialog()}
+              <div className="space-y-3">
+                {tasks.map((task: any, index: number) => (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragEnter={() => handleDragEnter(index)}
+                    onDragEnd={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
                   >
-                    <PlusIcon className="mr-1 h-4 w-4" />
-                    Add your first task
-                  </Button>
-                </div>
-              )}
+                    <TaskCard 
+                      task={task} 
+                      onTaskUpdate={refetch}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
