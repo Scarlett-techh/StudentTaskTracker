@@ -160,8 +160,12 @@ const TaskCard: FC<TaskCardProps> = ({
     <>
       <div 
         className={cn(
-          "task-card group bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition-all",
-          task.status === 'completed' ? "bg-gray-50" : "bg-white"
+          "task-card group bg-white border-l-4 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all card-shadow",
+          task.status === 'completed' 
+            ? "border-l-emerald-400 bg-gradient-to-r from-emerald-50/50 to-white" 
+            : task.status === 'in-progress'
+              ? "border-l-indigo-400 bg-white"
+              : "border-l-amber-400 bg-white"
         )}
         data-task-id={task.id}
       >
@@ -179,6 +183,10 @@ const TaskCard: FC<TaskCardProps> = ({
                     id={`task-${task.id}`}
                     checked={task.status === 'completed'}
                     onCheckedChange={handleStatusToggle}
+                    className={cn(
+                      task.status === 'completed' ? "border-emerald-500 bg-emerald-500" : "",
+                      "transition-all duration-300 hover:scale-110"
+                    )}
                   />
                 </div>
                 <div>
@@ -186,19 +194,36 @@ const TaskCard: FC<TaskCardProps> = ({
                     "text-sm sm:text-base font-medium",
                     task.status === 'completed' 
                       ? "line-through text-gray-500" 
-                      : "text-gray-900"
+                      : "text-gray-900 font-semibold"
                   )}>
                     {task.title}
                   </h4>
-                  <div className="mt-1 flex items-center flex-wrap gap-1">
+                  <div className="mt-1 flex items-center flex-wrap gap-2">
                     {task.subject && (
-                      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-transparent">
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "shadow-sm border-transparent font-medium",
+                          task.subject === 'Mathematics' && "bg-blue-100 text-blue-800",
+                          task.subject === 'Science' && "bg-purple-100 text-purple-800",
+                          task.subject === 'English' && "bg-green-100 text-green-800",
+                          task.subject === 'History' && "bg-amber-100 text-amber-800",
+                          task.subject === 'Physical Activity' && "bg-pink-100 text-pink-800",
+                          task.subject === 'Life Skills' && "bg-orange-100 text-orange-800",
+                          task.subject === 'Interest / Passion' && "bg-teal-100 text-teal-800"
+                        )}
+                      >
                         {task.subject}
                       </Badge>
                     )}
                     <Badge 
                       variant={currentStatus.variant}
-                      className="flex items-center"
+                      className={cn(
+                        "flex items-center shadow-sm",
+                        task.status === 'completed' && "bg-emerald-500 hover:bg-emerald-600",  
+                        task.status === 'in-progress' && "bg-indigo-500 hover:bg-indigo-600",
+                        task.status === 'pending' && "bg-amber-500 hover:bg-amber-600" 
+                      )}
                     >
                       {currentStatus.icon}
                       {currentStatus.label}
@@ -224,7 +249,7 @@ const TaskCard: FC<TaskCardProps> = ({
             <div className="flex space-x-1">
               {task.status === 'completed' && (
                 <button 
-                  className="text-gray-400 hover:text-blue-600"
+                  className="text-gray-400 hover:text-blue-600 transition-all hover:scale-110 p-1 rounded-full hover:bg-blue-100"
                   onClick={() => setShareDialogOpen(true)}
                   title="Share completed task"
                 >
@@ -232,31 +257,33 @@ const TaskCard: FC<TaskCardProps> = ({
                 </button>
               )}
               <button 
-                className="text-gray-400 hover:text-indigo-600"
+                className="text-gray-400 hover:text-primary transition-all hover:scale-110 p-1 rounded-full hover:bg-primary/10"
                 onClick={() => setAttachmentDialogOpen(true)}
                 title="Manage attachments"
               >
                 <Paperclip className="h-4 w-4" />
               </button>
               <button 
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-secondary transition-all hover:scale-110 p-1 rounded-full hover:bg-secondary/10"
                 onClick={handleEditClick}
+                title="Edit task"
               >
                 <Edit className="h-4 w-4" />
               </button>
               <button 
-                className="text-gray-400 hover:text-red-600"
+                className="text-gray-400 hover:text-red-600 transition-all hover:scale-110 p-1 rounded-full hover:bg-red-100"
                 onClick={() => setDeleteDialogOpen(true)}
+                title="Delete task"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
             {(task.dueDate || task.dueTime) && (
               <div className="mt-auto pt-3">
-                <p className="text-xs text-gray-500 flex items-center">
+                <div className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full flex items-center shadow-sm">
                   <Clock className="h-3 w-3 mr-1" />
                   {task.dueTime ? `Due at ${formatDueTime()}` : 'Due today'}
-                </p>
+                </div>
               </div>
             )}
           </div>
