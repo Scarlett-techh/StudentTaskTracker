@@ -16,6 +16,8 @@ import Share from "@/pages/share";
 import Parent from "@/pages/parent";
 import Calendar from "@/pages/calendar";
 import Profile from "@/pages/profile";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -43,6 +45,8 @@ function Router() {
             <Route path="/share" component={Share} />
             <Route path="/parent" component={Parent} />
             <Route path="/profile" component={Profile} />
+            <Route path="/forgot-password" component={ForgotPassword} />
+            <Route path="/reset-password/:token" component={ResetPassword} />
             <Route component={NotFound} />
           </Switch>
         </main>
