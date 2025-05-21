@@ -6,7 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, Star, Gift, PaintBucket, Award, Crown, Sparkles } from "lucide-react";
+import { 
+  Wallet, 
+  Star, 
+  Gift, 
+  PaintBucket, 
+  Award, 
+  Crown, 
+  Sparkles, 
+  Download,
+  Glasses,
+  Bookmark,
+  UserCircle,
+  GraduationCap,
+  Medal
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +29,7 @@ interface RewardItem {
   name: string;
   description: string;
   cost: number;
-  category: 'theme' | 'badge' | 'privilege' | 'customization';
+  category: 'theme' | 'badge' | 'accessory' | 'certificate' | 'privilege' | 'customization';
   icon: React.ReactNode;
   unlocked: boolean;
 }
@@ -35,6 +49,7 @@ export default function LearningWallet() {
   
   // Define available rewards
   const availableRewards: RewardItem[] = [
+    // Themes
     {
       id: 'theme_dark',
       name: 'Dark Mode Theme',
@@ -53,6 +68,8 @@ export default function LearningWallet() {
       icon: <PaintBucket className="h-5 w-5 text-blue-500" />,
       unlocked: false
     },
+    
+    // Badges
     {
       id: 'badge_genius',
       name: 'Genius Badge',
@@ -71,11 +88,62 @@ export default function LearningWallet() {
       icon: <Award className="h-5 w-5 text-amber-500" />,
       unlocked: false
     },
+    
+    // Avatar Accessories
+    {
+      id: 'accessory_glasses',
+      name: 'Smart Glasses',
+      description: 'Add stylish glasses to your avatar',
+      cost: 80,
+      category: 'accessory',
+      icon: <Glasses className="h-5 w-5 text-blue-500" />,
+      unlocked: false
+    },
+    {
+      id: 'accessory_hat',
+      name: 'Graduation Cap',
+      description: 'Show your academic spirit with this graduation cap',
+      cost: 120,
+      category: 'accessory',
+      icon: <GraduationCap className="h-5 w-5 text-indigo-500" />,
+      unlocked: false
+    },
+    {
+      id: 'accessory_frame',
+      name: 'Golden Frame',
+      description: 'Elegant golden frame for your profile picture',
+      cost: 200,
+      category: 'accessory',
+      icon: <UserCircle className="h-5 w-5 text-amber-500" />,
+      unlocked: false
+    },
+    
+    // Certificates
+    {
+      id: 'certificate_achievement',
+      name: 'Achievement Certificate',
+      description: 'Downloadable certificate celebrating your progress',
+      cost: 250,
+      category: 'certificate',
+      icon: <Medal className="h-5 w-5 text-green-500" />,
+      unlocked: false
+    },
+    {
+      id: 'certificate_excellence',
+      name: 'Excellence Certificate',
+      description: 'Premium certificate recognizing your dedication to learning',
+      cost: 500,
+      category: 'certificate',
+      icon: <Download className="h-5 w-5 text-red-500" />,
+      unlocked: false
+    },
+    
+    // Customizations
     {
       id: 'custom_avatar',
       name: 'Custom Avatar Frame',
       description: 'Unique border for your profile picture',
-      cost: 200,
+      cost: 180,
       category: 'customization',
       icon: <Sparkles className="h-5 w-5 text-indigo-500" />,
       unlocked: false
@@ -95,6 +163,16 @@ export default function LearningWallet() {
       return new Promise((resolve) => {
         setTimeout(() => {
           const reward = availableRewards.find(r => r.id === rewardId);
+          
+          // For certificate rewards, trigger certificate download
+          if (reward?.category === 'certificate') {
+            // In a real implementation, this would generate and download a PDF certificate
+            const a = document.createElement('a');
+            a.href = '#';
+            a.download = `${reward.name.replace(/\s+/g, '_')}.pdf`;
+            a.click();
+          }
+          
           resolve({ success: true, reward });
         }, 500);
       });
