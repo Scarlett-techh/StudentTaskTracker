@@ -19,20 +19,20 @@ export default function Profile() {
   
   // Fetch user data
   const { data: user, isLoading } = useQuery({
-    queryKey: ['/api/user'],
-    onSuccess: (data) => {
-      if (data && data.name) {
-        setName(data.name);
-      }
-    }
+    queryKey: ['/api/user']
   });
+  
+  // Update form when user data is loaded
+  useEffect(() => {
+    if (user && user.name) {
+      setName(user.name);
+    }
+  }, [user]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      return apiRequest('PATCH', '/api/user', formData, {
-        isFormData: true
-      });
+      return apiRequest('PATCH', '/api/user', formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });

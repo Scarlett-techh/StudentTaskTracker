@@ -469,6 +469,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       handleError(err, res);
     }
   });
+  
+  // Update user profile and avatar
+  app.patch("/api/user", upload.single('avatar'), async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const { name } = req.body;
+      
+      // Prepare update data
+      const updateData: any = {};
+      
+      if (name) {
+        updateData.name = name;
+      }
+      
+      // If there's a file upload, process it
+      if (req.file) {
+        // Convert the file to a base64 string for storage
+        const base64File = req.file.buffer.toString('base64');
+        // Store with the mime type for proper rendering later
+        updateData.avatar = `data:${req.file.mimetype};base64,${base64File}`;
+      }
+      
+      // Update the user
+      const updatedUser = await storage.updateUser(userId, updateData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't return the password
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
