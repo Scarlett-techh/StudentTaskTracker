@@ -41,8 +41,38 @@ export async function generateRecommendations(userId: number): Promise<LearningR
   // Get all subjects with their colors
   const subjects = await storage.getSubjects(userId);
   
+  // Always include a Minecraft recommendation
+  const minecraftRecommendation: LearningRecommendation = {
+    id: "minecraft_pyramid_challenge",
+    type: RecommendationType.CHALLENGE,
+    title: "Minecraft Egyptian Pyramid Challenge",
+    description: "Expand your Minecraft building skills with a historical architecture project.",
+    reason: "Building historical structures in Minecraft combines creativity with learning about ancient civilizations.",
+    suggestedTask: "Build an Egyptian pyramid in Minecraft, complete with interior chambers and hieroglyphics.",
+    relatedSubject: "Interest / Passion",
+    priority: 10,
+    resources: [
+      {
+        title: "Minecraft Ancient Egypt Tutorial",
+        url: "https://www.youtube.com/watch?v=pOfX8Mw-5bY",
+        description: "Step-by-step tutorial on building Egyptian structures in Minecraft"
+      },
+      {
+        title: "Egyptian Architecture Guide",
+        url: "https://www.worldhistory.org/Egyptian_Architecture/",
+        description: "Learn about authentic Egyptian architecture to inspire your builds"
+      },
+      {
+        title: "Planet Minecraft - Egyptian Builds",
+        url: "https://www.planetminecraft.com/projects/tag/egyptian/",
+        description: "Community builds and inspiration for Egyptian-themed Minecraft projects"
+      }
+    ]
+  };
+  
   // Generate different types of recommendations
   const recommendations: LearningRecommendation[] = [
+    minecraftRecommendation,
     ...await generateSubjectExplorationRecommendations(userId, tasks, subjects),
     ...await generateSkillDevelopmentRecommendations(userId, tasks),
     ...await generateBalanceRecommendations(userId, tasks),
