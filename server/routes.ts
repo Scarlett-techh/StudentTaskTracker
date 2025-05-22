@@ -164,23 +164,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedTask = await storage.updateTask(taskId, updateData);
       
-      // If task is being marked as completed, award points and check for achievements
-      if (statusChangingToCompleted) {
+      // If task is being marked as completed and we have a valid updated task, award points
+      if (statusChangingToCompleted && updatedTask) {
         const userId = updatedTask.userId;
         
-        // Award points based on task type
+        // Award points based on subject
         let pointsToAward = 10; // Base points for completing any task
         
-        // Give bonus points for different categories
-        if (updatedTask.category === "brain") pointsToAward += 5;
-        if (updatedTask.category === "body") pointsToAward += 5;
-        if (updatedTask.category === "space") pointsToAward += 5;
+        // Give bonus points based on subject if we have one
+        if (updatedTask.subject) {
+          // Assign bonus points for different subjects
+          const subjectBonusPoints: Record<string, number> = {
+            'Mathematics': 5,
+            'Science': 5,
+            'English': 5, 
+            'History': 5,
+            'Art': 5,
+            'Physical Activity': 5,
+            'Life Skills': 5,
+            'Interest / Passion': 10 // Extra bonus for pursuing personal interests
+          };
+          
+          // Award bonus if the subject exists in our list
+          const bonus = subjectBonusPoints[updatedTask.subject] || 0;
+          pointsToAward += bonus;
+        }
         
         // Award points 
         await storage.addPoints({
           userId,
           amount: pointsToAward,
-          reason: `Completed task: ${updatedTask.title}`,
+          reason: `Completed task: ${updatedTask.title || 'Unnamed task'}`,
           taskId: updatedTask.id
         });
         

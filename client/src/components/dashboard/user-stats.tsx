@@ -1,9 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Award, Star, Zap, Trophy } from "lucide-react";
+import { Award, Star, Zap, Trophy, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 interface Achievement {
   id: number;
@@ -30,6 +33,8 @@ interface UserStats {
 }
 
 export default function UserStats() {
+  const { toast } = useToast();
+  
   // Fetch user's stats
   const { data: stats, isLoading: statsLoading } = useQuery<UserStats>({
     queryKey: ["/api/user-stats"],
@@ -45,6 +50,32 @@ export default function UserStats() {
   const pointsToNextLevel = stats ? (stats.level * 100) : 100;
   const currentPoints = stats?.points || 0;
   const progressPercentage = stats ? Math.min(100, Math.round((currentPoints % 100) * 100 / 100)) : 0;
+  
+  // Mutation for adding test points
+  const addPointsMutation = useMutation({
+    mutationFn: async (amount: number) => {
+      // Simulate API call for points
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          // Update the local data to simulate earning points
+          queryClient.setQueryData(["/api/user-stats"], (oldData: any) => {
+            return {
+              ...oldData,
+              points: (oldData?.points || 0) + amount
+            };
+          });
+          resolve({ success: true });
+        }, 500);
+      });
+    },
+    onSuccess: (_, amount) => {
+      toast({
+        title: `${amount} Points Earned!`,
+        description: "You can now purchase certificates in the Learning Wallet.",
+        variant: "default",
+      });
+    }
+  });
 
   return (
     <div className="space-y-4">
@@ -123,6 +154,18 @@ export default function UserStats() {
             </div>
           )}
         </CardContent>
+        <CardFooter>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={() => addPointsMutation.mutate(50)}
+            disabled={addPointsMutation.isPending}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {addPointsMutation.isPending ? "Adding Points..." : "Add 50 Points (Testing)"}
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );
