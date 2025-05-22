@@ -43,8 +43,30 @@ export default function LearningWallet() {
 
   const points = stats?.points || 0;
   
-  // Define available certificate rewards
-  const availableCertificates: CertificateReward[] = [
+  // Get all tasks to analyze what subjects the student is focusing on
+  const { data: tasks } = useQuery({
+    queryKey: ["/api/tasks"],
+  });
+
+  // Calculate subject frequency from completed tasks
+  const getSubjectFrequency = () => {
+    if (!tasks || !Array.isArray(tasks)) return {};
+    
+    // Count tasks by subject
+    const subjectCounts = tasks.reduce((counts: Record<string, number>, task: any) => {
+      if (task.subject) {
+        counts[task.subject] = (counts[task.subject] || 0) + 1;
+      }
+      return counts;
+    }, {});
+    
+    return subjectCounts;
+  };
+  
+  const subjectCounts = getSubjectFrequency();
+  
+  // Base certificates available to all students
+  const baseCertificates: CertificateReward[] = [
     {
       id: 'certificate_academic_achievement',
       name: 'Academic Achievement Certificate',
@@ -60,16 +82,20 @@ export default function LearningWallet() {
       cost: 200,
       icon: <Award className="h-5 w-5 text-red-500" />,
       unlocked: false
-    },
-    {
-      id: 'certificate_minecraft_builder',
-      name: 'Master Builder Certificate',
-      description: 'Certificate honoring your Minecraft architectural achievements',
+    }
+  ];
+  
+  // Subject-specific certificates that appear based on student activity
+  const subjectSpecificCertificates: Record<string, CertificateReward> = {
+    'Mathematics': {
+      id: 'certificate_mathematics',
+      name: 'Mathematics Achievement Certificate',
+      description: 'Certificate recognizing your mathematical problem-solving skills',
       cost: 150,
-      icon: <Crown className="h-5 w-5 text-amber-500" />,
+      icon: <Sparkles className="h-5 w-5 text-blue-500" />,
       unlocked: false
     },
-    {
+    'Science': {
       id: 'certificate_science_explorer',
       name: 'Science Explorer Certificate',
       description: 'Certificate recognizing your scientific curiosity and achievements',
@@ -77,7 +103,7 @@ export default function LearningWallet() {
       icon: <Sparkles className="h-5 w-5 text-blue-500" />,
       unlocked: false
     },
-    {
+    'English': {
       id: 'certificate_language_arts',
       name: 'Language Arts Certificate',
       description: 'Certificate celebrating your reading and writing accomplishments',
@@ -85,22 +111,90 @@ export default function LearningWallet() {
       icon: <Bookmark className="h-5 w-5 text-purple-500" />,
       unlocked: false
     },
-    {
-      id: 'certificate_100days',
-      name: '100 Days of Learning Certificate',
-      description: 'Special certificate for maintaining a 100-day learning streak',
-      cost: 300,
-      icon: <GraduationCap className="h-5 w-5 text-indigo-500" />,
+    'History': {
+      id: 'certificate_history',
+      name: 'History Scholar Certificate',
+      description: 'Certificate honoring your understanding of historical events and contexts',
+      cost: 150,
+      icon: <Bookmark className="h-5 w-5 text-amber-500" />,
       unlocked: false
     },
-    {
-      id: 'certificate_innovation',
-      name: 'Innovation Award Certificate',
-      description: 'Certificate recognizing your creative problem-solving abilities',
-      cost: 250,
-      icon: <Download className="h-5 w-5 text-yellow-500" />,
+    'Interest / Passion': {
+      id: 'certificate_minecraft_builder',
+      name: 'Master Builder Certificate',
+      description: 'Certificate honoring your Minecraft architectural achievements',
+      cost: 150,
+      icon: <Crown className="h-5 w-5 text-amber-500" />,
       unlocked: false
     },
+    'Art': {
+      id: 'certificate_art',
+      name: 'Creative Arts Certificate',
+      description: 'Certificate celebrating your artistic expression and creativity',
+      cost: 150,
+      icon: <Sparkles className="h-5 w-5 text-purple-500" />,
+      unlocked: false
+    },
+    'Physical Activity': {
+      id: 'certificate_physical',
+      name: 'Physical Achievement Certificate',
+      description: 'Certificate recognizing your dedication to physical health and fitness',
+      cost: 150,
+      icon: <Award className="h-5 w-5 text-green-500" />,
+      unlocked: false
+    },
+    'Life Skills': {
+      id: 'certificate_life_skills',
+      name: 'Life Skills Mastery Certificate',
+      description: 'Certificate recognizing your practical life skills and independence',
+      cost: 150,
+      icon: <Crown className="h-5 w-5 text-blue-500" />,
+      unlocked: false
+    }
+  };
+  
+  // Get specialized certificates based on student's completed tasks
+  const getSpecializedCertificates = () => {
+    const specialized: CertificateReward[] = [];
+    
+    // Add subject-specific certificates for subjects the student has worked on
+    Object.keys(subjectCounts).forEach(subject => {
+      if (subjectSpecificCertificates[subject]) {
+        specialized.push(subjectSpecificCertificates[subject]);
+      }
+    });
+    
+    // Add streak certificate if student has points
+    if (points > 0) {
+      specialized.push({
+        id: 'certificate_100days',
+        name: '100 Days of Learning Certificate',
+        description: 'Special certificate for maintaining a 100-day learning streak',
+        cost: 300,
+        icon: <GraduationCap className="h-5 w-5 text-indigo-500" />,
+        unlocked: false
+      });
+    }
+    
+    // Add innovation certificate if student has completed tasks
+    if (Object.keys(subjectCounts).length > 0) {
+      specialized.push({
+        id: 'certificate_innovation',
+        name: 'Innovation Award Certificate',
+        description: 'Certificate recognizing your creative problem-solving abilities',
+        cost: 250,
+        icon: <Download className="h-5 w-5 text-yellow-500" />,
+        unlocked: false
+      });
+    }
+    
+    return specialized;
+  };
+  
+  // Combine base and specialized certificates
+  const availableCertificates: CertificateReward[] = [
+    ...baseCertificates,
+    ...getSpecializedCertificates()
   ];
 
   // Simulate user's purchased rewards
@@ -120,6 +214,49 @@ export default function LearningWallet() {
           // Create and download a certificate
           if (reward) {
             // Create a simple HTML certificate that we'll convert to a data URL
+            // Customize certificate description based on subject
+            let certificateDescription = "This certificate is awarded for outstanding achievements in learning and demonstrating exceptional dedication to personal development.";
+            
+            // Get subject-specific descriptions
+            if (reward.id.includes('mathematics')) {
+              certificateDescription = "This certificate recognizes exceptional mathematical thinking, problem-solving skills, and dedication to developing strong numerical abilities.";
+            } else if (reward.id.includes('science')) {
+              certificateDescription = "This certificate honors scientific curiosity, experimental thinking, and commitment to understanding the natural world through observation and analysis.";
+            } else if (reward.id.includes('language')) {
+              certificateDescription = "This certificate celebrates achievements in reading, writing, and communication skills, demonstrating a strong foundation in language arts.";
+            } else if (reward.id.includes('history')) {
+              certificateDescription = "This certificate recognizes excellence in historical understanding, critical thinking about past events, and connecting history to the present.";
+            } else if (reward.id.includes('minecraft') || reward.id.includes('builder')) {
+              certificateDescription = "This certificate honors creative excellence in Minecraft architecture, demonstrating spatial thinking, planning, and artistic vision in digital building.";
+            } else if (reward.id.includes('art')) {
+              certificateDescription = "This certificate celebrates artistic expression, creativity, and dedication to developing visual communication skills.";
+            } else if (reward.id.includes('physical')) {
+              certificateDescription = "This certificate recognizes commitment to physical well-being, development of motor skills, and dedication to an active lifestyle.";
+            } else if (reward.id.includes('life_skills')) {
+              certificateDescription = "This certificate honors the development of practical life skills, independence, and preparation for real-world challenges.";
+            }
+            
+            // Set certificate color based on subject
+            let certificateColor = "#8b5cf6"; // Default purple
+            
+            if (reward.id.includes('mathematics')) {
+              certificateColor = "#3B82F6"; // Blue
+            } else if (reward.id.includes('science')) {
+              certificateColor = "#10B981"; // Green
+            } else if (reward.id.includes('language')) {
+              certificateColor = "#8B5CF6"; // Purple
+            } else if (reward.id.includes('history')) {
+              certificateColor = "#F59E0B"; // Amber
+            } else if (reward.id.includes('minecraft') || reward.id.includes('builder')) {
+              certificateColor = "#65A30D"; // Lime
+            } else if (reward.id.includes('art')) {
+              certificateColor = "#EC4899"; // Pink
+            } else if (reward.id.includes('physical')) {
+              certificateColor = "#EF4444"; // Red
+            } else if (reward.id.includes('life_skills')) {
+              certificateColor = "#6366F1"; // Indigo
+            }
+            
             const certificateHTML = `
               <html>
                 <head>
@@ -128,7 +265,7 @@ export default function LearningWallet() {
                       font-family: Arial, sans-serif;
                       text-align: center;
                       padding: 40px;
-                      border: 15px solid #8b5cf6;
+                      border: 15px solid ${certificateColor};
                       margin: 0;
                       height: 100vh;
                       box-sizing: border-box;
@@ -138,18 +275,18 @@ export default function LearningWallet() {
                       background-color: #f9fafb;
                     }
                     h1 {
-                      color: #6d28d9;
+                      color: ${certificateColor};
                       font-size: 36px;
                       margin-bottom: 10px;
                     }
                     .certificate-title {
                       font-size: 24px;
                       margin-bottom: 30px;
-                      color: #4c1d95;
+                      color: ${certificateColor};
                     }
                     .student-name {
                       font-size: 30px;
-                      border-bottom: 2px solid #8b5cf6;
+                      border-bottom: 2px solid ${certificateColor};
                       padding-bottom: 10px;
                       margin-bottom: 30px;
                       display: inline-block;
@@ -174,7 +311,7 @@ export default function LearningWallet() {
                     }
                     .share-button {
                       margin-top: 20px;
-                      background-color: #4c1d95;
+                      background-color: ${certificateColor};
                       color: white;
                       border: none;
                       padding: 10px 20px;
@@ -183,7 +320,7 @@ export default function LearningWallet() {
                       font-size: 16px;
                     }
                     .share-button:hover {
-                      background-color: #6d28d9;
+                      opacity: 0.9;
                     }
                     .logo {
                       position: absolute;
@@ -193,7 +330,7 @@ export default function LearningWallet() {
                     }
                     .award-icon {
                       font-size: 48px;
-                      color: #8b5cf6;
+                      color: ${certificateColor};
                       margin-bottom: 20px;
                     }
                     .certificate-border {
@@ -202,7 +339,7 @@ export default function LearningWallet() {
                       left: 0;
                       right: 0;
                       bottom: 0;
-                      border: 15px solid #8b5cf6;
+                      border: 15px solid ${certificateColor};
                       pointer-events: none;
                       z-index: -1;
                     }
@@ -215,7 +352,7 @@ export default function LearningWallet() {
                   <div class="certificate-title">${reward.name}</div>
                   <div class="student-name">Emma Wilson</div>
                   <div class="description">
-                    This certificate is awarded for outstanding achievements in learning and demonstrating exceptional dedication to personal development.
+                    ${certificateDescription}
                   </div>
                   <div class="date">Awarded on ${new Date().toLocaleDateString()}</div>
                   <div class="signature">Aliud Learning Coach</div>
