@@ -99,8 +99,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Import the categorization service
           const { categorizeTask } = await import('./ai-categorization');
           
-          // Use AI to suggest a subject based on title and description
-          const suggestedSubject = await categorizeTask(requestBody.title, requestBody.description);
+          // Use AI to suggest a subject based on title, description, and resource link
+          const suggestedSubject = await categorizeTask(requestBody.title, requestBody.description, requestBody.resourceLink);
           if (suggestedSubject) {
             console.log(`AI categorized task "${requestBody.title}" as: ${suggestedSubject}`);
             requestBody.subject = suggestedSubject;
@@ -143,9 +143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Import the categorization service
           const { categorizeTask } = await import('./ai-categorization');
           
-          // Use AI to suggest a subject based on the new title and description
+          // Use AI to suggest a subject based on the new title, description, and resource link
           const description = requestBody.description !== undefined ? requestBody.description : existingTask.description;
-          const suggestedSubject = await categorizeTask(requestBody.title, description);
+          const resourceLink = requestBody.resourceLink !== undefined ? requestBody.resourceLink : existingTask.resourceLink;
+          const suggestedSubject = await categorizeTask(requestBody.title, description, resourceLink);
           if (suggestedSubject) {
             console.log(`AI recategorized task "${requestBody.title}" as: ${suggestedSubject}`);
             requestBody.subject = suggestedSubject;

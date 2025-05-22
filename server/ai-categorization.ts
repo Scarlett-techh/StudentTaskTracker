@@ -18,16 +18,21 @@ const SUBJECT_CATEGORIES = [
 
 /**
  * Uses AI to determine the most appropriate subject for a task
- * based on its title and description.
+ * based on its title, description, and resource link.
  */
-export async function categorizeTask(title: string, description: string | null): Promise<string | null> {
+export async function categorizeTask(title: string, description: string | null, resourceLink: string | null = null): Promise<string | null> {
   if (!process.env.OPENAI_API_KEY) {
     console.warn("OPENAI_API_KEY not set. Automatic task categorization disabled.");
     return null;
   }
 
   try {
-    const taskContent = `Title: ${title}${description ? `\nDescription: ${description}` : ''}`;
+    let taskContent = `Title: ${title}${description ? `\nDescription: ${description}` : ''}`;
+    
+    // Add resource link context if provided
+    if (resourceLink) {
+      taskContent += `\nResource Link: ${resourceLink}`;
+    }
     
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -35,7 +40,13 @@ export async function categorizeTask(title: string, description: string | null):
         {
           role: "system",
           content: `You are a task categorization assistant for a student learning platform. 
-          Your job is to assign the most appropriate subject category to a given task.
+          Your job is to assign the most appropriate subject category to a given task based on the title, description, and any provided resource links.
+          
+          When analyzing resource links, consider:
+          - The domain and content type (e.g., khanacademy.org suggests math/science)
+          - Educational platform focus (e.g., duolingo.com suggests language learning)
+          - Subject-specific websites (e.g., mathway.com suggests mathematics)
+          
           Available categories are: ${SUBJECT_CATEGORIES.join(", ")}.
           Respond ONLY with the category name. If none of the categories fit well, respond with "Unassigned".`
         },
