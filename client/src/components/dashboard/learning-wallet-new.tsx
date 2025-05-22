@@ -448,102 +448,144 @@ export default function LearningWallet() {
                 <head>
                   <style>
                     body {
-                      font-family: Arial, sans-serif;
-                      text-align: center;
-                      padding: 40px;
-                      border: 15px solid ${certificateColor};
                       margin: 0;
-                      height: 100vh;
-                      box-sizing: border-box;
+                      padding: 40px;
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      background: linear-gradient(135deg, ${certificateColor}15, ${certificateColor}35);
+                      min-height: 100vh;
                       display: flex;
-                      flex-direction: column;
+                      align-items: center;
                       justify-content: center;
-                      background-color: #f9fafb;
+                      box-sizing: border-box;
                     }
-                    h1 {
-                      color: ${certificateColor};
-                      font-size: 36px;
-                      margin-bottom: 10px;
+                    .certificate-container {
+                      background: white;
+                      border-radius: 20px;
+                      padding: 60px 80px;
+                      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                      text-align: center;
+                      max-width: 800px;
+                      width: 100%;
+                      position: relative;
+                      border: 3px solid ${certificateColor};
                     }
-                    .certificate-title {
+                    .decorative-elements {
                       font-size: 24px;
                       margin-bottom: 30px;
                       color: ${certificateColor};
                     }
+                    .aliud-logo {
+                      font-size: 32px;
+                      font-weight: bold;
+                      color: ${certificateColor};
+                      letter-spacing: 3px;
+                      margin-bottom: 30px;
+                    }
+                    .certificate-title-main {
+                      font-size: 28px;
+                      font-weight: bold;
+                      color: #2d3748;
+                      margin-bottom: 40px;
+                      text-transform: uppercase;
+                      letter-spacing: 2px;
+                    }
+                    .awarded-to {
+                      font-size: 18px;
+                      color: #4a5568;
+                      margin-bottom: 20px;
+                    }
                     .student-name {
-                      font-size: 30px;
+                      font-size: 42px;
+                      font-weight: bold;
+                      color: ${certificateColor};
+                      margin-bottom: 30px;
                       border-bottom: 2px solid ${certificateColor};
                       padding-bottom: 10px;
-                      margin-bottom: 30px;
                       display: inline-block;
                     }
-                    .description {
-                      font-size: 18px;
+                    .achievement-text {
+                      font-size: 20px;
+                      color: #2d3748;
                       margin-bottom: 30px;
-                      max-width: 600px;
-                      margin-left: auto;
-                      margin-right: auto;
-                    }
-                    .date {
-                      font-size: 16px;
-                      margin-top: 40px;
-                    }
-                    .signature {
-                      margin-top: 60px;
-                      border-top: 1px solid #d1d5db;
-                      padding-top: 10px;
-                      display: inline-block;
-                      width: 200px;
-                    }
-                    .share-button {
-                      margin-top: 20px;
-                      background-color: ${certificateColor};
-                      color: white;
-                      border: none;
-                      padding: 10px 20px;
-                      border-radius: 5px;
-                      cursor: pointer;
-                      font-size: 16px;
-                    }
-                    .share-button:hover {
-                      opacity: 0.9;
-                    }
-                    .logo {
-                      position: absolute;
-                      bottom: 20px;
-                      right: 20px;
-                      width: 100px;
+                      font-weight: 600;
                     }
                     .award-icon {
                       font-size: 48px;
                       color: ${certificateColor};
                       margin-bottom: 20px;
                     }
-                    .certificate-border {
-                      position: absolute;
-                      top: 0;
-                      left: 0;
-                      right: 0;
-                      bottom: 0;
-                      border: 15px solid ${certificateColor};
-                      pointer-events: none;
-                      z-index: -1;
+                    .description {
+                      font-size: 16px;
+                      color: #4a5568;
+                      line-height: 1.6;
+                      margin-bottom: 40px;
+                      max-width: 600px;
+                      margin-left: auto;
+                      margin-right: auto;
+                    }
+                    .date-signature {
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      margin-top: 50px;
+                      border-top: 1px solid #e2e8f0;
+                      padding-top: 30px;
+                    }
+                    .date {
+                      font-size: 14px;
+                      color: #4a5568;
+                    }
+                    .signature {
+                      font-size: 16px;
+                      color: #2d3748;
+                      font-weight: 600;
+                    }
+                    .share-button {
+                      margin-top: 20px;
+                      background: linear-gradient(135deg, ${certificateColor}, ${certificateColor}cc);
+                      color: white;
+                      border: none;
+                      padding: 12px 24px;
+                      border-radius: 25px;
+                      cursor: pointer;
+                      font-size: 16px;
+                      font-weight: 600;
+                      box-shadow: 0 4px 15px ${certificateColor}40;
+                      transition: all 0.3s ease;
+                    }
+                    .share-button:hover {
+                      transform: translateY(-2px);
+                      box-shadow: 0 6px 20px ${certificateColor}60;
                     }
                   </style>
                 </head>
                 <body>
-                  <div class="certificate-border"></div>
-                  <div class="award-icon">🏆</div>
-                  <h1>Certificate of Achievement</h1>
-                  <div class="certificate-title">${reward.name}</div>
-                  <div class="student-name">Emma Wilson</div>
-                  <div class="description">
-                    ${certificateDescription}
+                  <div class="certificate-container">
+                    <div class="decorative-elements">🎓✨🌟</div>
+                    
+                    <div class="aliud-logo">ALIUD</div>
+                    
+                    <div class="certificate-title-main">CERTIFICATE OF ACHIEVEMENT</div>
+                    
+                    <div class="awarded-to">This is awarded to</div>
+                    
+                    <div class="student-name">Emma Wilson</div>
+                    
+                    <div class="achievement-text">You are a MASTER of your own EDUCATION</div>
+                    
+                    <div class="award-icon">${reward.icon}</div>
+                    
+                    <div class="description">
+                      ${certificateDescription}
+                    </div>
+                    
+                    <div class="date-signature">
+                      <div class="date">Awarded on ${new Date().toLocaleDateString()}</div>
+                      <div class="signature">Aliud Learning Coach</div>
+                    </div>
+                    
+                    <button class="share-button" onclick="window.print()">Share Certificate</button>
                   </div>
-                  <div class="date">Awarded on ${new Date().toLocaleDateString()}</div>
-                  <div class="signature">Aliud Learning Coach</div>
-                  <button class="share-button" onclick="window.print()">Share Certificate</button>
-                  <img src="/src/assets/aliud-logo.png" class="logo" alt="Aliud Learning Logo" />
                 </body>
               </html>
             `;
