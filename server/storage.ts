@@ -219,6 +219,7 @@ export class MemStorage implements IStorage {
       createdAt,
       description: insertTask.description || null,
       subject: insertTask.subject || null,
+      resourceLink: insertTask.resourceLink || null,
       status: insertTask.status || 'pending',
       dueDate: insertTask.dueDate || null,
       dueTime: insertTask.dueTime || null,

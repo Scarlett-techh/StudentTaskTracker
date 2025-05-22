@@ -16,6 +16,7 @@ const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   subject: z.string().optional(),
+  resourceLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
   // Remove category field
   status: z.enum(["pending", "in-progress", "completed"]),
   dueDate: z.string().optional(),
@@ -47,6 +48,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
       title: task?.title || initialValues?.title || "",
       description: task?.description || initialValues?.description || "",
       subject: task?.subject || initialValues?.subject || "",
+      resourceLink: task?.resourceLink || initialValues?.resourceLink || "",
       status: task?.status || initialValues?.status || "pending",
       dueDate: task?.dueDate || initialValues?.dueDate || "",
       dueTime: task?.dueTime || initialValues?.dueTime || "",
@@ -112,6 +114,24 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
                 <Textarea 
                   placeholder="Add details about the task" 
                   className="resize-none h-20"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="resourceLink"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Resource Link</FormLabel>
+              <FormControl>
+                <Input 
+                  type="url"
+                  placeholder="https://example.com - Website or resource used for this task (optional)"
                   {...field} 
                 />
               </FormControl>
