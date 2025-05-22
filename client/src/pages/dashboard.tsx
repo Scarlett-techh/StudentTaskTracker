@@ -9,7 +9,7 @@ import TaskCard from "@/components/dashboard/task-card";
 import NoteCard from "@/components/dashboard/note-card";
 import PhotoThumbnail from "@/components/dashboard/photo-thumbnail";
 import UserStats from "@/components/dashboard/user-stats";
-import LearningWallet from "@/components/dashboard/learning-wallet";
+import LearningWallet from "@/components/dashboard/learning-wallet-new";
 import LearningRecommendations from "@/components/dashboard/learning-recommendations";
 import TaskForm from "@/components/forms/task-form";
 import NoteForm from "@/components/forms/note-form";

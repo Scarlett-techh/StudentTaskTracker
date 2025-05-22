@@ -10,26 +10,22 @@ import {
   Wallet, 
   Star, 
   Gift, 
-  PaintBucket, 
   Award, 
   Crown, 
   Sparkles, 
   Download,
-  Glasses,
   Bookmark,
-  UserCircle,
   GraduationCap,
   Medal
 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
-interface RewardItem {
+interface CertificateReward {
   id: string;
   name: string;
   description: string;
   cost: number;
-  category: 'certificate';
   icon: React.ReactNode;
   unlocked: boolean;
 }
@@ -37,7 +33,7 @@ interface RewardItem {
 export default function LearningWallet() {
   const { toast } = useToast();
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
-  const [selectedReward, setSelectedReward] = useState<RewardItem | null>(null);
+  const [selectedReward, setSelectedReward] = useState<CertificateReward | null>(null);
 
   // Get user stats
   const { data: stats } = useQuery({
@@ -47,84 +43,13 @@ export default function LearningWallet() {
 
   const points = stats?.points || 0;
   
-  // Define available rewards
-  const availableRewards: RewardItem[] = [
-    // Themes
+  // Define available certificate rewards
+  const availableCertificates: CertificateReward[] = [
     {
-      id: 'theme_dark',
-      name: 'Dark Mode Theme',
-      description: 'Switch to a sleek dark theme for the app',
-      cost: 50,
-      category: 'theme',
-      icon: <PaintBucket className="h-5 w-5 text-purple-500" />,
-      unlocked: false
-    },
-    {
-      id: 'theme_ocean',
-      name: 'Ocean Theme',
-      description: 'Calming blue theme inspired by the ocean',
-      cost: 75,
-      category: 'theme',
-      icon: <PaintBucket className="h-5 w-5 text-blue-500" />,
-      unlocked: false
-    },
-    
-    // Badges
-    {
-      id: 'badge_genius',
-      name: 'Genius Badge',
-      description: 'Show off your smarts with this special profile badge',
+      id: 'certificate_academic_achievement',
+      name: 'Academic Achievement Certificate',
+      description: 'Shareable certificate recognizing your academic progress',
       cost: 100,
-      category: 'badge',
-      icon: <Crown className="h-5 w-5 text-yellow-500" />,
-      unlocked: false
-    },
-    {
-      id: 'badge_streaker',
-      name: 'Streak Master Badge',
-      description: 'Badge for maintaining your study streaks',
-      cost: 150,
-      category: 'badge',
-      icon: <Award className="h-5 w-5 text-amber-500" />,
-      unlocked: false
-    },
-    
-    // Avatar Accessories
-    {
-      id: 'accessory_glasses',
-      name: 'Smart Glasses',
-      description: 'Add stylish glasses to your avatar',
-      cost: 80,
-      category: 'accessory',
-      icon: <Glasses className="h-5 w-5 text-blue-500" />,
-      unlocked: false
-    },
-    {
-      id: 'accessory_hat',
-      name: 'Graduation Cap',
-      description: 'Show your academic spirit with this graduation cap',
-      cost: 120,
-      category: 'accessory',
-      icon: <GraduationCap className="h-5 w-5 text-indigo-500" />,
-      unlocked: false
-    },
-    {
-      id: 'accessory_frame',
-      name: 'Golden Frame',
-      description: 'Elegant golden frame for your profile picture',
-      cost: 200,
-      category: 'accessory',
-      icon: <UserCircle className="h-5 w-5 text-amber-500" />,
-      unlocked: false
-    },
-    
-    // Certificates
-    {
-      id: 'certificate_achievement',
-      name: 'Achievement Certificate',
-      description: 'Downloadable certificate celebrating your progress',
-      cost: 250,
-      category: 'certificate',
       icon: <Medal className="h-5 w-5 text-green-500" />,
       unlocked: false
     },
@@ -132,20 +57,48 @@ export default function LearningWallet() {
       id: 'certificate_excellence',
       name: 'Excellence Certificate',
       description: 'Premium certificate recognizing your dedication to learning',
-      cost: 500,
-      category: 'certificate',
-      icon: <Download className="h-5 w-5 text-red-500" />,
+      cost: 200,
+      icon: <Award className="h-5 w-5 text-red-500" />,
       unlocked: false
     },
-    
-    // Customizations
     {
-      id: 'custom_avatar',
-      name: 'Custom Avatar Frame',
-      description: 'Unique border for your profile picture',
-      cost: 180,
-      category: 'customization',
-      icon: <Sparkles className="h-5 w-5 text-indigo-500" />,
+      id: 'certificate_minecraft_builder',
+      name: 'Master Builder Certificate',
+      description: 'Certificate honoring your Minecraft architectural achievements',
+      cost: 150,
+      icon: <Crown className="h-5 w-5 text-amber-500" />,
+      unlocked: false
+    },
+    {
+      id: 'certificate_science_explorer',
+      name: 'Science Explorer Certificate',
+      description: 'Certificate recognizing your scientific curiosity and achievements',
+      cost: 175,
+      icon: <Sparkles className="h-5 w-5 text-blue-500" />,
+      unlocked: false
+    },
+    {
+      id: 'certificate_language_arts',
+      name: 'Language Arts Certificate',
+      description: 'Certificate celebrating your reading and writing accomplishments',
+      cost: 175,
+      icon: <Bookmark className="h-5 w-5 text-purple-500" />,
+      unlocked: false
+    },
+    {
+      id: 'certificate_100days',
+      name: '100 Days of Learning Certificate',
+      description: 'Special certificate for maintaining a 100-day learning streak',
+      cost: 300,
+      icon: <GraduationCap className="h-5 w-5 text-indigo-500" />,
+      unlocked: false
+    },
+    {
+      id: 'certificate_innovation',
+      name: 'Innovation Award Certificate',
+      description: 'Certificate recognizing your creative problem-solving abilities',
+      cost: 250,
+      icon: <Download className="h-5 w-5 text-yellow-500" />,
       unlocked: false
     },
   ];
@@ -153,7 +106,7 @@ export default function LearningWallet() {
   // Simulate user's purchased rewards
   const [purchasedRewards, setPurchasedRewards] = useState<string[]>([]);
 
-  // Mutation for purchasing rewards
+  // Mutation for purchasing certificates
   const purchaseMutation = useMutation({
     mutationFn: async (rewardId: string) => {
       // This would be a real API call in production
@@ -162,10 +115,10 @@ export default function LearningWallet() {
       // For now, simulate the API call
       return new Promise((resolve) => {
         setTimeout(() => {
-          const reward = availableRewards.find(r => r.id === rewardId);
+          const reward = availableCertificates.find(r => r.id === rewardId);
           
-          // For certificate rewards, create and download an actual certificate
-          if (reward?.category === 'certificate') {
+          // Create and download a certificate
+          if (reward) {
             // Create a simple HTML certificate that we'll convert to a data URL
             const certificateHTML = `
               <html>
@@ -219,10 +172,46 @@ export default function LearningWallet() {
                       display: inline-block;
                       width: 200px;
                     }
+                    .share-button {
+                      margin-top: 20px;
+                      background-color: #4c1d95;
+                      color: white;
+                      border: none;
+                      padding: 10px 20px;
+                      border-radius: 5px;
+                      cursor: pointer;
+                      font-size: 16px;
+                    }
+                    .share-button:hover {
+                      background-color: #6d28d9;
+                    }
+                    .logo {
+                      position: absolute;
+                      bottom: 20px;
+                      right: 20px;
+                      width: 100px;
+                    }
+                    .award-icon {
+                      font-size: 48px;
+                      color: #8b5cf6;
+                      margin-bottom: 20px;
+                    }
+                    .certificate-border {
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      right: 0;
+                      bottom: 0;
+                      border: 15px solid #8b5cf6;
+                      pointer-events: none;
+                      z-index: -1;
+                    }
                   </style>
                 </head>
                 <body>
-                  <h1>Certificate of ${reward.id.includes('excellence') ? 'Excellence' : 'Achievement'}</h1>
+                  <div class="certificate-border"></div>
+                  <div class="award-icon">🏆</div>
+                  <h1>Certificate of Achievement</h1>
                   <div class="certificate-title">${reward.name}</div>
                   <div class="student-name">Emma Wilson</div>
                   <div class="description">
@@ -230,6 +219,8 @@ export default function LearningWallet() {
                   </div>
                   <div class="date">Awarded on ${new Date().toLocaleDateString()}</div>
                   <div class="signature">Aliud Learning Coach</div>
+                  <button class="share-button" onclick="window.print()">Share Certificate</button>
+                  <img src="/src/assets/aliud-logo.png" class="logo" alt="Aliud Learning Logo" />
                 </body>
               </html>
             `;
@@ -256,7 +247,7 @@ export default function LearningWallet() {
       setPurchasedRewards([...purchasedRewards, rewardId]);
       
       // Get the purchased reward
-      const reward = availableRewards.find(r => r.id === rewardId);
+      const reward = availableCertificates.find(r => r.id === rewardId);
       
       // Update points locally for demo
       queryClient.setQueryData(["/api/user-stats"], (oldData: any) => {
@@ -268,39 +259,17 @@ export default function LearningWallet() {
         };
       });
       
-      // For theme rewards, show a special notification
-      if (reward?.category === 'theme') {
-        // In a real app, we would apply the theme change here
-        if (reward.id === 'theme_dark') {
-          // Simulate theme change
-          document.documentElement.classList.add('simulate-dark-theme');
-          toast({
-            title: "Dark Theme Applied!",
-            description: "Your new dark theme has been activated.",
-            variant: "default",
-          });
-        } else if (reward.id === 'theme_ocean') {
-          // Simulate theme change
-          document.documentElement.classList.add('simulate-ocean-theme');
-          toast({
-            title: "Ocean Theme Applied!",
-            description: "Your new ocean theme has been activated.",
-            variant: "default",
-          });
-        }
-      } else {
-        toast({
-          title: "Reward Purchased!",
-          description: "You've successfully unlocked a new reward.",
-          variant: "default",
-        });
-      }
+      toast({
+        title: "Certificate Purchased!",
+        description: "Your certificate has been generated and downloaded. You can now share it with others!",
+        variant: "default",
+      });
       
       setPurchaseDialogOpen(false);
     }
   });
 
-  const handlePurchaseClick = (reward: RewardItem) => {
+  const handlePurchaseClick = (reward: CertificateReward) => {
     setSelectedReward(reward);
     setPurchaseDialogOpen(true);
   };
@@ -311,7 +280,7 @@ export default function LearningWallet() {
     if (points < selectedReward.cost) {
       toast({
         title: "Not enough points",
-        description: `You need ${selectedReward.cost - points} more points to purchase this reward.`,
+        description: `You need ${selectedReward.cost - points} more points to purchase this certificate.`,
         variant: "destructive",
       });
       return;
@@ -329,7 +298,7 @@ export default function LearningWallet() {
             Learning Wallet
           </CardTitle>
           <CardDescription>
-            Earn and spend points on rewards and customizations
+            Earn points by completing tasks and redeem them for shareable certificates
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -343,12 +312,12 @@ export default function LearningWallet() {
           
           <Tabs defaultValue="shop">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="shop">Rewards Shop</TabsTrigger>
-              <TabsTrigger value="inventory">My Rewards</TabsTrigger>
+              <TabsTrigger value="shop">Certificate Shop</TabsTrigger>
+              <TabsTrigger value="inventory">My Certificates</TabsTrigger>
             </TabsList>
             
             <TabsContent value="shop" className="mt-4 space-y-4">
-              {availableRewards
+              {availableCertificates
                 .filter(reward => !purchasedRewards.includes(reward.id))
                 .map(reward => (
                   <div 
@@ -389,17 +358,17 @@ export default function LearningWallet() {
                   </div>
                 ))}
                 
-              {availableRewards.filter(reward => !purchasedRewards.includes(reward.id)).length === 0 && (
+              {availableCertificates.filter(reward => !purchasedRewards.includes(reward.id)).length === 0 && (
                 <div className="text-center py-8">
                   <Gift className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">You've purchased all available rewards!</p>
+                  <p className="text-gray-500">You've purchased all available certificates!</p>
                 </div>
               )}
             </TabsContent>
             
             <TabsContent value="inventory" className="mt-4 space-y-4">
               {purchasedRewards.length > 0 ? (
-                availableRewards
+                availableCertificates
                   .filter(reward => purchasedRewards.includes(reward.id))
                   .map(reward => (
                     <div 
@@ -415,13 +384,24 @@ export default function LearningWallet() {
                           <p className="text-xs text-muted-foreground">{reward.description}</p>
                         </div>
                       </div>
-                      <Badge variant="default" className="bg-green-500">Unlocked</Badge>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="flex items-center gap-1"
+                        onClick={() => {
+                          // Re-download the certificate
+                          purchaseMutation.mutate(reward.id);
+                        }}
+                      >
+                        <Download className="h-4 w-4" />
+                        Share
+                      </Button>
                     </div>
                   ))
               ) : (
                 <div className="text-center py-8">
                   <Gift className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">You haven't purchased any rewards yet.</p>
+                  <p className="text-gray-500">You haven't purchased any certificates yet.</p>
                   <p className="text-gray-500 text-sm">Complete tasks to earn points!</p>
                 </div>
               )}
@@ -434,9 +414,9 @@ export default function LearningWallet() {
       <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirm Purchase</DialogTitle>
+            <DialogTitle>Confirm Certificate Purchase</DialogTitle>
             <DialogDescription>
-              You are about to spend points on this reward.
+              You are about to purchase a shareable certificate.
             </DialogDescription>
           </DialogHeader>
           
@@ -448,10 +428,10 @@ export default function LearningWallet() {
               <div>
                 <h4 className="font-medium">{selectedReward.name}</h4>
                 <p className="text-sm text-muted-foreground">{selectedReward.description}</p>
-                <Badge className="mt-2 bg-yellow-500 hover:bg-yellow-600">
-                  <Star className="h-3 w-3 mr-1" />
-                  {selectedReward.cost} points
-                </Badge>
+                <div className="flex items-center mt-2">
+                  <Star className="h-4 w-4 text-yellow-500 mr-1" />
+                  <span className="font-medium">{selectedReward.cost} points</span>
+                </div>
               </div>
             </div>
           )}
@@ -460,8 +440,11 @@ export default function LearningWallet() {
             <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handlePurchaseConfirm} disabled={purchaseMutation.isPending}>
-              {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
+            <Button 
+              disabled={purchaseMutation.isPending}
+              onClick={handlePurchaseConfirm}
+            >
+              {purchaseMutation.isPending ? "Processing..." : "Purchase Certificate"}
             </Button>
           </DialogFooter>
         </DialogContent>
