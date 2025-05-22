@@ -213,8 +213,6 @@ export default function LearningWallet() {
               </head>
               <body>
                 <div class="certificate-container">
-                  <div class="decorative-elements">🎓✨🌟</div>
-                  
                   <div class="aliud-logo">ALIUD</div>
                   
                   <div class="certificate-title-main">CERTIFICATE OF ACHIEVEMENT</div>
