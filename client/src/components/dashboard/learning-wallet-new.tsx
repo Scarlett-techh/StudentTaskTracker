@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Wallet, 
@@ -16,7 +20,9 @@ import {
   Download,
   Bookmark,
   GraduationCap,
-  Medal
+  Medal,
+  Palette,
+  Eye
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -34,6 +40,17 @@ export default function LearningWallet() {
   const { toast } = useToast();
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [selectedReward, setSelectedReward] = useState<CertificateReward | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  
+  // Custom certificate designer state
+  const [customCertificate, setCustomCertificate] = useState({
+    title: "",
+    description: "",
+    recipientName: "Emma Wilson",
+    colorTheme: "#8b5cf6",
+    borderStyle: "solid",
+    fontSize: "medium"
+  });
 
   // Get user stats
   const { data: stats } = useQuery({
@@ -448,8 +465,9 @@ export default function LearningWallet() {
           </div>
           
           <Tabs defaultValue="shop">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="shop">Certificate Shop</TabsTrigger>
+              <TabsTrigger value="designer">Design Your Own</TabsTrigger>
               <TabsTrigger value="inventory">My Certificates</TabsTrigger>
             </TabsList>
             
