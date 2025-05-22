@@ -103,7 +103,7 @@ export default function LearningWallet() {
                     margin: 0;
                     padding: 40px;
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: linear-gradient(135deg, #3b82f615, #3b82f635);
+                    background: linear-gradient(135deg, #1e40af, #3b82f6);
                     min-height: 100vh;
                     display: flex;
                     align-items: center;
@@ -224,8 +224,6 @@ export default function LearningWallet() {
                   <div class="student-name">Emma Wilson</div>
                   
                   <div class="achievement-text">You are a MASTER of your own EDUCATION</div>
-                  
-                  <div class="award-icon">🏆</div>
                   
                   <div class="description">
                     ${certificate.description}
