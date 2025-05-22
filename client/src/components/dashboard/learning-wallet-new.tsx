@@ -521,6 +521,202 @@ export default function LearningWallet() {
               )}
             </TabsContent>
             
+            <TabsContent value="designer" className="mt-4 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Palette className="mr-2 h-5 w-5 text-purple-500" />
+                    Custom Certificate Designer
+                  </CardTitle>
+                  <CardDescription>
+                    Design your own personalized certificate with custom text and styling
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="cert-title">Certificate Title</Label>
+                        <Input
+                          id="cert-title"
+                          placeholder="e.g., Master of Minecraft Building"
+                          value={customCertificate.title}
+                          onChange={(e) => setCustomCertificate(prev => ({ ...prev, title: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="cert-description">Certificate Description</Label>
+                        <Textarea
+                          id="cert-description"
+                          placeholder="e.g., This certificate recognizes exceptional creativity and skill in architectural design..."
+                          value={customCertificate.description}
+                          onChange={(e) => setCustomCertificate(prev => ({ ...prev, description: e.target.value }))}
+                          rows={3}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="recipient-name">Recipient Name</Label>
+                        <Input
+                          id="recipient-name"
+                          value={customCertificate.recipientName}
+                          onChange={(e) => setCustomCertificate(prev => ({ ...prev, recipientName: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="color-theme">Color Theme</Label>
+                        <Select value={customCertificate.colorTheme} onValueChange={(value) => setCustomCertificate(prev => ({ ...prev, colorTheme: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a color theme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="#8b5cf6">Purple</SelectItem>
+                            <SelectItem value="#3B82F6">Blue</SelectItem>
+                            <SelectItem value="#10B981">Green</SelectItem>
+                            <SelectItem value="#F59E0B">Gold</SelectItem>
+                            <SelectItem value="#EF4444">Red</SelectItem>
+                            <SelectItem value="#EC4899">Pink</SelectItem>
+                            <SelectItem value="#6366F1">Indigo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="font-size">Font Size</Label>
+                        <Select value={customCertificate.fontSize} onValueChange={(value) => setCustomCertificate(prev => ({ ...prev, fontSize: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose font size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="small">Small</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="large">Large</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-[300px] flex items-center justify-center">
+                        <div className="text-center">
+                          <Eye className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500 mb-2">Certificate Preview</p>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setPreviewDialogOpen(true)}
+                            disabled={!customCertificate.title || !customCertificate.description}
+                          >
+                            Preview Certificate
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        className="w-full" 
+                        disabled={!customCertificate.title || !customCertificate.description}
+                        onClick={() => {
+                          // Generate and download custom certificate
+                          const certificateHTML = `
+                            <html>
+                              <head>
+                                <style>
+                                  body {
+                                    font-family: Arial, sans-serif;
+                                    text-align: center;
+                                    padding: 40px;
+                                    border: 15px solid ${customCertificate.colorTheme};
+                                    margin: 0;
+                                    height: 100vh;
+                                    box-sizing: border-box;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: center;
+                                    background-color: #f9fafb;
+                                  }
+                                  h1 {
+                                    color: ${customCertificate.colorTheme};
+                                    font-size: ${customCertificate.fontSize === 'large' ? '42px' : customCertificate.fontSize === 'medium' ? '36px' : '30px'};
+                                    margin-bottom: 10px;
+                                  }
+                                  .certificate-title {
+                                    font-size: ${customCertificate.fontSize === 'large' ? '28px' : customCertificate.fontSize === 'medium' ? '24px' : '20px'};
+                                    margin-bottom: 30px;
+                                    color: ${customCertificate.colorTheme};
+                                  }
+                                  .student-name {
+                                    font-size: ${customCertificate.fontSize === 'large' ? '34px' : customCertificate.fontSize === 'medium' ? '30px' : '26px'};
+                                    border-bottom: 2px solid ${customCertificate.colorTheme};
+                                    padding-bottom: 10px;
+                                    margin-bottom: 30px;
+                                    display: inline-block;
+                                  }
+                                  .description {
+                                    font-size: ${customCertificate.fontSize === 'large' ? '20px' : customCertificate.fontSize === 'medium' ? '18px' : '16px'};
+                                    margin-bottom: 30px;
+                                    max-width: 600px;
+                                    margin-left: auto;
+                                    margin-right: auto;
+                                  }
+                                  .date {
+                                    font-size: 16px;
+                                    margin-top: 40px;
+                                  }
+                                  .signature {
+                                    margin-top: 60px;
+                                    border-top: 1px solid #d1d5db;
+                                    padding-top: 10px;
+                                    display: inline-block;
+                                    width: 200px;
+                                  }
+                                  .award-icon {
+                                    font-size: 48px;
+                                    color: ${customCertificate.colorTheme};
+                                    margin-bottom: 20px;
+                                  }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="award-icon">🏆</div>
+                                <h1>Certificate of Achievement</h1>
+                                <div class="certificate-title">${customCertificate.title}</div>
+                                <div class="student-name">${customCertificate.recipientName}</div>
+                                <div class="description">
+                                  ${customCertificate.description}
+                                </div>
+                                <div class="date">Awarded on ${new Date().toLocaleDateString()}</div>
+                                <div class="signature">Aliud Learning Coach</div>
+                              </body>
+                            </html>
+                          `;
+                          
+                          const blob = new Blob([certificateHTML], { type: 'text/html' });
+                          const dataUrl = URL.createObjectURL(blob);
+                          
+                          const a = document.createElement('a');
+                          a.href = dataUrl;
+                          a.download = `${customCertificate.title.replace(/\s+/g, '_')}_Certificate.html`;
+                          a.click();
+                          
+                          setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
+                          
+                          toast({
+                            title: "Custom Certificate Created!",
+                            description: "Your personalized certificate has been downloaded and can be shared with others!",
+                            variant: "default",
+                          });
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Create & Download Certificate
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
             <TabsContent value="inventory" className="mt-4 space-y-4">
               {purchasedRewards.length > 0 ? (
                 availableCertificates
