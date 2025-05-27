@@ -135,6 +135,42 @@ const Resources = () => {
       category: "video",
       tags: ["tutorials", "lectures", "how-to", "explanations"],
       icon: <Video className="h-10 w-10 text-red-500" />
+    },
+    {
+      id: "practical-money-skills",
+      title: "Practical Money Skills",
+      description: "Real-world math activities for budgeting, banking, and financial planning with interactive calculators.",
+      url: "https://www.practicalmoneyskills.com/",
+      category: "life-skills",
+      tags: ["budgeting", "math", "finance", "calculator", "real-world"],
+      icon: <Database className="h-10 w-10 text-green-600" />
+    },
+    {
+      id: "cooking-math",
+      title: "Math in the Kitchen - Exploratorium",
+      description: "Learn fractions, ratios, and conversions through cooking and baking activities.",
+      url: "https://www.exploratorium.edu/cooking/",
+      category: "life-skills",
+      tags: ["cooking", "fractions", "ratios", "measurements", "practical"],
+      icon: <BookOpen className="h-10 w-10 text-orange-500" />
+    },
+    {
+      id: "consumer-math",
+      title: "Consumer Math - Smart Shopping",
+      description: "Calculate discounts, compare prices, and understand sales tax with interactive activities.",
+      url: "https://www.practicalmoneyskills.com/learn/lesson_plans/teens",
+      category: "life-skills",
+      tags: ["shopping", "discounts", "percentages", "taxes", "real-world"],
+      icon: <Database className="h-10 w-10 text-purple-600" />
+    },
+    {
+      id: "statistics-daily-life",
+      title: "Statistics for Everyday Life",
+      description: "Understanding data, graphs, and probability in daily decision-making with Khan Academy.",
+      url: "https://www.khanacademy.org/math/statistics-probability",
+      category: "mathematics",
+      tags: ["statistics", "data", "graphs", "probability", "daily-life"],
+      icon: <Database className="h-10 w-10 text-blue-600" />
     }
   ];
 
