@@ -496,14 +496,19 @@ function getSubjectResources(subject: string): Array<{ title: string, url: strin
         description: "Free interactive lessons covering everything from basic arithmetic to calculus"
       },
       {
-        title: "Desmos Graphing Calculator",
-        url: "https://www.desmos.com/calculator",
-        description: "Interactive graphing calculator for exploring mathematical concepts visually"
+        title: "Practical Money Skills - Math Games",
+        url: "https://www.practicalmoneyskills.com/learn/lesson_plans",
+        description: "Real-world math activities for budgeting, banking, and financial planning"
       },
       {
-        title: "Brilliant.org - Math Courses",
-        url: "https://brilliant.org/courses/#math-foundational",
-        description: "Interactive courses that build problem-solving skills through challenges"
+        title: "Math in the Kitchen - Cooking Measurements",
+        url: "https://www.exploratorium.edu/cooking/",
+        description: "Learn fractions, ratios, and conversions through cooking and baking"
+      },
+      {
+        title: "Statistics for Everyday Life",
+        url: "https://www.khanacademy.org/math/statistics-probability",
+        description: "Understanding data, graphs, and probability in daily decision-making"
       }
     ],
     "Science": [
@@ -579,6 +584,21 @@ function getSubjectResources(subject: string): Array<{ title: string, url: strin
         title: "Practical Money Skills",
         url: "https://www.practicalmoneyskills.com/",
         description: "Financial literacy resources for budgeting and money management"
+      },
+      {
+        title: "Math for Life Skills - Budgeting Calculator",
+        url: "https://www.jumpstart.org/what-we-do/support-financial-literacy/reality-check/",
+        description: "Interactive tools for calculating real-world expenses and income"
+      },
+      {
+        title: "Cooking Math - Recipe Scaling",
+        url: "https://www.mathsisfun.com/definitions/ratio.html",
+        description: "Learn to double, halve, and convert recipe measurements using ratios"
+      },
+      {
+        title: "Consumer Math - Smart Shopping",
+        url: "https://www.practicalmoneyskills.com/learn/lesson_plans/teens",
+        description: "Calculate discounts, compare prices, and understand sales tax"
       },
       {
         title: "AllRecipes",
