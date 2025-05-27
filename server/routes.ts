@@ -108,6 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (aiError) {
           // If AI categorization fails, log but continue with task creation
           console.error("AI categorization error:", aiError);
+          console.error("Full error details:", aiError.message, aiError.stack);
         }
       }
       
