@@ -13,7 +13,10 @@ const SUBJECT_CATEGORIES = [
   "English",
   "Physical Activity",
   "Life Skills",
-  "Interest / Passion"
+  "Interest / Passion",
+  "Art",
+  "Game Design",
+  "Coding"
 ];
 
 /**
@@ -91,7 +94,10 @@ export function keywordBasedCategorization(title: string, description: string | 
     "English": ["english", "essay", "writing", "read", "book", "literature", "grammar", "vocabulary", "spelling", "story", "novel", "poem", "author", "language", "writing", "composition", "reading"],
     "Physical Activity": ["physical", "exercise", "sport", "run", "swim", "gym", "fitness", "workout", "training", "walk", "jog", "bike", "hiking", "yoga", "stretch", "walk dog", "athletics", "movement"],
     "Life Skills": ["cooking", "clean", "organize", "budget", "finance", "shop", "laundry", "schedule", "plan", "time management", "responsibility", "adulting", "chore", "life skill", "driving", "driver", "house", "planning"],
-    "Interest / Passion": ["hobby", "interest", "passion", "creative", "art", "music", "instrument", "craft", "project", "design", "coding", "program", "game", "paint", "draw", "create", "build", "minecraft", "gaming", "personal"]
+    "Interest / Passion": ["hobby", "interest", "passion", "creative", "music", "instrument", "craft", "project", "minecraft", "gaming", "personal"],
+    "Art": ["art", "drawing", "painting", "sketch", "sculpture", "creative", "design", "visual", "illustration", "canvas", "watercolor", "acrylic", "digital art", "portrait", "landscape"],
+    "Game Design": ["game design", "game development", "unity", "unreal", "level design", "character design", "gameplay", "mechanics", "indie game", "video game", "board game", "game jam"],
+    "Coding": ["coding", "programming", "python", "javascript", "html", "css", "java", "c++", "web development", "app development", "software", "algorithm", "debugging", "code", "developer", "computer science"]
   };
   
   for (const [category, keywords] of Object.entries(keywordMap)) {

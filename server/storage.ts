@@ -127,6 +127,9 @@ export class MemStorage implements IStorage {
     this.createSubject({ name: 'Physical Activity', color: '#EC4899', userId: 1 });
     this.createSubject({ name: 'Life Skills', color: '#F97316', userId: 1 });
     this.createSubject({ name: 'Interest / Passion', color: '#14B8A6', userId: 1 });
+    this.createSubject({ name: 'Art', color: '#EF4444', userId: 1 });
+    this.createSubject({ name: 'Game Design', color: '#8B5CF6', userId: 1 });
+    this.createSubject({ name: 'Coding', color: '#059669', userId: 1 });
   }
 
   // User methods
