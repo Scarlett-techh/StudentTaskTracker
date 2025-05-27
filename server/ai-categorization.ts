@@ -81,17 +81,17 @@ export async function categorizeTask(title: string, description: string | null, 
 /**
  * Simple fallback function that uses keyword matching to categorize tasks
  */
-function keywordBasedCategorization(title: string, description: string | null): string | null {
+export function keywordBasedCategorization(title: string, description: string | null): string | null {
   const content = `${title} ${description || ''}`.toLowerCase();
   
   const keywordMap: Record<string, string[]> = {
-    "Mathematics": ["math", "algebra", "calculus", "geometry", "equation", "number", "arithmetic", "statistics", "probability", "khan academy"],
-    "Science": ["science", "biology", "chemistry", "physics", "experiment", "lab", "hypothesis", "scientific", "molecule", "atom", "cell"],
-    "History": ["history", "historical", "civilization", "century", "ancient", "medieval", "modern", "war", "revolution", "empire", "president", "kingdom"],
-    "English": ["english", "essay", "writing", "read", "book", "literature", "grammar", "vocabulary", "spelling", "story", "novel", "poem", "author"],
-    "Physical Activity": ["physical", "exercise", "sport", "run", "swim", "gym", "fitness", "workout", "training", "walk", "jog", "bike", "hiking", "yoga", "stretch", "walk dog"],
-    "Life Skills": ["cooking", "clean", "organize", "budget", "finance", "shop", "laundry", "schedule", "plan", "time management", "responsibility", "adulting", "chore", "life skill", "driving", "driver", "house"],
-    "Interest / Passion": ["hobby", "interest", "passion", "creative", "art", "music", "instrument", "craft", "project", "design", "coding", "program", "game", "paint", "draw", "create", "build"]
+    "Mathematics": ["math", "algebra", "calculus", "geometry", "equation", "number", "arithmetic", "statistics", "probability", "khan academy", "khan", "academy", "multiplication", "division", "fraction"],
+    "Science": ["science", "biology", "chemistry", "physics", "experiment", "lab", "hypothesis", "scientific", "molecule", "atom", "cell", "ecosystem", "evolution", "research"],
+    "History": ["history", "historical", "civilization", "century", "ancient", "medieval", "modern", "war", "revolution", "empire", "president", "kingdom", "egypt", "egyptian", "podcast", "historical", "indigenous", "culture", "timeline"],
+    "English": ["english", "essay", "writing", "read", "book", "literature", "grammar", "vocabulary", "spelling", "story", "novel", "poem", "author", "language", "writing", "composition", "reading"],
+    "Physical Activity": ["physical", "exercise", "sport", "run", "swim", "gym", "fitness", "workout", "training", "walk", "jog", "bike", "hiking", "yoga", "stretch", "walk dog", "athletics", "movement"],
+    "Life Skills": ["cooking", "clean", "organize", "budget", "finance", "shop", "laundry", "schedule", "plan", "time management", "responsibility", "adulting", "chore", "life skill", "driving", "driver", "house", "planning"],
+    "Interest / Passion": ["hobby", "interest", "passion", "creative", "art", "music", "instrument", "craft", "project", "design", "coding", "program", "game", "paint", "draw", "create", "build", "minecraft", "gaming", "personal"]
   };
   
   for (const [category, keywords] of Object.entries(keywordMap)) {

@@ -93,22 +93,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Make a copy of the request body for potential AI modification
       const requestBody = { ...req.body };
       
-      // If subject is not explicitly set, try to automatically categorize using AI
+      // If subject is not explicitly set, use manual keyword-based categorization
       if (!requestBody.subject) {
-        try {
-          // Import the categorization service
-          const { categorizeTask } = await import('./ai-categorization');
-          
-          // Use AI to suggest a subject based on title, description, and resource link
-          const suggestedSubject = await categorizeTask(requestBody.title, requestBody.description, requestBody.resourceLink);
-          if (suggestedSubject) {
-            console.log(`AI categorized task "${requestBody.title}" as: ${suggestedSubject}`);
-            requestBody.subject = suggestedSubject;
-          }
-        } catch (aiError) {
-          // If AI categorization fails, log but continue with task creation
-          console.error("AI categorization error:", aiError);
-          console.error("Full error details:", aiError.message, aiError.stack);
+        const { keywordBasedCategorization } = await import('./ai-categorization');
+        const suggestedSubject = keywordBasedCategorization(requestBody.title, requestBody.description);
+        if (suggestedSubject) {
+          console.log(`Manual categorization assigned task "${requestBody.title}" as: ${suggestedSubject}`);
+          requestBody.subject = suggestedSubject;
         }
       }
       
@@ -140,21 +131,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If title is being updated but subject isn't explicitly set, consider recategorizing
       if (requestBody.title && !requestBody.subject && (!existingTask.subject || req.query.recategorize === 'true')) {
-        try {
-          // Import the categorization service
-          const { categorizeTask } = await import('./ai-categorization');
-          
-          // Use AI to suggest a subject based on the new title, description, and resource link
-          const description = requestBody.description !== undefined ? requestBody.description : existingTask.description;
-          const resourceLink = requestBody.resourceLink !== undefined ? requestBody.resourceLink : existingTask.resourceLink;
-          const suggestedSubject = await categorizeTask(requestBody.title, description, resourceLink);
-          if (suggestedSubject) {
-            console.log(`AI recategorized task "${requestBody.title}" as: ${suggestedSubject}`);
-            requestBody.subject = suggestedSubject;
-          }
-        } catch (aiError) {
-          // If AI categorization fails, log but continue with task update
-          console.error("AI categorization error:", aiError);
+        const { keywordBasedCategorization } = await import('./ai-categorization');
+        const description = requestBody.description !== undefined ? requestBody.description : existingTask.description;
+        const suggestedSubject = keywordBasedCategorization(requestBody.title, description);
+        if (suggestedSubject) {
+          console.log(`Manual recategorization assigned task "${requestBody.title}" as: ${suggestedSubject}`);
+          requestBody.subject = suggestedSubject;
         }
       }
       
