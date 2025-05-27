@@ -190,54 +190,7 @@ export default function Analytics() {
   // We're already using the tasksBySubject mapping defined above
   // No need to create it again
   
-  // Generate AI content for parent reports
-  const studentLearningReport = {
-    subjects: {
-      Mathematics: {
-        strengths: 'Excellent progress in algebra concepts and problem-solving skills',
-        areas_for_growth: 'Could benefit from more practice with geometry and spatial reasoning',
-        recent_achievements: 'Completed 5 challenging math tasks in the past week',
-        learning_patterns: 'Tends to engage with math concepts most effectively in the morning hours',
-        connections: 'Mathematical reasoning is positively impacting logical thinking in other subjects',
-      },
-      Science: {
-        strengths: 'Strong understanding of scientific inquiry and hypothesis testing',
-        areas_for_growth: 'Could explore more hands-on experiments to strengthen practical application',
-        recent_achievements: 'Demonstrated excellent comprehension of basic chemistry concepts',
-        learning_patterns: 'Shows curiosity-driven learning with frequent question-asking',
-        connections: 'Scientific thinking is enhancing critical analysis skills across all subjects',
-      },
-      'Physical Activity': {
-        strengths: 'Consistent engagement with physical activities throughout the week',
-        areas_for_growth: 'Could benefit from more variety in activity types',
-        recent_achievements: 'Maintained regular exercise schedule for two consecutive weeks',
-        learning_patterns: 'Most engaged with physical activities in the afternoon',
-        connections: 'Regular physical activity is supporting improved focus during academic work',
-      },
-      'Life Skills': {
-        strengths: 'Demonstrating strong time management and organizational skills',
-        areas_for_growth: 'Could benefit from more practice with financial literacy concepts',
-        recent_achievements: 'Successfully completed multiple planning and organization tasks',
-        learning_patterns: 'Learns best through practical application and real-world examples',
-        connections: 'Organizational skills are positively impacting task completion in all areas',
-      }
-    },
-    overall_progress: {
-      strengths: 'Showing consistent engagement across multiple subject areas with good balance between knowledge acquisition and skill development',
-      learning_style: 'Demonstrates a primarily visual-logical learning style, with strengths in pattern recognition and systematic problem-solving',
-      engagement: 'Highest engagement levels observed during morning hours and early afternoon',
-      growth_areas: 'Would benefit from more collaborative learning opportunities and project-based assignments',
-      recommendations: 'Consider incorporating more interdisciplinary projects that connect mathematical concepts with real-world applications'
-    },
-    learning_patterns: [
-      { name: 'Pattern Recognition', value: 85 },
-      { name: 'Critical Thinking', value: 78 },
-      { name: 'Creative Problem Solving', value: 65 },
-      { name: 'Communication', value: 72 },
-      { name: 'Collaboration', value: 58 },
-      { name: 'Self-Direction', value: 80 },
-    ]
-  };
+
 
   return (
     <>

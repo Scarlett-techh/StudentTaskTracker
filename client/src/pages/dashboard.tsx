@@ -37,9 +37,13 @@ const Dashboard = () => {
     queryKey: ["/api/photos"],
   });
 
-  // Get user
+  // Get user and stats
   const { data: user } = useQuery({
     queryKey: ["/api/user"],
+  });
+
+  const { data: userStats } = useQuery({
+    queryKey: ["/api/user-stats"],
   });
 
   // Calculate task stats
@@ -50,6 +54,58 @@ const Dashboard = () => {
     pending: tasks?.filter((t: any) => t.status === "pending").length || 0,
     upcoming: 4 // This would normally be calculated based on due dates
   };
+
+  // Generate personalized welcome message
+  const getPersonalizedMessage = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const firstName = user?.name?.split(' ')[0] || 'Student';
+    
+    // Time-based greeting
+    let greeting = "Hello";
+    if (hour < 12) greeting = "Good morning";
+    else if (hour < 17) greeting = "Good afternoon";
+    else greeting = "Good evening";
+
+    // Progress-based encouragement
+    let progressMessage = "";
+    if (taskStats.completed > 0) {
+      progressMessage = `You've completed ${taskStats.completed} task${taskStats.completed > 1 ? 's' : ''} - great work!`;
+    } else if (taskStats.inProgress > 0) {
+      progressMessage = `You have ${taskStats.inProgress} task${taskStats.inProgress > 1 ? 's' : ''} in progress. Keep going!`;
+    } else if (taskStats.total > 0) {
+      progressMessage = "Ready to tackle your tasks? Let's make today productive!";
+    } else {
+      progressMessage = "Ready to start your learning journey? Create your first task!";
+    }
+
+    // Subject diversity message
+    const subjects = [...new Set((tasks || []).map((t: any) => t.subject).filter(Boolean))];
+    let diversityMessage = "";
+    if (subjects.length > 3) {
+      diversityMessage = ` You're exploring ${subjects.length} different subjects - amazing variety!`;
+    } else if (subjects.length > 1) {
+      diversityMessage = ` You're working on ${subjects.join(' and ')} - nice balance!`;
+    }
+
+    // Streak and achievement message
+    let motivationMessage = "";
+    if (userStats?.streak && userStats.streak > 0) {
+      motivationMessage = ` 🔥 ${userStats.streak} day learning streak!`;
+    }
+    if (userStats?.points && userStats.points > 0) {
+      motivationMessage += ` You've earned ${userStats.points} points so far.`;
+    }
+
+    return {
+      greeting: `${greeting}, ${firstName}!`,
+      main: progressMessage,
+      diversity: diversityMessage,
+      motivation: motivationMessage
+    };
+  };
+
+  const welcomeMessage = getPersonalizedMessage();
 
   return (
     <>
@@ -62,19 +118,30 @@ const Dashboard = () => {
       </Helmet>
       
       <div className="space-y-6">
-        {/* Date & Quick Actions */}
-        <div className="flex justify-between items-center flex-col sm:flex-row space-y-4 sm:space-y-0">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">{currentDate}</h2>
-            <p className="text-gray-600">
-              Welcome back, <span>{user?.name?.split(' ')[0] || 'Student'}</span>! Here's your daily overview.
-            </p>
-          </div>
-          <div>
-            <Button onClick={() => setNewTaskDialogOpen(true)}>
-              <PlusIcon className="mr-2 h-4 w-4" />
-              New Task
-            </Button>
+        {/* Personalized Welcome Message */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg text-white p-6">
+          <div className="flex justify-between items-start flex-col sm:flex-row space-y-4 sm:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold mb-2">{welcomeMessage.greeting}</h1>
+              <p className="text-blue-100 text-lg mb-1">{welcomeMessage.main}</p>
+              {welcomeMessage.diversity && (
+                <p className="text-blue-100">{welcomeMessage.diversity}</p>
+              )}
+              {welcomeMessage.motivation && (
+                <p className="text-yellow-200 font-medium">{welcomeMessage.motivation}</p>
+              )}
+              <p className="text-blue-200 text-sm mt-3">{currentDate}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setNewTaskDialogOpen(true)}
+                variant="secondary"
+                className="bg-white text-blue-600 hover:bg-blue-50"
+              >
+                <PlusIcon className="mr-2 h-4 w-4" />
+                New Task
+              </Button>
+            </div>
           </div>
         </div>
 
