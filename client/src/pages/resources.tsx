@@ -158,7 +158,7 @@ const Resources = () => {
       id: "consumer-math",
       title: "Consumer Math - Smart Shopping",
       description: "Calculate discounts, compare prices, and understand sales tax with interactive activities.",
-      url: "https://www.practicalmoneyskills.com/learn/lesson_plans/teens",
+      url: "https://www.practicalmoneyskills.com/",
       category: "life-skills",
       tags: ["shopping", "discounts", "percentages", "taxes", "real-world"],
       icon: <Database className="h-10 w-10 text-purple-600" />
