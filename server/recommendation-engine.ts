@@ -41,42 +41,42 @@ export async function generateRecommendations(userId: number): Promise<LearningR
   // Get all subjects with their colors
   const subjects = await storage.getSubjects(userId);
   
-  // Always include a Minecraft recommendation
-  const minecraftRecommendation: LearningRecommendation = {
-    id: "minecraft_pyramid_challenge",
+  // Always include a creative project recommendation
+  const creativeProjectRecommendation: LearningRecommendation = {
+    id: "creative_building_project",
     type: RecommendationType.CHALLENGE,
-    title: "Minecraft Egyptian Pyramid Challenge",
-    description: "Expand your Minecraft building skills with a historical architecture project.",
-    reason: "Building historical structures in Minecraft combines creativity with learning about ancient civilizations.",
-    suggestedTask: "Build an Egyptian pyramid in Minecraft, complete with interior chambers and hieroglyphics.",
+    title: "Creative Building Project",
+    description: "Challenge yourself with a hands-on creative project that combines learning with making.",
+    reason: "Creative projects help develop problem-solving skills while exploring your interests and passions.",
+    suggestedTask: "Choose a creative project like building something, designing art, or creating a digital project that interests you.",
     relatedSubject: "Interest / Passion",
-    priority: 10,
+    priority: 5,
     resources: [
       {
-        title: "Minecraft Ancient Egypt Tutorial",
-        url: "https://www.youtube.com/watch?v=pOfX8Mw-5bY",
-        description: "Step-by-step tutorial on building Egyptian structures in Minecraft"
+        title: "DIY Project Ideas",
+        url: "https://www.instructables.com/",
+        description: "Step-by-step guides for creative projects and builds"
       },
       {
-        title: "Egyptian Architecture Guide",
-        url: "https://www.worldhistory.org/Egyptian_Architecture/",
-        description: "Learn about authentic Egyptian architecture to inspire your builds"
+        title: "Creative Learning Resources",
+        url: "https://www.khanacademy.org/computing/pixar",
+        description: "Learn creative skills through interactive lessons"
       },
       {
-        title: "Planet Minecraft - Egyptian Builds",
-        url: "https://www.planetminecraft.com/projects/tag/egyptian/",
-        description: "Community builds and inspiration for Egyptian-themed Minecraft projects"
+        title: "Maker Project Gallery",
+        url: "https://www.makerspaces.com/projects/",
+        description: "Community projects and inspiration for hands-on learning"
       }
     ]
   };
   
   // Generate different types of recommendations
   const recommendations: LearningRecommendation[] = [
-    minecraftRecommendation,
     ...await generateSubjectExplorationRecommendations(userId, tasks, subjects),
     ...await generateSkillDevelopmentRecommendations(userId, tasks),
     ...await generateBalanceRecommendations(userId, tasks),
-    ...await generateChallengeRecommendations(userId, tasks)
+    ...await generateChallengeRecommendations(userId, tasks),
+    creativeProjectRecommendation
   ];
   
   // Sort by priority
