@@ -12,13 +12,11 @@ import UserStats from "@/components/dashboard/user-stats";
 import LearningWallet from "@/components/dashboard/learning-wallet-new";
 import LearningRecommendations from "@/components/dashboard/learning-recommendations";
 import TaskForm from "@/components/forms/task-form";
-import NoteForm from "@/components/forms/note-form";
 import PhotoUpload from "@/components/forms/photo-upload";
 import { Helmet } from "react-helmet-async";
 
 const Dashboard = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
-  const [newNoteDialogOpen, setNewNoteDialogOpen] = useState(false);
   const [photoUploadDialogOpen, setPhotoUploadDialogOpen] = useState(false);
 
   // Get current date
@@ -29,9 +27,7 @@ const Dashboard = () => {
     queryKey: ["/api/tasks"],
   });
 
-  const { data: notes, isLoading: isLoadingNotes, refetch: refetchNotes } = useQuery({
-    queryKey: ["/api/notes"],
-  });
+
 
   const { data: photos, isLoading: isLoadingPhotos, refetch: refetchPhotos } = useQuery({
     queryKey: ["/api/photos"],
@@ -240,43 +236,8 @@ const Dashboard = () => {
           <LearningRecommendations />
         </div>
 
-        {/* Notes, Photos, and Rewards Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Notes Section */}
-          <div className="bg-white rounded-lg shadow lg:col-span-1">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900">Recent Notes</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setNewNoteDialogOpen(true)}
-                >
-                  <PlusIcon className="mr-1 h-4 w-4" />
-                  New Note
-                </Button>
-              </div>
-            </div>
-            <div className="p-6">
-              {isLoadingNotes ? (
-                <div className="text-center py-8">Loading notes...</div>
-              ) : notes && notes.length > 0 ? (
-                <div className="space-y-4">
-                  {notes.slice(0, 2).map((note: any) => (
-                    <NoteCard 
-                      key={note.id} 
-                      note={note} 
-                      onNoteUpdate={refetchNotes}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No notes yet. Create your first note!</p>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Photos and Rewards Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Photos Section */}
           <div className="bg-white rounded-lg shadow lg:col-span-1">
@@ -338,21 +299,7 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* New Note Dialog */}
-      <Dialog open={newNoteDialogOpen} onOpenChange={setNewNoteDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New Note</DialogTitle>
-          </DialogHeader>
-          <NoteForm 
-            onSuccess={() => {
-              setNewNoteDialogOpen(false);
-              refetchNotes();
-            }} 
-            onCancel={() => setNewNoteDialogOpen(false)} 
-          />
-        </DialogContent>
-      </Dialog>
+
 
       {/* Photo Upload Dialog */}
       <Dialog open={photoUploadDialogOpen} onOpenChange={setPhotoUploadDialogOpen}>
