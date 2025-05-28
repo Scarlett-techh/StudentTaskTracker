@@ -10,13 +10,13 @@ import { HelmetProvider } from "react-helmet-async";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
-import Notes from "@/pages/notes";
 import Resources from "@/pages/resources";
 import Portfolio from "@/pages/portfolio";
 import Share from "@/pages/share";
 import Parent from "@/pages/parent";
 import Calendar from "@/pages/calendar";
 import Profile from "@/pages/profile";
+import Settings from "@/pages/settings";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Analytics from "@/pages/analytics-new";
@@ -41,13 +41,13 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/tasks" component={Tasks} />
             <Route path="/calendar" component={Calendar} />
-            <Route path="/notes" component={Notes} />
             <Route path="/resources" component={Resources} />
             <Route path="/portfolio" component={Portfolio} />
             <Route path="/analytics" component={Analytics} />
             <Route path="/share" component={Share} />
             <Route path="/parent" component={Parent} />
             <Route path="/profile" component={Profile} />
+            <Route path="/settings" component={Settings} />
             <Route path="/forgot-password" component={ForgotPassword} />
             <Route path="/reset-password/:token" component={ResetPassword} />
             <Route component={NotFound} />
