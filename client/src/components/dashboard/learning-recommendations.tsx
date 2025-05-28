@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   Card, 
   CardContent, 
@@ -25,6 +25,8 @@ import {
   Trophy 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 // Define types based on our API
 interface Resource {
@@ -94,6 +96,42 @@ export const LearningRecommendations = () => {
   const { data: recommendations, isLoading, error } = useQuery<LearningRecommendation[]>({
     queryKey: ['/api/recommendations'],
   });
+
+  const { toast } = useToast();
+
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      return apiRequest('/api/tasks', taskData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      toast({
+        title: "Task Created",
+        description: "Learning recommendation added to your tasks successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddToTasks = (recommendation: LearningRecommendation) => {
+    const taskData = {
+      title: recommendation.title,
+      description: recommendation.suggestedTask || recommendation.description,
+      subject: recommendation.relatedSubject || "Interest / Passion",
+      resourceLink: recommendation.resources?.[0]?.url || null,
+      status: "pending",
+      dueDate: null,
+      dueTime: null,
+    };
+
+    createTaskMutation.mutate(taskData);
+  };
 
   if (isLoading) {
     return (
@@ -204,8 +242,13 @@ export const LearningRecommendations = () => {
                     )}
                     
                     <div className="flex justify-end mt-4">
-                      <Button variant="ghost" size="sm">
-                        Add to tasks
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleAddToTasks(recommendation)}
+                        disabled={createTaskMutation.isPending}
+                      >
+                        {createTaskMutation.isPending ? "Adding..." : "Add to tasks"}
                       </Button>
                     </div>
                   </div>
