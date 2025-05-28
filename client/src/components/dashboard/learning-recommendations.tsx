@@ -101,7 +101,8 @@ export const LearningRecommendations = () => {
 
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
-      return apiRequest('/api/tasks', taskData);
+      const response = await apiRequest('POST', '/api/tasks', taskData);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
