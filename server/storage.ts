@@ -88,6 +88,7 @@ export class MemStorage implements IStorage {
   private achievements: Map<number, Achievement>;
   private userAchievements: Map<number, UserAchievement>;
   private pointsHistory: Map<number, PointsHistory>;
+  private moodEntries: Map<number, MoodEntry>;
 
   
   private userCurrentId: number;
@@ -99,6 +100,7 @@ export class MemStorage implements IStorage {
   private achievementCurrentId: number;
   private userAchievementCurrentId: number;
   private pointsHistoryCurrentId: number;
+  private moodEntryCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -110,6 +112,7 @@ export class MemStorage implements IStorage {
     this.achievements = new Map();
     this.userAchievements = new Map();
     this.pointsHistory = new Map();
+    this.moodEntries = new Map();
     
     this.userCurrentId = 1;
     this.taskCurrentId = 1;
@@ -120,6 +123,7 @@ export class MemStorage implements IStorage {
     this.achievementCurrentId = 1;
     this.userAchievementCurrentId = 1;
     this.pointsHistoryCurrentId = 1;
+    this.moodEntryCurrentId = 1;
     
     // Initialize default achievements
     this.initializeAchievements();
@@ -647,6 +651,31 @@ export class MemStorage implements IStorage {
       completedToday,
       pendingTasks
     };
+  }
+
+  // Mood tracking methods
+  async getMoodEntries(userId: number): Promise<MoodEntry[]> {
+    return Array.from(this.moodEntries.values()).filter(entry => entry.userId === userId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  async getTodaysMood(userId: number): Promise<MoodEntry | undefined> {
+    const today = new Date().toDateString();
+    return Array.from(this.moodEntries.values())
+      .find(entry => entry.userId === userId && new Date(entry.date).toDateString() === today);
+  }
+
+  async createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry> {
+    const id = this.moodEntryCurrentId++;
+    const newMoodEntry: MoodEntry = {
+      ...moodEntry,
+      id,
+      note: moodEntry.note || null,
+      date: new Date(),
+      createdAt: new Date(),
+    };
+    this.moodEntries.set(id, newMoodEntry);
+    return newMoodEntry;
   }
 }
 

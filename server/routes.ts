@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTaskSchema, insertNoteSchema, insertPhotoSchema, insertTaskAttachmentSchema, insertSubjectSchema } from "@shared/schema";
+import { insertTaskSchema, insertNoteSchema, insertPhotoSchema, insertTaskAttachmentSchema, insertSubjectSchema, insertMoodEntrySchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -734,6 +734,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = 1; // Hardcoded for demo
       const user = await storage.updateUserStreak(userId);
       res.json({ success: true, streak: user?.streak || 0 });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // == Mood Tracking Routes ==
+  
+  // Get all mood entries for a user
+  app.get("/api/mood-entries", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const moodEntries = await storage.getMoodEntries(userId);
+      res.json(moodEntries);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // Get today's mood entry for a user
+  app.get("/api/mood-entries/today", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const todaysMood = await storage.getTodaysMood(userId);
+      res.json(todaysMood || null);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // Create a new mood entry
+  app.post("/api/mood-entries", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Hardcoded for demo
+      const moodData = insertMoodEntrySchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const moodEntry = await storage.createMoodEntry(moodData);
+      res.status(201).json(moodEntry);
     } catch (err: any) {
       handleError(err, res);
     }
