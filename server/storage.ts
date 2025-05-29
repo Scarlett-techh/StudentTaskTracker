@@ -122,6 +122,7 @@ export class MemStorage implements IStorage {
       password: 'password123',
       name: 'Emma Wilson',
       avatar: '',
+      email: 'emma.wilson@student.example.com',
     });
     
     // Create demo subjects
