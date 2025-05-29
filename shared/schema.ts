@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -248,8 +248,28 @@ export const insertDailyNotificationSchema = createInsertSchema(dailyNotificatio
   pointsEarned: true,
 });
 
+export const moodEntries = pgTable("mood_entries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  moodType: varchar("mood_type").notNull(), // happy, tired, bored, excited, stressed, focused, etc.
+  intensity: integer("intensity").notNull(), // 1-5 scale
+  note: text("note"), // optional note about their mood
+  date: timestamp("date").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMoodEntrySchema = createInsertSchema(moodEntries).pick({
+  userId: true,
+  moodType: true,
+  intensity: true,
+  note: true,
+});
+
 export type CoachStudent = typeof coachStudents.$inferSelect;
 export type InsertCoachStudent = z.infer<typeof insertCoachStudentSchema>;
 
 export type DailyNotification = typeof dailyNotifications.$inferSelect;
 export type InsertDailyNotification = z.infer<typeof insertDailyNotificationSchema>;
+
+export type MoodEntry = typeof moodEntries.$inferSelect;
+export type InsertMoodEntry = z.infer<typeof insertMoodEntrySchema>;

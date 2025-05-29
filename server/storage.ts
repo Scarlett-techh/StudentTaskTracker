@@ -1,6 +1,6 @@
 import {
   users, tasks, notes, photos, taskAttachments, subjects, 
-  achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications,
+  achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications, moodEntries,
   type User, type InsertUser,
   type Task, type InsertTask,
   type Note, type InsertNote,
@@ -11,7 +11,8 @@ import {
   type UserAchievement, type InsertUserAchievement,
   type PointsHistory, type InsertPointsHistory,
   type CoachStudent, type InsertCoachStudent,
-  type DailyNotification, type InsertDailyNotification
+  type DailyNotification, type InsertDailyNotification,
+  type MoodEntry, type InsertMoodEntry
 } from "@shared/schema";
 
 export interface IStorage {
@@ -70,6 +71,11 @@ export interface IStorage {
   getCoachesByEmail(email: string): Promise<User[]>;
   getCoachStudents(coachId: number): Promise<User[]>;
   getCoachStats(coachId: number): Promise<{ totalStudents: number, tasksAssigned: number, completedToday: number, pendingTasks: number }>;
+
+  // Mood tracking methods
+  getMoodEntries(userId: number): Promise<MoodEntry[]>;
+  getTodaysMood(userId: number): Promise<MoodEntry | undefined>;
+  createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry>;
 }
 
 export class MemStorage implements IStorage {
