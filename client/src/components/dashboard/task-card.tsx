@@ -211,12 +211,16 @@ const TaskCard: FC<TaskCardProps> = ({
                   />
                 </div>
                 <div>
-                  <h4 className={cn(
-                    "text-sm sm:text-base font-medium",
-                    task.status === 'completed' 
-                      ? "line-through text-gray-500" 
-                      : "text-gray-900 font-semibold"
-                  )}>
+                  <h4 
+                    className={cn(
+                      "text-sm sm:text-base font-medium",
+                      task.status === 'completed' 
+                        ? "line-through text-gray-500" 
+                        : "text-gray-900 font-semibold",
+                      task.isCoachTask && "cursor-pointer hover:text-blue-600 transition-colors"
+                    )}
+                    onClick={task.isCoachTask ? () => setEditDialogOpen(true) : undefined}
+                  >
                     {task.title}
                   </h4>
                   <div className="mt-1 flex items-center flex-wrap gap-2">

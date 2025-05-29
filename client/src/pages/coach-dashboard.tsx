@@ -168,7 +168,64 @@ const CoachDashboard = () => {
                                   </div>
                                 ))
                               ) : (
-                                <p className="text-gray-500">No students available. Students will appear here once you assign them tasks.</p>
+                                <div className="space-y-2">
+                                  <p className="text-gray-500 text-sm">No students found. Add a student by email:</p>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      placeholder="student@example.com"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          const email = e.currentTarget.value.trim();
+                                          if (email && email.includes('@')) {
+                                            const updatedValue = [...(field.value || []), email];
+                                            field.onChange(updatedValue);
+                                            setSelectedStudents(updatedValue);
+                                            e.currentTarget.value = '';
+                                          }
+                                        }
+                                      }}
+                                    />
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                        const email = input.value.trim();
+                                        if (email && email.includes('@')) {
+                                          const updatedValue = [...(field.value || []), email];
+                                          field.onChange(updatedValue);
+                                          setSelectedStudents(updatedValue);
+                                          input.value = '';
+                                        }
+                                      }}
+                                    >
+                                      Add
+                                    </Button>
+                                  </div>
+                                  {field.value && field.value.length > 0 && (
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-medium">Selected students:</p>
+                                      {field.value.map((email: string) => (
+                                        <div key={email} className="flex items-center justify-between bg-blue-50 px-2 py-1 rounded">
+                                          <span className="text-sm">{email}</span>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                              const updatedValue = field.value.filter((e: string) => e !== email);
+                                              field.onChange(updatedValue);
+                                              setSelectedStudents(updatedValue);
+                                            }}
+                                          >
+                                            ×
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </FormControl>
