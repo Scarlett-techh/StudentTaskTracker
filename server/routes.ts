@@ -771,6 +771,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Student not found with that email address" });
       }
       
+      // Get coach ID (in a real app, this would come from session)
+      const coachId = 2; // Using coach ID 2 for the demo coach account
+      
       // Create coach task
       const task = await storage.createTask({
         title,
@@ -782,7 +785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: dueDate || null,
         dueTime: dueTime || null,
         userId: student.id,
-        assignedByCoachId: 1,
+        assignedByCoachId: coachId,
         isCoachTask: true,
         order: 0,
       });
@@ -795,7 +798,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/coach/students", async (req: Request, res: Response) => {
     try {
-      res.json([]);
+      const coachId = 2; // Using coach ID 2 for the demo coach account
+      const students = await storage.getCoachStudents(coachId);
+      res.json(students);
     } catch (error) {
       handleError(error, res);
     }
@@ -803,12 +808,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/coach/stats", async (req: Request, res: Response) => {
     try {
-      res.json({
-        totalStudents: 0,
-        tasksAssigned: 0,
-        completedToday: 0,
-        pendingTasks: 0
-      });
+      const coachId = 2; // Using coach ID 2 for the demo coach account
+      const stats = await storage.getCoachStats(coachId);
+      res.json(stats);
     } catch (error) {
       handleError(error, res);
     }

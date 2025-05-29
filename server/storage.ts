@@ -66,8 +66,10 @@ export interface IStorage {
   updateUserStreak(userId: number): Promise<User | undefined>;
   getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }>;
 
-  // Coach-Student methods (basic implementation for now)
+  // Coach-Student methods
   getCoachesByEmail(email: string): Promise<User[]>;
+  getCoachStudents(coachId: number): Promise<User[]>;
+  getCoachStats(coachId: number): Promise<{ totalStudents: number, tasksAssigned: number, completedToday: number, pendingTasks: number }>;
 }
 
 export class MemStorage implements IStorage {
@@ -587,6 +589,58 @@ export class MemStorage implements IStorage {
     for (const achievement of defaultAchievements) {
       await this.createAchievement(achievement);
     }
+  }
+
+  async getCoachesByEmail(email: string): Promise<User[]> {
+    return Array.from(this.users.values()).filter(user => 
+      user.email === email
+    );
+  }
+
+  async getCoachStudents(coachId: number): Promise<User[]> {
+    // Get all students who have tasks assigned by this coach
+    const studentsWithCoachTasks = new Set<number>();
+    
+    Array.from(this.tasks.values()).forEach(task => {
+      if (task.assignedByCoachId === coachId) {
+        studentsWithCoachTasks.add(task.userId);
+      }
+    });
+
+    return Array.from(this.users.values()).filter(user => 
+      studentsWithCoachTasks.has(user.id)
+    );
+  }
+
+  async getCoachStats(coachId: number): Promise<{ totalStudents: number, tasksAssigned: number, completedToday: number, pendingTasks: number }> {
+    const coachTasks = Array.from(this.tasks.values()).filter(task => 
+      task.assignedByCoachId === coachId
+    );
+    
+    const studentsWithCoachTasks = new Set<number>();
+    let completedToday = 0;
+    let pendingTasks = 0;
+    
+    const today = new Date().toDateString();
+    
+    coachTasks.forEach(task => {
+      studentsWithCoachTasks.add(task.userId);
+      
+      if (task.status === 'completed' && task.updatedAt && new Date(task.updatedAt).toDateString() === today) {
+        completedToday++;
+      }
+      
+      if (task.status === 'pending') {
+        pendingTasks++;
+      }
+    });
+
+    return {
+      totalStudents: studentsWithCoachTasks.size,
+      tasksAssigned: coachTasks.length,
+      completedToday,
+      pendingTasks
+    };
   }
 }
 
