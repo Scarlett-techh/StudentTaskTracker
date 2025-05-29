@@ -763,34 +763,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/coach/assign-task", async (req: Request, res: Response) => {
     try {
-      const { studentEmail, title, description, subject, resourceLink, dueDate, dueTime } = req.body;
+      const { selectedStudents, title, description, subject, resourceLink, dueDate, dueTime } = req.body;
       
-      // Find student by email
-      const student = await storage.getUserByEmail(studentEmail);
-      if (!student) {
-        return res.status(404).json({ error: "Student not found with that email address" });
+      if (!selectedStudents || !Array.isArray(selectedStudents) || selectedStudents.length === 0) {
+        return res.status(400).json({ error: "Please select at least one student" });
       }
       
       // Get coach ID (in a real app, this would come from session)
       const coachId = 2; // Using coach ID 2 for the demo coach account
       
-      // Create coach task
-      const task = await storage.createTask({
-        title,
-        description: description || null,
-        subject: subject || null,
-        resourceLink: resourceLink || null,
-        category: "brain", // Default category since it's required by the schema
-        status: "pending",
-        dueDate: dueDate || null,
-        dueTime: dueTime || null,
-        userId: student.id,
-        assignedByCoachId: coachId,
-        isCoachTask: true,
-        order: 0,
-      });
+      const createdTasks = [];
       
-      res.json(task);
+      // Create task for each selected student
+      for (const studentEmail of selectedStudents) {
+        // Find student by email
+        const student = await storage.getUserByEmail(studentEmail);
+        if (student) {
+          // Create coach task
+          const task = await storage.createTask({
+            title,
+            description: description || null,
+            subject: subject || null,
+            resourceLink: resourceLink || null,
+            category: "brain", // Default category since it's required by the schema
+            status: "pending",
+            dueDate: dueDate || null,
+            dueTime: dueTime || null,
+            userId: student.id,
+            assignedByCoachId: coachId,
+            isCoachTask: true,
+            order: 0,
+          });
+          createdTasks.push(task);
+        }
+      }
+      
+      res.json({ 
+        message: `Task assigned to ${createdTasks.length} student(s)`,
+        tasks: createdTasks 
+      });
     } catch (error) {
       handleError(error, res);
     }

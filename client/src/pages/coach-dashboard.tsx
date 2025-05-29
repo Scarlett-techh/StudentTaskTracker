@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,7 +24,7 @@ const assignTaskSchema = z.object({
   resourceLink: z.string().url().optional().or(z.literal("")),
   dueDate: z.string().optional(),
   dueTime: z.string().optional(),
-  studentEmail: z.string().email("Valid email is required"),
+  selectedStudents: z.array(z.string()).min(1, "Please select at least one student"),
 });
 
 type AssignTaskForm = z.infer<typeof assignTaskSchema>;
@@ -31,6 +32,7 @@ type AssignTaskForm = z.infer<typeof assignTaskSchema>;
 const CoachDashboard = () => {
   const { toast } = useToast();
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   const form = useForm<AssignTaskForm>({
     resolver: zodResolver(assignTaskSchema),
@@ -41,7 +43,7 @@ const CoachDashboard = () => {
       resourceLink: "",
       dueDate: "",
       dueTime: "",
-      studentEmail: "",
+      selectedStudents: [],
     },
   });
 
@@ -138,12 +140,37 @@ const CoachDashboard = () => {
                     
                     <FormField
                       control={form.control}
-                      name="studentEmail"
+                      name="selectedStudents"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Student Email *</FormLabel>
+                        <FormItem className="col-span-2">
+                          <FormLabel>Select Students *</FormLabel>
                           <FormControl>
-                            <Input placeholder="student@example.com" {...field} />
+                            <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
+                              {studentsLoading ? (
+                                <p className="text-gray-500">Loading students...</p>
+                              ) : students && students.length > 0 ? (
+                                students.map((student: any) => (
+                                  <div key={student.email} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={student.email}
+                                      checked={field.value?.includes(student.email) || false}
+                                      onCheckedChange={(checked) => {
+                                        const updatedValue = checked
+                                          ? [...(field.value || []), student.email]
+                                          : (field.value || []).filter((email: string) => email !== student.email);
+                                        field.onChange(updatedValue);
+                                        setSelectedStudents(updatedValue);
+                                      }}
+                                    />
+                                    <Label htmlFor={student.email} className="text-sm font-normal">
+                                      {student.name || student.username} ({student.email})
+                                    </Label>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-gray-500">No students available. Students will appear here once you assign them tasks.</p>
+                              )}
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
