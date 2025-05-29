@@ -22,7 +22,7 @@ const MobileNav = ({ currentPath }: MobileNavProps) => {
     { href: "/calendar", icon: <Calendar className="h-5 w-5" />, label: "Calendar" },
     { href: "/resources", icon: <BarChart2 className="h-5 w-5" />, label: "Resources" },
     { href: "/portfolio", icon: <Award className="h-5 w-5" />, label: "Portfolio" },
-    { href: "/share", icon: <Send className="h-5 w-5" />, label: "Share" },
+    { href: "/coach/login", icon: <Users className="h-5 w-5" />, label: "Coach" },
   ];
 
   return (

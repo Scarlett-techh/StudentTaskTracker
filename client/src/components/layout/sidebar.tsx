@@ -30,7 +30,7 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
     { href: "/portfolio", icon: <Award className="mr-3 h-5 w-5" />, label: "Portfolio" },
     { href: "/analytics", icon: <BarChart2 className="mr-3 h-5 w-5" />, label: "Analytics" },
     { href: "/share", icon: <Send className="mr-3 h-5 w-5" />, label: "Share Work" },
-    { href: "/parent", icon: <Users className="mr-3 h-5 w-5" />, label: "Parent Access" },
+    { href: "/coach/login", icon: <Users className="mr-3 h-5 w-5" />, label: "Coach Portal" },
     { href: "/settings", icon: <Settings className="mr-3 h-5 w-5" />, label: "Settings" },
   ];
 
