@@ -1,6 +1,6 @@
 import {
   users, tasks, notes, photos, taskAttachments, subjects, 
-  achievements, userAchievements, pointsHistory,
+  achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications,
   type User, type InsertUser,
   type Task, type InsertTask,
   type Note, type InsertNote,
@@ -9,7 +9,9 @@ import {
   type Subject, type InsertSubject,
   type Achievement, type InsertAchievement,
   type UserAchievement, type InsertUserAchievement,
-  type PointsHistory, type InsertPointsHistory
+  type PointsHistory, type InsertPointsHistory,
+  type CoachStudent, type InsertCoachStudent,
+  type DailyNotification, type InsertDailyNotification
 } from "@shared/schema";
 
 export interface IStorage {
@@ -63,6 +65,9 @@ export interface IStorage {
   getPointsHistory(userId: number): Promise<PointsHistory[]>;
   updateUserStreak(userId: number): Promise<User | undefined>;
   getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }>;
+
+  // Coach-Student methods (basic implementation for now)
+  getCoachesByEmail(email: string): Promise<User[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -75,6 +80,8 @@ export class MemStorage implements IStorage {
   private achievements: Map<number, Achievement>;
   private userAchievements: Map<number, UserAchievement>;
   private pointsHistory: Map<number, PointsHistory>;
+  private coachStudents: Map<number, CoachStudent>;
+  private dailyNotifications: Map<number, DailyNotification>;
   
   private userCurrentId: number;
   private taskCurrentId: number;

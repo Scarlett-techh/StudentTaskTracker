@@ -16,6 +16,15 @@ export const users = pgTable("users", {
   level: integer("level").notNull().default(1),
   streak: integer("streak").notNull().default(0),
   lastActiveDate: timestamp("last_active_date"),
+  userType: text("user_type").notNull().default("student"), // "student" or "coach"
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Coach-Student relationship
+export const coachStudents = pgTable("coach_students", {
+  id: serial("id").primaryKey(),
+  coachId: integer("coach_id").notNull(),
+  studentId: integer("student_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -39,6 +48,8 @@ export const tasks = pgTable("tasks", {
   dueDate: text("due_date"),
   dueTime: text("due_time"),
   userId: integer("user_id").notNull(),
+  assignedByCoachId: integer("assigned_by_coach_id"), // null for self-created tasks
+  isCoachTask: boolean("is_coach_task").notNull().default(false),
   order: integer("order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -53,6 +64,8 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   dueDate: true,
   dueTime: true,
   userId: true,
+  assignedByCoachId: true,
+  isCoachTask: true,
   order: true,
 });
 
@@ -208,3 +221,35 @@ export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 
 export type PointsHistory = typeof pointsHistory.$inferSelect;
 export type InsertPointsHistory = z.infer<typeof insertPointsHistorySchema>;
+
+// Daily notification tracking
+export const dailyNotifications = pgTable("daily_notifications", {
+  id: serial("id").primaryKey(),
+  coachId: integer("coach_id").notNull(),
+  studentId: integer("student_id").notNull(),
+  notificationDate: text("notification_date").notNull(), // YYYY-MM-DD format
+  emailSent: boolean("email_sent").notNull().default(false),
+  tasksCompleted: integer("tasks_completed").notNull().default(0),
+  pointsEarned: integer("points_earned").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertCoachStudentSchema = createInsertSchema(coachStudents).pick({
+  coachId: true,
+  studentId: true,
+});
+
+export const insertDailyNotificationSchema = createInsertSchema(dailyNotifications).pick({
+  coachId: true,
+  studentId: true,
+  notificationDate: true,
+  emailSent: true,
+  tasksCompleted: true,
+  pointsEarned: true,
+});
+
+export type CoachStudent = typeof coachStudents.$inferSelect;
+export type InsertCoachStudent = z.infer<typeof insertCoachStudentSchema>;
+
+export type DailyNotification = typeof dailyNotifications.$inferSelect;
+export type InsertDailyNotification = z.infer<typeof insertDailyNotificationSchema>;
