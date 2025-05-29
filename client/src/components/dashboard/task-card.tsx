@@ -33,6 +33,8 @@ interface TaskCardProps {
     dueDate?: string;
     dueTime?: string;
     order: number;
+    isCoachTask?: boolean;
+    assignedByCoachId?: number;
   };
   onTaskUpdate?: () => void;
   isDraggable?: boolean;
@@ -233,6 +235,14 @@ const TaskCard: FC<TaskCardProps> = ({
                         )}
                       >
                         {task.subject}
+                      </Badge>
+                    )}
+                    {task.isCoachTask && (
+                      <Badge 
+                        variant="outline" 
+                        className="bg-blue-50 text-blue-700 border-blue-200 font-medium"
+                      >
+                        Coach Assignment
                       </Badge>
                     )}
                     <Badge 
