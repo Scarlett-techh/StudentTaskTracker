@@ -10,7 +10,8 @@ import {
   AlertCircle, 
   Menu as MenuIcon,
   Share2,
-  Paperclip
+  Paperclip,
+  ExternalLink
 } from "lucide-react";
 import ShareTaskModal from "./share-task-modal";
 import TaskAttachmentSimple from "./task-attachment-simple";
@@ -30,6 +31,7 @@ interface TaskCardProps {
     status: string;
     category?: string;
     subject?: string;
+    resourceLink?: string;
     dueDate?: string;
     dueTime?: string;
     order: number;
@@ -273,6 +275,20 @@ const TaskCard: FC<TaskCardProps> = ({
                     : "text-gray-600"
                 )}>
                   {task.description}
+                </div>
+              )}
+              
+              {task.resourceLink && (
+                <div className="mt-2 pl-8">
+                  <a 
+                    href={task.resourceLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded-lg border border-blue-200 transition-all text-sm font-medium hover:shadow-sm"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open Resource Link
+                  </a>
                 </div>
               )}
             </div>
