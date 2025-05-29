@@ -60,10 +60,8 @@ const CoachDashboard = () => {
 
   const assignTaskMutation = useMutation({
     mutationFn: async (data: AssignTaskForm) => {
-      return apiRequest('/api/coach/assign-task', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest('POST', '/api/coach/assign-task', data);
+      return response.json();
     },
     onSuccess: () => {
       toast({

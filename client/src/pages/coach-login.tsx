@@ -35,10 +35,8 @@ const CoachLogin = () => {
 
   const loginMutation = useMutation({
     mutationFn: async (data: CoachLoginForm) => {
-      return apiRequest('/api/coach/login', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest('POST', '/api/coach/login', data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
