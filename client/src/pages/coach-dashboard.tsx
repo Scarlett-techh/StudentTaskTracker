@@ -16,6 +16,7 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, BookOpen, CheckCircle, Clock, Target } from "lucide-react";
+import { StudentMoodOverview } from "@/components/coach/student-mood-overview";
 
 const assignTaskSchema = z.object({
   title: z.string().min(1, "Task title is required"),
@@ -394,6 +395,11 @@ const CoachDashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Student Moods Overview */}
+        <div className="mb-8">
+          <StudentMoodOverview />
         </div>
 
         {/* Students List */}

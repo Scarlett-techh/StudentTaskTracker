@@ -76,6 +76,7 @@ export interface IStorage {
   getMoodEntries(userId: number): Promise<MoodEntry[]>;
   getTodaysMood(userId: number): Promise<MoodEntry | undefined>;
   createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry>;
+  getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -676,6 +677,26 @@ export class MemStorage implements IStorage {
     };
     this.moodEntries.set(id, newMoodEntry);
     return newMoodEntry;
+  }
+
+  async getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]> {
+    const today = new Date().toDateString();
+    const todaysMoods: (MoodEntry & { studentName: string })[] = [];
+    
+    for (const studentId of studentIds) {
+      const mood = Array.from(this.moodEntries.values())
+        .find(entry => entry.userId === studentId && new Date(entry.date).toDateString() === today);
+      
+      if (mood) {
+        const student = this.users.get(studentId);
+        todaysMoods.push({
+          ...mood,
+          studentName: student?.name || student?.username || 'Unknown Student'
+        });
+      }
+    }
+    
+    return todaysMoods;
   }
 }
 

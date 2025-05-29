@@ -779,6 +779,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get students' moods for coaches
+  app.get("/api/coach/students-moods", async (req: Request, res: Response) => {
+    try {
+      const coachId = 1; // Hardcoded for demo
+      const students = await storage.getCoachStudents(coachId);
+      const studentIds = students.map(student => student.id);
+      const studentsMoods = await storage.getStudentsMoodsToday(studentIds);
+      res.json(studentsMoods);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
   // Coach routes
   app.post("/api/coach/login", async (req: Request, res: Response) => {
     try {
