@@ -80,8 +80,7 @@ export class MemStorage implements IStorage {
   private achievements: Map<number, Achievement>;
   private userAchievements: Map<number, UserAchievement>;
   private pointsHistory: Map<number, PointsHistory>;
-  private coachStudents: Map<number, CoachStudent>;
-  private dailyNotifications: Map<number, DailyNotification>;
+
   
   private userCurrentId: number;
   private taskCurrentId: number;

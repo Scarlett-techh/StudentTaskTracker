@@ -20,6 +20,8 @@ import Settings from "@/pages/settings";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Analytics from "@/pages/analytics-new";
+import CoachLogin from "@/pages/coach-login";
+import CoachDashboard from "@/pages/coach-dashboard";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -29,6 +31,18 @@ import Footer from "@/components/layout/footer";
 function Router() {
   const [location] = useLocation();
   
+  // Coach routes (no layout)
+  if (location.startsWith('/coach')) {
+    return (
+      <Switch>
+        <Route path="/coach/login" component={CoachLogin} />
+        <Route path="/coach/dashboard" component={CoachDashboard} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+  
+  // Student routes (with layout)
   return (
     <div className="min-h-screen flex flex-col">
       <Header />

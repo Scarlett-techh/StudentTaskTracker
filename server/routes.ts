@@ -739,6 +739,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Coach routes
+  app.post("/api/coach/login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      
+      // For demo, create a coach account
+      let coach = await storage.getUserByUsername(username);
+      if (!coach) {
+        coach = await storage.createUser({
+          username,
+          password,
+          name: "Learning Coach",
+          email: `${username}@coach.example.com`,
+        });
+      }
+      
+      res.json({ success: true, coach: { id: coach.id, name: coach.name, username: coach.username } });
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  app.post("/api/coach/assign-task", async (req: Request, res: Response) => {
+    try {
+      const { studentEmail, title, description, subject, resourceLink, category, dueDate, dueTime } = req.body;
+      
+      // Find student by email
+      const student = await storage.getUserByEmail(studentEmail);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found with that email address" });
+      }
+      
+      // Create coach task
+      const task = await storage.createTask({
+        title,
+        description: description || null,
+        subject: subject || null,
+        resourceLink: resourceLink || null,
+        category: category || "brain",
+        status: "pending",
+        dueDate: dueDate || null,
+        dueTime: dueTime || null,
+        userId: student.id,
+        assignedByCoachId: 1,
+        isCoachTask: true,
+        order: 0,
+      });
+      
+      res.json(task);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  app.get("/api/coach/students", async (req: Request, res: Response) => {
+    try {
+      res.json([]);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  app.get("/api/coach/stats", async (req: Request, res: Response) => {
+    try {
+      res.json({
+        totalStudents: 0,
+        tasksAssigned: 0,
+        completedToday: 0,
+        pendingTasks: 0
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
