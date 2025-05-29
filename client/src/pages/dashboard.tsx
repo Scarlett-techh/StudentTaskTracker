@@ -11,6 +11,7 @@ import PhotoThumbnail from "@/components/dashboard/photo-thumbnail";
 import UserStats from "@/components/dashboard/user-stats";
 import LearningWallet from "@/components/dashboard/learning-wallet-new";
 import LearningRecommendations from "@/components/dashboard/learning-recommendations";
+import { MoodTracker } from "@/components/dashboard/mood-tracker";
 import TaskForm from "@/components/forms/task-form";
 import PhotoUpload from "@/components/forms/photo-upload";
 import { Helmet } from "react-helmet-async";
@@ -170,6 +171,9 @@ const Dashboard = () => {
             />
           </div>
         </div>
+
+        {/* Mood Tracker Section */}
+        <MoodTracker />
 
         {/* Tasks Section */}
         <div className="bg-white rounded-lg shadow">
