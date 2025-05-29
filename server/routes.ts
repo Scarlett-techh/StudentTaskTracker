@@ -763,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/coach/assign-task", async (req: Request, res: Response) => {
     try {
-      const { studentEmail, title, description, subject, resourceLink, category, dueDate, dueTime } = req.body;
+      const { studentEmail, title, description, subject, resourceLink, dueDate, dueTime } = req.body;
       
       // Find student by email
       const student = await storage.getUserByEmail(studentEmail);
@@ -777,7 +777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || null,
         subject: subject || null,
         resourceLink: resourceLink || null,
-        category: category || "brain",
+        category: "brain", // Default category since it's required by the schema
         status: "pending",
         dueDate: dueDate || null,
         dueTime: dueTime || null,

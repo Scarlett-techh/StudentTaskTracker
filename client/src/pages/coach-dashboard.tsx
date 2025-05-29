@@ -21,7 +21,6 @@ const assignTaskSchema = z.object({
   description: z.string().optional(),
   subject: z.string().optional(),
   resourceLink: z.string().url().optional().or(z.literal("")),
-  category: z.enum(["brain", "body", "space"]),
   dueDate: z.string().optional(),
   dueTime: z.string().optional(),
   studentEmail: z.string().email("Valid email is required"),
@@ -40,7 +39,6 @@ const CoachDashboard = () => {
       description: "",
       subject: "",
       resourceLink: "",
-      category: "brain",
       dueDate: "",
       dueTime: "",
       studentEmail: "",
@@ -197,30 +195,7 @@ const CoachDashboard = () => {
                     )}
                   />
                   
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="brain">Brain (Academic)</SelectItem>
-                              <SelectItem value="body">Body (Physical)</SelectItem>
-                              <SelectItem value="space">Space (Creative)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="dueDate"
