@@ -300,8 +300,8 @@ export default function LearningWallet() {
                       <CardTitle className="text-lg">{certificate.name}</CardTitle>
                     </div>
                     {certificate.unlocked && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        Unlocked!
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1 flex-shrink-0">
+                        Unlocked
                       </Badge>
                     )}
                   </div>
@@ -312,10 +312,13 @@ export default function LearningWallet() {
                     <Button 
                       onClick={() => downloadCertificateMutation.mutate(certificate.id)}
                       disabled={downloadCertificateMutation.isPending}
-                      className="w-full"
+                      className="w-full text-sm px-2 py-2"
+                      size="sm"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      {downloadCertificateMutation.isPending ? "Generating..." : "Download Certificate"}
+                      <Download className="h-4 w-4 mr-1 flex-shrink-0" />
+                      <span className="truncate">
+                        {downloadCertificateMutation.isPending ? "Generating..." : "Download"}
+                      </span>
                     </Button>
                   ) : (
                     <div className="text-center text-gray-500">
