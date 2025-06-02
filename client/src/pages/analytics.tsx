@@ -1,21 +1,9 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { apiRequest } from "@/lib/queryClient";
 import { 
   BarChart, 
   Bar, 
@@ -23,32 +11,18 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  Legend, 
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar
+  Cell
 } from "recharts";
 import { 
-  DownloadIcon, 
+  FileTextIcon, 
+  Share2, 
   TrendingUpIcon, 
   BookOpenIcon, 
   CheckCircleIcon, 
-  ClockIcon, 
-  BrainIcon, 
-  Share2, 
-  PlusIcon, 
-  SendIcon, 
-  FileTextIcon, 
-  PenToolIcon,
-  School,
-  TargetIcon,
-  ActivityIcon
+  ClockIcon
 } from "lucide-react";
 
 export default function Analytics() {
@@ -78,6 +52,68 @@ export default function Analytics() {
     queryKey: ["/api/notes"],
   });
   
+  // Handle export PDF functionality
+  const handleExportPDF = () => {
+    toast({
+      title: "Exporting PDF",
+      description: "Your analytics report is being generated...",
+    });
+    
+    // Create a simplified text-based report
+    const reportData = generateReportData();
+    const blob = new Blob([reportData], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `learning-analytics-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle share report functionality
+  const handleShareReport = () => {
+    const reportData = generateReportData();
+    
+    if (navigator.share) {
+      navigator.share({
+        title: 'Learning Analytics Report',
+        text: reportData,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(reportData);
+      toast({
+        title: "Report Copied",
+        description: "Report data copied to clipboard for sharing",
+      });
+    }
+  };
+
+  // Generate report data
+  const generateReportData = () => {
+    const totalTasks = Array.isArray(tasks) ? tasks.length : 0;
+    const completedTasksCount = completedTasks.length;
+    const subjectBreakdown = Object.keys(tasksBySubject).map(subject => 
+      `${subject}: ${tasksBySubject[subject].length} tasks`
+    ).join('\n');
+    
+    return `Learning Analytics Report
+Generated: ${new Date().toLocaleDateString()}
+
+Summary:
+- Total Tasks: ${totalTasks}
+- Completed Tasks: ${completedTasksCount}
+- Current Level: ${stats?.level || 1}
+- Current Points: ${stats?.points || 0}
+- Streak: ${stats?.streak || 0} days
+
+Subject Breakdown:
+${subjectBreakdown}
+
+This report shows progress across all learning activities.`;
+  };
+
   // Simulate AI-generated insights based on student data
   const generateParentInsights = () => {
     setParentInsightsLoading(true);
@@ -89,7 +125,7 @@ export default function Analytics() {
   };
   
   // Filter completed tasks
-  const completedTasks = tasks ? tasks.filter((task: any) => task.status === 'completed') : [];
+  const completedTasks = Array.isArray(tasks) ? tasks.filter((task: any) => task.status === 'completed') : [];
   
   // Group tasks by subject - this will be used across the component
   const tasksBySubject = completedTasks.reduce((acc: any, task: any) => {
@@ -533,11 +569,21 @@ export default function Analytics() {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-1"
+                      onClick={() => handleExportPDF()}
+                    >
                       <FileTextIcon className="h-4 w-4" />
                       Export PDF
                     </Button>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-1"
+                      onClick={() => handleShareReport()}
+                    >
                       <Share2 className="h-4 w-4" />
                       Share Report
                     </Button>
