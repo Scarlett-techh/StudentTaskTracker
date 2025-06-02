@@ -102,16 +102,46 @@ const Portfolio = () => {
     type: "achievement" as "achievement" | "test"
   });
   
-  // Fetch portfolio items
-  // This is simulated here, but would be a real API call
-  const { data: portfolioItems = mockPortfolioItems, isLoading } = useQuery({
-    queryKey: ["/api/portfolio"],
-    // This would be uncommented when the real API is implemented
-    // enabled: false,
+  // Fetch portfolio items from completed tasks, photos, and achievements
+  const { data: tasks = [] } = useQuery({ 
+    queryKey: ['/api/tasks']
   });
   
+  const { data: achievements = [] } = useQuery({ 
+    queryKey: ['/api/user-achievements']
+  });
+  
+  // Convert real data to portfolio items
+  const portfolioItems = [
+    // Add completed tasks to portfolio
+    ...Array.isArray(tasks) ? tasks
+      .filter((task: any) => task.status === 'completed')
+      .map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description || "",
+        type: 'task' as const,
+        subject: task.subject,
+        date: task.updatedAt || task.createdAt,
+        sourceId: task.id,
+        featured: false
+      })) : [],
+    
+    // Add achievements to portfolio
+    ...Array.isArray(achievements) ? achievements.map((userAchievement: any) => ({
+      id: `achievement-${userAchievement.id}`,
+      title: userAchievement.achievement?.title || "Achievement",
+      description: userAchievement.achievement?.description || "",
+      type: 'achievement' as const,
+      date: userAchievement.earnedAt,
+      featured: true
+    })) : []
+  ];
+  
+  const isLoading = false;
+  
   // Fetch tasks, notes, and photos for adding to portfolio
-  const { data: tasks = [] } = useQuery({ 
+  const { data: availableTasks = [] } = useQuery({ 
     queryKey: ['/api/tasks'],
     select: (data) => data.filter((task: any) => task.status === 'completed')
   });

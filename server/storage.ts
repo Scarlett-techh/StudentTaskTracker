@@ -177,7 +177,8 @@ export class MemStorage implements IStorage {
       level: 1,
       streak: 0,
       lastActiveDate: null,
-      createdAt: new Date()
+      createdAt: new Date(),
+      userType: insertUser.userType || 'student'
     };
     this.users.set(id, user);
     return user;
@@ -699,56 +700,7 @@ export class MemStorage implements IStorage {
     return todaysMoods;
   }
 
-  private async initializeSampleData(): Promise<void> {
-    // Wait for user creation first
-    setTimeout(async () => {
-      try {
-        // Add some sample completed tasks to demonstrate points system
-        const task1 = await this.createTask({
-          userId: 1,
-          title: "Complete Math Worksheet",
-          description: "Algebra practice problems",
-          subject: "Mathematics",
-          status: "completed",
-          order: 1,
-          createdAt: new Date(Date.now() - 86400000), // 1 day ago
-          updatedAt: new Date(Date.now() - 86400000)
-        });
 
-        const task2 = await this.createTask({
-          userId: 1,
-          title: "Science Lab Report",
-          description: "Write up findings from chemistry experiment",
-          subject: "Science",
-          status: "completed",
-          order: 2,
-          createdAt: new Date(Date.now() - 86400000),
-          updatedAt: new Date(Date.now() - 86400000)
-        });
-
-        // Award points for completed tasks
-        await this.addPoints({
-          userId: 1,
-          amount: 20,
-          reason: "Completed Math Worksheet",
-          createdAt: new Date(Date.now() - 86400000)
-        });
-
-        await this.addPoints({
-          userId: 1,
-          amount: 25,
-          reason: "Completed Science Lab Report", 
-          createdAt: new Date(Date.now() - 86400000)
-        });
-
-        // Update user streak
-        await this.updateUserStreak(1);
-
-      } catch (error) {
-        console.log("Sample data initialization completed");
-      }
-    }, 1000);
-  }
 }
 
 export const storage = new MemStorage();
