@@ -88,9 +88,10 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
+    <div className="max-h-[70vh] overflow-y-auto">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
           control={form.control}
           name="title"
           render={({ field }) => (
@@ -247,8 +248,9 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
             }
           </Button>
         </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
   );
 };
 
