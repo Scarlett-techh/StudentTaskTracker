@@ -916,8 +916,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      const path = require('path');
-      const fs = require('fs');
       const fullPath = path.resolve(item.filePath);
       
       if (!fs.existsSync(fullPath)) {
