@@ -253,7 +253,7 @@ export default function Analytics() {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="subjects">Subjects</TabsTrigger>
-                <TabsTrigger value="parent-report">Parent Report</TabsTrigger>
+                <TabsTrigger value="parent-report">Learning Summary</TabsTrigger>
               </TabsList>
             </Tabs>
             
@@ -515,7 +515,7 @@ export default function Analytics() {
                   <div>
                     <CardTitle className="text-2xl text-primary">Learning Progress Report</CardTitle>
                     <CardDescription>
-                      AI-Generated insights about your child's learning journey and progress
+                      A summary of your student's work
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
