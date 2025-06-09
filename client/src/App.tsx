@@ -30,55 +30,49 @@ import MobileNav from "@/components/layout/mobile-nav";
 import Footer from "@/components/layout/footer";
 
 function Router() {
-  const [location] = useLocation();
-  
-  // Authentication routes (no layout)
-  if (location === '/login' || location === '/student-login') {
-    return <StudentLogin />;
-  }
-  
-  // Coach routes (no layout)
-  if (location.startsWith('/coach')) {
-    return (
-      <Switch>
-        <Route path="/coach/login" component={CoachLogin} />
-        <Route path="/coach/dashboard" component={CoachDashboard} />
-        <Route component={NotFound} />
-      </Switch>
-    );
-  }
-  
-  // Student routes (with layout)
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <Switch>
+      {/* Authentication routes (no layout) */}
+      <Route path="/login" component={StudentLogin} />
+      <Route path="/student-login" component={StudentLogin} />
       
-      <div className="flex flex-1">
-        <Sidebar currentPath={location} />
-        
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/tasks" component={Tasks} />
-            <Route path="/calendar" component={Calendar} />
-            <Route path="/resources" component={Resources} />
-            <Route path="/portfolio" component={Portfolio} />
-            <Route path="/analytics" component={Analytics} />
-            <Route path="/share" component={Share} />
-            <Route path="/parent" component={Parent} />
-            <Route path="/profile" component={Profile} />
-            <Route path="/settings" component={Settings} />
-            <Route path="/forgot-password" component={ForgotPassword} />
-            <Route path="/reset-password/:token" component={ResetPassword} />
-            <Route component={NotFound} />
-          </Switch>
-        </main>
-      </div>
+      {/* Coach routes (no layout) */}
+      <Route path="/coach/login" component={CoachLogin} />
+      <Route path="/coach/dashboard" component={CoachDashboard} />
       
-      <Footer />
-      <MobileNav currentPath={location} />
-    </div>
+      {/* Student routes (with layout) */}
+      <Route path="/">
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          
+          <div className="flex flex-1">
+            <Sidebar currentPath={window.location.pathname} />
+            
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/dashboard" component={Dashboard} />
+                <Route path="/tasks" component={Tasks} />
+                <Route path="/calendar" component={Calendar} />
+                <Route path="/resources" component={Resources} />
+                <Route path="/portfolio" component={Portfolio} />
+                <Route path="/analytics" component={Analytics} />
+                <Route path="/share" component={Share} />
+                <Route path="/parent" component={Parent} />
+                <Route path="/profile" component={Profile} />
+                <Route path="/settings" component={Settings} />
+                <Route path="/forgot-password" component={ForgotPassword} />
+                <Route path="/reset-password/:token" component={ResetPassword} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
+          
+          <Footer />
+          <MobileNav currentPath={window.location.pathname} />
+        </div>
+      </Route>
+    </Switch>
   );
 }
 
