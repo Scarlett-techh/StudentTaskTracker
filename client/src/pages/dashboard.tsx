@@ -24,31 +24,33 @@ const Dashboard = () => {
   const currentDate = format(new Date(), "EEEE, MMMM d, yyyy");
 
   // Fetch tasks, notes, and photos
-  const { data: tasks, isLoading: isLoadingTasks, refetch: refetchTasks } = useQuery({
+  const { data: tasks = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useQuery({
     queryKey: ["/api/tasks"],
   });
 
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ["/api/recommendations"],
+  });
 
-
-  const { data: photos, isLoading: isLoadingPhotos, refetch: refetchPhotos } = useQuery({
+  const { data: photos = [], isLoading: isLoadingPhotos, refetch: refetchPhotos } = useQuery({
     queryKey: ["/api/photos"],
   });
 
   // Get user and stats
-  const { data: user } = useQuery({
+  const { data: user = {} } = useQuery({
     queryKey: ["/api/user"],
   });
 
-  const { data: userStats } = useQuery({
+  const { data: userStats = { points: 0, level: 1, streak: 0 } } = useQuery({
     queryKey: ["/api/user-stats"],
   });
 
   // Calculate task stats
   const taskStats = {
-    total: tasks?.length || 0,
-    completed: tasks?.filter((t: any) => t.status === "completed").length || 0,
-    inProgress: tasks?.filter((t: any) => t.status === "in-progress").length || 0,
-    pending: tasks?.filter((t: any) => t.status === "pending").length || 0,
+    total: Array.isArray(tasks) ? tasks.length : 0,
+    completed: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === "completed").length : 0,
+    inProgress: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === "in-progress").length : 0,
+    pending: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === "pending").length : 0,
     upcoming: 4 // This would normally be calculated based on due dates
   };
 
