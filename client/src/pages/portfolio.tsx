@@ -23,689 +23,421 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Star, 
   Plus, 
   FileText, 
   Image, 
-  Award, 
-  Book, 
-  Trash2, 
-  Edit, 
-  CheckCircle,
-  BarChart 
+  Link as LinkIcon,
+  Upload,
+  Calendar,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
 
-// Portfolio item interface
-interface PortfolioItem {
-  id: number;
-  title: string;
-  description: string;
-  type: 'achievement' | 'task' | 'note' | 'photo' | 'test';
-  score?: string;
-  subject?: string;
-  date: string;
-  sourceId?: number;
-  thumbnail?: string;
-  featured: boolean;
-}
-
-// Mock portfolio data - this would be replaced with real API data
-const mockPortfolioItems: PortfolioItem[] = [
-  {
-    id: 1,
-    title: "Math Final Exam",
-    description: "Scored 95% on the final algebra exam",
-    type: "test",
-    score: "95%",
-    subject: "Mathematics",
-    date: "2025-04-15",
-    featured: true
-  },
-  {
-    id: 2,
-    title: "Science Project: Photosynthesis",
-    description: "Built a model demonstrating the process of photosynthesis in plants",
-    type: "task",
-    subject: "Science",
-    date: "2025-03-20",
-    sourceId: 3,
-    featured: true
-  },
-  {
-    id: 3,
-    title: "History Essay: World War II",
-    description: "Researched and wrote a comprehensive essay on the causes and effects of World War II",
-    type: "note",
-    subject: "History",
-    date: "2025-02-10",
-    sourceId: 2,
-    featured: false
-  }
-];
-
-const Portfolio = () => {
+export default function Portfolio() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [newItemDialogOpen, setNewItemDialogOpen] = useState(false);
-  const [newTestDialogOpen, setNewTestDialogOpen] = useState(false);
-  const [addExistingWorkDialogOpen, setAddExistingWorkDialogOpen] = useState(false);
   
-  // Form state for new portfolio item
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     subject: "",
-    score: "",
-    type: "achievement" as "achievement" | "test"
+    link: "",
+    type: "file" as "file" | "link" | "photo"
   });
-  
-  // Fetch portfolio items from completed tasks, photos, and achievements
-  const { data: tasks = [] } = useQuery({ 
-    queryKey: ['/api/tasks']
-  });
-  
-  const { data: achievements = [] } = useQuery({ 
-    queryKey: ['/api/user-achievements']
-  });
-  
-  // Fetch saved portfolio items from API
-  const { data: savedPortfolioItems = [] } = useQuery({ 
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Fetch portfolio items
+  const { data: portfolioItems = [], isLoading } = useQuery({ 
     queryKey: ['/api/portfolio']
   });
 
-  // Convert real data to portfolio items
-  const portfolioItems = [
-    // Add saved portfolio items (test scores, custom achievements)
-    ...Array.isArray(savedPortfolioItems) ? savedPortfolioItems.map((item: any) => ({
-      id: item.id,
-      title: item.title,
-      description: item.description || "",
-      type: item.type,
-      subject: item.subject,
-      score: item.score,
-      date: item.createdAt,
-      sourceId: item.sourceId,
-      featured: item.featured
-    })) : [],
-    
-    // Add completed tasks to portfolio
-    ...Array.isArray(tasks) ? tasks
-      .filter((task: any) => task.status === 'completed')
-      .map((task: any) => ({
-        id: `task-${task.id}`,
-        title: task.title,
-        description: task.description || "",
-        type: 'task' as const,
-        subject: task.subject,
-        date: task.updatedAt || task.createdAt,
-        sourceId: task.id,
-        featured: false
-      })) : [],
-    
-    // Add achievements to portfolio
-    ...Array.isArray(achievements) ? achievements.map((userAchievement: any) => ({
-      id: `achievement-${userAchievement.id}`,
-      title: userAchievement.achievement?.title || "Achievement",
-      description: userAchievement.achievement?.description || "",
-      type: 'achievement' as const,
-      date: userAchievement.earnedAt,
-      featured: true
-    })) : []
-  ];
-  
-  const isLoading = false;
-  
-  // Fetch tasks, notes, and photos for adding to portfolio
-  const { data: availableTasks = [] } = useQuery({ 
-    queryKey: ['/api/tasks'],
-    select: (data) => data.filter((task: any) => task.status === 'completed')
+  // Fetch subjects for the dropdown
+  const { data: subjects = [] } = useQuery({ 
+    queryKey: ['/api/subjects']
   });
-  
-  const { data: notes = [] } = useQuery({ 
-    queryKey: ['/api/notes'] 
-  });
-  
-  const { data: photos = [] } = useQuery({ 
-    queryKey: ['/api/photos'] 
-  });
-  
-  // Add to portfolio mutation 
-  // This would add an existing task, note, or photo to the portfolio
-  const addToPortfolioMutation = useMutation({
-    mutationFn: async (item: any) => {
-      // This would be a real API call to add an item to the portfolio
-      // return apiRequest("POST", "/api/portfolio", item);
-      
+
+  // Create portfolio item mutation
+  const createPortfolioMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (data.type === 'file' && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('title', data.title);
+        formData.append('description', data.description || '');
+        formData.append('subject', data.subject || '');
+        formData.append('type', 'file');
+        
+        return apiRequest("POST", "/api/portfolio", formData);
+      } else {
+        return apiRequest("POST", "/api/portfolio", data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       toast({
         title: "Added to portfolio",
-        description: `${item.title} has been added to your portfolio.`,
+        description: `${formData.title} has been added to your portfolio.`,
       });
-      
-      return {
-        id: Math.floor(Math.random() * 1000),
-        title: item.title,
-        description: item.description || "",
-        type: item.type,
-        subject: item.subject,
-        date: new Date().toISOString(),
-        sourceId: item.id,
-        featured: false
-      };
-    },
-    onSuccess: () => {
-      // This would invalidate the portfolio query cache
-      // queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-    }
-  });
-  
-  // Create new portfolio item mutation
-  const createPortfolioItemMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      // This would be a real API call to create a new portfolio item
-      // return apiRequest("POST", "/api/portfolio", data);
-      
-      toast({
-        title: "Portfolio item created",
-        description: `${data.title} has been added to your portfolio.`,
-      });
-      
-      return {
-        id: Math.floor(Math.random() * 1000),
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        subject: data.subject,
-        score: data.score,
-        date: new Date().toISOString(),
-        featured: false
-      };
-    },
-    onSuccess: () => {
-      // Reset form and close dialog
       setFormData({
         title: "",
         description: "",
         subject: "",
-        score: "",
-        type: "achievement"
+        link: "",
+        type: "file"
       });
-      setNewItemDialogOpen(false);
-      setNewTestDialogOpen(false);
-      
-      // This would invalidate the portfolio query cache
-      // queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      setSelectedFile(null);
+      setAddDialogOpen(false);
     }
   });
-  
-  // Remove from portfolio mutation
-  const removeFromPortfolioMutation = useMutation({
+
+  // Delete portfolio item mutation
+  const deletePortfolioMutation = useMutation({
     mutationFn: async (id: number) => {
-      // This would be a real API call to remove an item from the portfolio
-      // return apiRequest("DELETE", `/api/portfolio/${id}`);
-      
+      return apiRequest("DELETE", `/api/portfolio/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       toast({
         title: "Removed from portfolio",
         description: "Item has been removed from your portfolio.",
       });
-      
-      return id;
-    },
-    onSuccess: () => {
-      // This would invalidate the portfolio query cache
-      // queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
     }
   });
-  
-  // Toggle featured status mutation
-  const toggleFeaturedMutation = useMutation({
-    mutationFn: async (item: PortfolioItem) => {
-      // This would be a real API call to update the featured status
-      // return apiRequest("PATCH", `/api/portfolio/${item.id}`, { featured: !item.featured });
-      
-      toast({
-        title: item.featured ? "Unfeatured" : "Featured",
-        description: `${item.title} has been ${item.featured ? "removed from" : "added to"} featured items.`,
-      });
-      
-      return {...item, featured: !item.featured};
-    },
-    onSuccess: () => {
-      // This would invalidate the portfolio query cache
-      // queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-    }
-  });
-  
-  // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
-  
-  // Handle form submission
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createPortfolioItemMutation.mutate(formData);
+    
+    if (!formData.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a title for your portfolio item.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.type === 'link' && !formData.link.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a link URL.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.type === 'file' && !selectedFile) {
+      toast({
+        title: "Error",
+        description: "Please select a file to upload.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const portfolioData = {
+      ...formData,
+      link: formData.type === 'link' ? formData.link : null
+    };
+
+    createPortfolioMutation.mutate(portfolioData);
   };
-  
-  // Filter items based on active tab
-  const filteredItems = portfolioItems.filter(item => {
-    if (activeTab === "all") return true;
-    if (activeTab === "featured") return item.featured;
-    return item.type === activeTab;
-  });
-  
-  // Render icon based on item type
-  const renderIcon = (type: string) => {
-    switch (type) {
-      case 'achievement':
-        return <Award className="h-10 w-10 text-yellow-500" />;
-      case 'task':
-        return <CheckCircle className="h-10 w-10 text-green-500" />;
-      case 'note':
-        return <FileText className="h-10 w-10 text-blue-500" />;
-      case 'photo':
-        return <Image className="h-10 w-10 text-purple-500" />;
-      case 'test':
-        return <BarChart className="h-10 w-10 text-red-500" />;
-      default:
-        return <Book className="h-10 w-10 text-gray-500" />;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!formData.title) {
+        setFormData(prev => ({
+          ...prev,
+          title: file.name.split('.')[0]
+        }));
+      }
     }
   };
-  
+
+  const getItemIcon = (type: string) => {
+    switch (type) {
+      case 'file': return <FileText className="h-5 w-5" />;
+      case 'photo': return <Image className="h-5 w-5" />;
+      case 'link': return <LinkIcon className="h-5 w-5" />;
+      default: return <FileText className="h-5 w-5" />;
+    }
+  };
+
+  const getItemTypeColor = (type: string) => {
+    switch (type) {
+      case 'file': return 'bg-blue-100 text-blue-800';
+      case 'photo': return 'bg-green-100 text-green-800';
+      case 'link': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <Helmet>
-        <title>Portfolio | Student Work Tracker</title>
-        <meta 
-          name="description" 
-          content="Showcase your best work, achievements, and test scores in your student portfolio."
-        />
+        <title>Portfolio - Student Learning Platform</title>
+        <meta name="description" content="Showcase your learning achievements, projects, and progress in your personal portfolio." />
       </Helmet>
-      
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Your Portfolio</h2>
-            <p className="text-muted-foreground">
-              Showcase your achievements, best work, and test scores
-            </p>
+
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text"></div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              My Portfolio
+            </h1>
           </div>
-          
-          <div className="flex flex-wrap sm:flex-nowrap gap-2">
-            <Button variant="outline" onClick={() => setNewItemDialogOpen(true)}>
-              <Award className="mr-2 h-4 w-4" />
-              Add Achievement
-            </Button>
-            <Button variant="outline" onClick={() => setNewTestDialogOpen(true)}>
-              <BarChart className="mr-2 h-4 w-4" />
-              Add Test Score
-            </Button>
-            <Button onClick={() => setAddExistingWorkDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Existing Work
-            </Button>
-          </div>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Showcase your learning journey, achievements, and creative work in one place.
+          </p>
         </div>
-        
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All Items</TabsTrigger>
-            <TabsTrigger value="featured">Featured</TabsTrigger>
-            <TabsTrigger value="achievement">Achievements</TabsTrigger>
-            <TabsTrigger value="test">Test Scores</TabsTrigger>
-            <TabsTrigger value="task">Tasks</TabsTrigger>
-            <TabsTrigger value="note">Notes</TabsTrigger>
-            <TabsTrigger value="photo">Photos</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value={activeTab} className="mt-0">
-            {isLoading ? (
-              <div className="text-center py-8">Loading portfolio items...</div>
-            ) : filteredItems.length === 0 ? (
-              <div className="text-center py-8 border rounded-md bg-muted/50">
-                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                  <Book className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium">No portfolio items yet</h3>
-                <p className="text-muted-foreground mt-1 mb-4">Add your achievements, test scores, or best work to your portfolio.</p>
-                <div className="flex gap-2 justify-center">
-                  <Button variant="outline" size="sm" onClick={() => setNewItemDialogOpen(true)}>
-                    Add Achievement
-                  </Button>
-                  <Button size="sm" onClick={() => setNewTestDialogOpen(true)}>
-                    Add Test Score
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-4">
-                          {renderIcon(item.type)}
-                          <div>
-                            <CardTitle className="text-base">{item.title}</CardTitle>
-                            {item.subject && (
-                              <CardDescription className="text-xs">
-                                {item.subject}
-                              </CardDescription>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`h-8 w-8 ${item.featured ? 'text-yellow-500' : 'text-muted-foreground'}`}
-                          onClick={() => toggleFeaturedMutation.mutate(item)}
-                          title={item.featured ? "Unfeature" : "Feature"}
-                        >
-                          <Star className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent>
-                      {item.type === 'photo' && item.thumbnail && (
-                        <div className="mb-3 rounded-md overflow-hidden aspect-video bg-muted flex items-center justify-center">
-                          <img 
-                            src={item.thumbnail} 
-                            alt={item.title} 
-                            className="w-full h-full object-cover" 
-                          />
-                        </div>
-                      )}
-                      
-                      {item.score && (
-                        <div className="mb-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                          Score: {item.score}
-                        </div>
-                      )}
-                      
-                      <p className="text-sm text-muted-foreground line-clamp-3">{item.description}</p>
-                    </CardContent>
-                    
-                    <CardFooter className="border-t pt-3 flex justify-between">
-                      <div className="text-xs text-muted-foreground">
-                        Added: {new Date(item.date).toLocaleDateString()}
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-red-500"
-                          onClick={() => removeFromPortfolioMutation.mutate(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* Dialog for adding a new achievement */}
-      <Dialog open={newItemDialogOpen} onOpenChange={setNewItemDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Achievement</DialogTitle>
-            <DialogDescription>
-              Record a new achievement or milestone to your portfolio.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="title">Achievement Title</Label>
-              <Input 
-                id="title"
-                name="title"
-                placeholder="e.g., First Place in Science Fair"
-                value={formData.title}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description"
-                name="description"
-                placeholder="Describe your achievement..."
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={3}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject Area (Optional)</Label>
-              <Input 
-                id="subject"
-                name="subject"
-                placeholder="e.g., Science, Art, Sports"
-                value={formData.subject}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <input type="hidden" name="type" value="achievement" />
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setNewItemDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
+
+        {/* Add to Portfolio Button */}
+        <div className="flex justify-center mb-8">
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              >
+                <Plus className="h-5 w-5 mr-2" />
                 Add to Portfolio
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog for adding a test score */}
-      <Dialog open={newTestDialogOpen} onOpenChange={setNewTestDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Test Score</DialogTitle>
-            <DialogDescription>
-              Record a test score or assessment result to your portfolio.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="test-title">Test Name</Label>
-              <Input 
-                id="test-title"
-                name="title"
-                placeholder="e.g., Math Final Exam, SAT, Science Quiz"
-                value={formData.title}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="score">Score / Grade</Label>
-              <Input 
-                id="score"
-                name="score"
-                placeholder="e.g., 95%, A+, 1250"
-                value={formData.score}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="test-subject">Subject</Label>
-              <Input 
-                id="test-subject"
-                name="subject"
-                placeholder="e.g., Mathematics, Science, English"
-                value={formData.subject}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="test-description">Additional Notes</Label>
-              <Textarea 
-                id="test-description"
-                name="description"
-                placeholder="Any additional details about the test..."
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={3}
-              />
-            </div>
-            
-            <input type="hidden" name="type" value="test" />
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setNewTestDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                Add Test Score
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog for adding existing work to portfolio */}
-      <Dialog open={addExistingWorkDialogOpen} onOpenChange={setAddExistingWorkDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add to Portfolio</DialogTitle>
-            <DialogDescription>
-              Select completed work to add to your portfolio.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Tabs defaultValue="tasks">
-            <TabsList className="mb-4">
-              <TabsTrigger value="tasks">Tasks</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="photos">Photos</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="tasks">
-              {tasks.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No completed tasks available.</p>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add to Portfolio</DialogTitle>
+                <DialogDescription>
+                  Add a file, link, or photo to your portfolio
+                </DialogDescription>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="type">Type</Label>
+                  <Select 
+                    value={formData.type} 
+                    onValueChange={(value: "file" | "link" | "photo") => 
+                      setFormData(prev => ({ ...prev, type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="file">📄 File</SelectItem>
+                      <SelectItem value="link">🔗 Link</SelectItem>
+                      <SelectItem value="photo">📸 Photo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                  {tasks.map((task: any) => (
-                    <Card key={task.id} className="p-3 flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <div>
-                          <p className="font-medium text-sm">{task.title}</p>
-                          {task.subject && <p className="text-xs text-muted-foreground">{task.subject}</p>}
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => addToPortfolioMutation.mutate({
-                        ...task,
-                        type: 'task'
-                      })}>
-                        Add
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="notes">
-              {notes.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No notes available.</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                  {notes.map((note: any) => (
-                    <Card key={note.id} className="p-3 flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-sm">{note.title}</p>
-                          {note.subject && <p className="text-xs text-muted-foreground">{note.subject}</p>}
-                        </div>
-                      </div>
-                      <Button size="sm" onClick={() => addToPortfolioMutation.mutate({
-                        ...note,
-                        type: 'note'
-                      })}>
-                        Add
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="photos">
-              {photos.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No photos available.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
-                  {photos.map((photo: any) => (
-                    <Card key={photo.id} className="overflow-hidden">
-                      <div className="aspect-video bg-muted">
-                        {photo.fileData && (
-                          <img 
-                            src={`data:${photo.mimeType};base64,${photo.fileData}`} 
-                            alt={photo.title} 
-                            className="w-full h-full object-cover" 
-                          />
-                        )}
-                      </div>
-                      <div className="p-2 flex justify-between items-center">
-                        <p className="font-medium text-xs truncate">{photo.title}</p>
-                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => addToPortfolioMutation.mutate({
-                          ...photo,
-                          type: 'photo',
-                          thumbnail: photo.fileData ? `data:${photo.mimeType};base64,${photo.fileData}` : undefined
-                        })}>
-                          Add
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddExistingWorkDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-};
 
-export default Portfolio;
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter a title for your work"
+                    required
+                  />
+                </div>
+
+                {formData.type === 'file' && (
+                  <div>
+                    <Label htmlFor="file">Choose File</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      onChange={handleFileChange}
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+                    />
+                    {selectedFile && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Selected: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {formData.type === 'link' && (
+                  <div>
+                    <Label htmlFor="link">Link URL</Label>
+                    <Input
+                      id="link"
+                      type="url"
+                      value={formData.link}
+                      onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
+                      placeholder="https://example.com"
+                      required
+                    />
+                  </div>
+                )}
+
+                {formData.type === 'photo' && (
+                  <div>
+                    <Label htmlFor="photo">Choose Photo</Label>
+                    <Input
+                      id="photo"
+                      type="file"
+                      onChange={handleFileChange}
+                      accept="image/*"
+                    />
+                    {selectedFile && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Selected: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="subject">Subject (Optional)</Label>
+                  <Select 
+                    value={formData.subject} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, subject: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((subject: any) => (
+                        <SelectItem key={subject.name} value={subject.name}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe your work..."
+                    rows={3}
+                  />
+                </div>
+
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setAddDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createPortfolioMutation.isPending}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  >
+                    {createPortfolioMutation.isPending ? 'Adding...' : 'Add to Portfolio'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Portfolio Items Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="h-48 animate-pulse">
+                <CardHeader className="bg-gray-200 rounded-t-lg h-full" />
+              </Card>
+            ))}
+          </div>
+        ) : portfolioItems.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+              <FileText className="h-12 w-12 text-purple-600" />
+            </div>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">Your Portfolio is Empty</h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              Start building your portfolio by adding your work, projects, and achievements.
+            </p>
+            <Button 
+              onClick={() => setAddDialogOpen(true)}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Item
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {portfolioItems.map((item: any) => (
+              <Card 
+                key={item.id} 
+                className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90"
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getItemIcon(item.type)}
+                      <CardTitle className="text-lg font-semibold line-clamp-1">
+                        {item.title}
+                      </CardTitle>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deletePortfolioMutation.mutate(item.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getItemTypeColor(item.type)}`}>
+                      {item.type}
+                    </span>
+                    {item.subject && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {item.subject}
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {item.description && (
+                    <CardDescription className="text-sm text-gray-600 line-clamp-3 mb-3">
+                      {item.description}
+                    </CardDescription>
+                  )}
+                  {item.link && (
+                    <a 
+                      href={item.link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1 mb-3"
+                    >
+                      <LinkIcon className="h-3 w-3" />
+                      <span>View Link</span>
+                    </a>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {format(new Date(item.createdAt), 'MMM d, yyyy')}
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

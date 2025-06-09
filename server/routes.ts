@@ -891,13 +891,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/portfolio", async (req: Request, res: Response) => {
+  app.post("/api/portfolio", upload.single('file'), async (req: Request, res: Response) => {
     try {
       const userId = 1; // Mock user ID for demo
-      const portfolioData = {
-        ...req.body,
-        userId
+      
+      let portfolioData = {
+        title: req.body.title,
+        description: req.body.description || null,
+        subject: req.body.subject || null,
+        type: req.body.type,
+        userId,
+        link: req.body.link || null,
+        filePath: null as string | null
       };
+
+      // Handle file upload
+      if (req.file) {
+        portfolioData.filePath = req.file.path;
+      }
+
       const portfolioItem = await storage.createPortfolioItem(portfolioData);
       res.status(201).json(portfolioItem);
     } catch (err: any) {
