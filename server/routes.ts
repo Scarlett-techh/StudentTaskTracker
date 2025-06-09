@@ -891,6 +891,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Serve uploaded files
+  app.get("/api/portfolio/file/:id", async (req: Request, res: Response) => {
+    try {
+      const portfolioId = parseInt(req.params.id);
+      const item = await storage.getPortfolioItem(portfolioId);
+      
+      if (!item || !item.filePath) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      res.sendFile(item.filePath, { root: process.cwd() });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
   app.post("/api/portfolio", upload.single('file'), async (req: Request, res: Response) => {
     try {
       const userId = 1; // Mock user ID for demo

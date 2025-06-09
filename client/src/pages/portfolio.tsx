@@ -177,6 +177,62 @@ export default function Portfolio() {
     }
   };
 
+  const handleItemClick = (item: any) => {
+    if (item.type === 'link' && item.link) {
+      window.open(item.link, '_blank');
+    } else if ((item.type === 'file' || item.type === 'photo') && item.filePath) {
+      window.open(`/api/portfolio/file/${item.id}`, '_blank');
+    }
+  };
+
+  const getThumbnail = (item: any) => {
+    if (item.type === 'photo' && item.filePath) {
+      return (
+        <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden mb-3">
+          <img 
+            src={`/api/portfolio/file/${item.id}`}
+            alt={item.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
+      );
+    } else if (item.type === 'file' && item.filePath) {
+      const fileExt = item.title.split('.').pop()?.toLowerCase();
+      const isPDF = fileExt === 'pdf';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt || '');
+      
+      if (isImage) {
+        return (
+          <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden mb-3">
+            <img 
+              src={`/api/portfolio/file/${item.id}`}
+              alt={item.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+        );
+      } else {
+        return (
+          <div className="w-full h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mb-3">
+            <div className="text-center">
+              <FileText className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+              <p className="text-xs text-blue-800 font-medium">
+                {fileExt?.toUpperCase() || 'FILE'}
+              </p>
+            </div>
+          </div>
+        );
+      }
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <Helmet>

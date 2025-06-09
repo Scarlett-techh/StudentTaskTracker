@@ -81,6 +81,7 @@ export interface IStorage {
   
   // Portfolio methods
   getPortfolioItems(userId: number): Promise<PortfolioItem[]>;
+  getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(portfolioItem: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioItem(id: number, portfolioItem: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined>;
   deletePortfolioItem(id: number): Promise<boolean>;
@@ -737,6 +738,10 @@ export class MemStorage implements IStorage {
     };
     this.portfolioItems.set(id, updatedItem);
     return updatedItem;
+  }
+
+  async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
+    return this.portfolioItems.get(id);
   }
 
   async deletePortfolioItem(id: number): Promise<boolean> {

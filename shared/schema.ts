@@ -231,11 +231,13 @@ export const portfolioItems = pgTable("portfolio_items", {
   userId: integer("user_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
-  type: text("type").notNull(), // 'achievement', 'test', 'project', 'custom'
+  type: text("type").notNull(), // 'file', 'link', 'photo'
   subject: text("subject"),
   score: text("score"), // For test scores or grades
   sourceId: integer("source_id"), // Reference to original task/note if applicable
   featured: boolean("featured").notNull().default(false),
+  filePath: text("file_path"), // Path to uploaded file
+  link: text("link"), // URL for link type items
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -248,6 +250,8 @@ export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).pick
   score: true,
   sourceId: true,
   featured: true,
+  filePath: true,
+  link: true,
 });
 
 // Daily notification tracking
