@@ -15,6 +15,7 @@ import {
   type MoodEntry, type InsertMoodEntry,
   type PortfolioItem, type InsertPortfolioItem
 } from "@shared/schema";
+import { DatabaseStorage } from "./db-storage";
 
 export interface IStorage {
   // User methods
@@ -758,4 +759,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
