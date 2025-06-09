@@ -13,7 +13,7 @@ import {
   Paperclip,
   ExternalLink
 } from "lucide-react";
-import ShareTaskModal from "./share-task-modal";
+
 import TaskAttachmentSimple from "./task-attachment-simple";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -132,6 +132,35 @@ const TaskCard: FC<TaskCardProps> = ({
     onError: (error) => {
       toast({
         title: "Error deleting task",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Share to portfolio mutation
+  const shareToPortfolioMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/portfolio", {
+        title: task.title,
+        description: task.description,
+        subject: task.subject,
+        type: "task",
+        sourceId: task.id,
+        featured: false
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      toast({
+        title: "Added to Portfolio",
+        description: "Task has been shared to your portfolio successfully.",
+      });
+      setShareDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error sharing to portfolio",
         description: error.message,
         variant: "destructive",
       });
@@ -393,16 +422,46 @@ const TaskCard: FC<TaskCardProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Share Task Dialog */}
-      <ShareTaskModal
-        open={shareDialogOpen}
-        onOpenChange={setShareDialogOpen}
-        task={{
-          title: task.title,
-          description: task.description,
-          category: 'task'
-        }}
-      />
+      {/* Share to Portfolio Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent className="bg-white border-0 rounded-xl shadow-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold gradient-heading">Share to Portfolio</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Add this completed task to your portfolio to showcase your achievements.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-blue-50 p-4 rounded-lg my-4 border border-blue-200">
+            <h4 className="font-semibold text-blue-900 mb-2">{task.title}</h4>
+            {task.description && (
+              <p className="text-sm text-blue-800 mb-2">{task.description}</p>
+            )}
+            {task.subject && (
+              <span className="inline-block px-2 py-1 bg-blue-200 text-blue-800 rounded-full text-xs font-medium">
+                {task.subject}
+              </span>
+            )}
+          </div>
+          
+          <DialogFooter className="gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShareDialogOpen(false)}
+              className="btn-bounce border-gray-300 hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => shareToPortfolioMutation.mutate()}
+              disabled={shareToPortfolioMutation.isPending}
+              className="btn-bounce bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              {shareToPortfolioMutation.isPending ? "Adding..." : "Add to Portfolio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Task Attachment Dialog */}
       <TaskAttachmentSimple
