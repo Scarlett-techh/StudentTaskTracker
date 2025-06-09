@@ -110,6 +110,7 @@ export class MemStorage implements IStorage {
   private userAchievementCurrentId: number;
   private pointsHistoryCurrentId: number;
   private moodEntryCurrentId: number;
+  private portfolioItemCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -133,6 +134,8 @@ export class MemStorage implements IStorage {
     this.userAchievementCurrentId = 1;
     this.pointsHistoryCurrentId = 1;
     this.moodEntryCurrentId = 1;
+    this.portfolioItems = new Map();
+    this.portfolioItemCurrentId = 1;
     
     // Initialize default achievements
     this.initializeAchievements();
@@ -708,7 +711,37 @@ export class MemStorage implements IStorage {
     return todaysMoods;
   }
 
+  // Portfolio methods
+  async getPortfolioItems(userId: number): Promise<PortfolioItem[]> {
+    return Array.from(this.portfolioItems.values()).filter(item => item.userId === userId);
+  }
 
+  async createPortfolioItem(insertPortfolioItem: InsertPortfolioItem): Promise<PortfolioItem> {
+    const id = this.portfolioItemCurrentId++;
+    const portfolioItem: PortfolioItem = {
+      id,
+      ...insertPortfolioItem,
+      createdAt: new Date()
+    };
+    this.portfolioItems.set(id, portfolioItem);
+    return portfolioItem;
+  }
+
+  async updatePortfolioItem(id: number, portfolioItemUpdate: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined> {
+    const existingItem = this.portfolioItems.get(id);
+    if (!existingItem) return undefined;
+
+    const updatedItem: PortfolioItem = {
+      ...existingItem,
+      ...portfolioItemUpdate
+    };
+    this.portfolioItems.set(id, updatedItem);
+    return updatedItem;
+  }
+
+  async deletePortfolioItem(id: number): Promise<boolean> {
+    return this.portfolioItems.delete(id);
+  }
 }
 
 export const storage = new MemStorage();

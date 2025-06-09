@@ -880,6 +880,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Portfolio routes
+  app.get("/api/portfolio", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Mock user ID for demo
+      const portfolioItems = await storage.getPortfolioItems(userId);
+      res.json(portfolioItems);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  app.post("/api/portfolio", async (req: Request, res: Response) => {
+    try {
+      const userId = 1; // Mock user ID for demo
+      const portfolioData = {
+        ...req.body,
+        userId
+      };
+      const portfolioItem = await storage.createPortfolioItem(portfolioData);
+      res.status(201).json(portfolioItem);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  app.patch("/api/portfolio/:id", async (req: Request, res: Response) => {
+    try {
+      const portfolioId = parseInt(req.params.id);
+      const updatedItem = await storage.updatePortfolioItem(portfolioId, req.body);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Portfolio item not found" });
+      }
+      
+      res.json(updatedItem);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  app.delete("/api/portfolio/:id", async (req: Request, res: Response) => {
+    try {
+      const portfolioId = parseInt(req.params.id);
+      const deleted = await storage.deletePortfolioItem(portfolioId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Portfolio item not found" });
+      }
+      
+      res.json({ message: "Portfolio item deleted successfully" });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

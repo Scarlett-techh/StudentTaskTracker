@@ -111,13 +111,31 @@ const Portfolio = () => {
     queryKey: ['/api/user-achievements']
   });
   
+  // Fetch saved portfolio items from API
+  const { data: savedPortfolioItems = [] } = useQuery({ 
+    queryKey: ['/api/portfolio']
+  });
+
   // Convert real data to portfolio items
   const portfolioItems = [
+    // Add saved portfolio items (test scores, custom achievements)
+    ...Array.isArray(savedPortfolioItems) ? savedPortfolioItems.map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description || "",
+      type: item.type,
+      subject: item.subject,
+      score: item.score,
+      date: item.createdAt,
+      sourceId: item.sourceId,
+      featured: item.featured
+    })) : [],
+    
     // Add completed tasks to portfolio
     ...Array.isArray(tasks) ? tasks
       .filter((task: any) => task.status === 'completed')
       .map((task: any) => ({
-        id: task.id,
+        id: `task-${task.id}`,
         title: task.title,
         description: task.description || "",
         type: 'task' as const,
