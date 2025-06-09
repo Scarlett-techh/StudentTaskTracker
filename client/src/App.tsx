@@ -20,6 +20,7 @@ import Settings from "@/pages/settings";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Analytics from "@/pages/analytics-new";
+import StudentLogin from "@/pages/student-login";
 import CoachLogin from "@/pages/coach-login";
 import CoachDashboard from "@/pages/coach-dashboard";
 

@@ -79,7 +79,7 @@ export interface IStorage {
   getTodaysMood(userId: number): Promise<MoodEntry | undefined>;
   createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry>;
   getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]>;
-  
+
   // Portfolio methods
   getPortfolioItems(userId: number): Promise<PortfolioItem[]>;
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;

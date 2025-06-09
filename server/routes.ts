@@ -807,6 +807,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Student authentication routes
+  app.post("/api/student/register", async (req: Request, res: Response) => {
+    try {
+      const { username, password, name, email } = req.body;
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // Create new student account
+      const student = await storage.createUser({
+        username,
+        password,
+        name,
+        email: email || null,
+      });
+      
+      res.json({ 
+        success: true, 
+        student: { 
+          id: student.id, 
+          name: student.name, 
+          username: student.username,
+          email: student.email 
+        } 
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  app.post("/api/student/login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      
+      // Find user by username
+      const student = await storage.getUserByUsername(username);
+      if (!student) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // In a real app, you would hash and compare passwords
+      // For this demo, we'll do a simple comparison
+      if (student.password !== password) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      res.json({ 
+        success: true, 
+        student: { 
+          id: student.id, 
+          name: student.name, 
+          username: student.username,
+          email: student.email 
+        } 
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
   // Coach routes
   app.post("/api/coach/login", async (req: Request, res: Response) => {
     try {
