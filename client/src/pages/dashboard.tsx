@@ -116,26 +116,27 @@ const Dashboard = () => {
       
       <div className="space-y-6">
         {/* Personalized Welcome Message */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg text-white p-6">
-          <div className="flex justify-between items-start flex-col sm:flex-row space-y-4 sm:space-y-0">
+        <div className="glass-card rounded-2xl text-gray-900 p-8 animate-slide-up shadow-glow relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full opacity-20 animate-float"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-400 to-cyan-400 rounded-full opacity-20 animate-pulse-soft"></div>
+          <div className="flex justify-between items-start flex-col sm:flex-row space-y-4 sm:space-y-0 relative z-10">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-2">{welcomeMessage.greeting}</h1>
-              <p className="text-blue-100 text-lg mb-1">{welcomeMessage.main}</p>
+              <h1 className="text-4xl font-bold mb-3 gradient-heading">{welcomeMessage.greeting}</h1>
+              <p className="text-gray-700 text-xl mb-2">{welcomeMessage.main}</p>
               {welcomeMessage.diversity && (
-                <p className="text-blue-100">{welcomeMessage.diversity}</p>
+                <p className="text-gray-600 text-lg">{welcomeMessage.diversity}</p>
               )}
               {welcomeMessage.motivation && (
-                <p className="text-yellow-200 font-medium">{welcomeMessage.motivation}</p>
+                <p className="points-display text-2xl font-bold mt-2">{welcomeMessage.motivation}</p>
               )}
-              <p className="text-blue-200 text-sm mt-3">{currentDate}</p>
+              <p className="text-gray-500 text-base mt-4">{currentDate}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button 
                 onClick={() => setNewTaskDialogOpen(true)}
-                variant="secondary"
-                className="bg-white text-blue-600 hover:bg-blue-50"
+                className="btn-gradient px-6 py-3 text-lg animate-pulse-soft"
               >
-                <PlusIcon className="mr-2 h-4 w-4" />
+                <PlusIcon className="mr-2 h-5 w-5" />
                 New Task
               </Button>
             </div>
@@ -143,8 +144,8 @@ const Dashboard = () => {
         </div>
 
         {/* Progress Overview */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Progress</h3>
+        <div className="glass-card rounded-2xl p-8 shadow-accent">
+          <h3 className="text-2xl font-bold gradient-heading mb-6">Today's Progress</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <ProgressCard 
               label="Completed" 
