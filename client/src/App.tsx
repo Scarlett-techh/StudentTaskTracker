@@ -32,6 +32,11 @@ import Footer from "@/components/layout/footer";
 function Router() {
   const [location] = useLocation();
   
+  // Authentication routes (no layout)
+  if (location === '/login' || location === '/student-login') {
+    return <StudentLogin />;
+  }
+  
   // Coach routes (no layout)
   if (location.startsWith('/coach')) {
     return (
