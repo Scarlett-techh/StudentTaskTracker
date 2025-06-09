@@ -11,6 +11,7 @@ import {
   userAchievements,
   pointsHistory,
   moodEntries,
+  portfolioItems,
   type User,
   type Task,
   type Note,
@@ -21,6 +22,7 @@ import {
   type UserAchievement,
   type PointsHistory,
   type MoodEntry,
+  type PortfolioItem,
   type InsertUser,
   type InsertTask,
   type InsertNote,
@@ -31,6 +33,7 @@ import {
   type InsertUserAchievement,
   type InsertPointsHistory,
   type InsertMoodEntry,
+  type InsertPortfolioItem,
 } from "@shared/schema";
 import type { IStorage } from "./storage";
 
@@ -424,5 +427,30 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.log("Achievements already initialized or error occurred:", error);
     }
+  }
+
+  // Portfolio methods
+  async getPortfolioItems(userId: number): Promise<PortfolioItem[]> {
+    return await db.select().from(portfolioItems).where(eq(portfolioItems.userId, userId)).orderBy(desc(portfolioItems.createdAt));
+  }
+
+  async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
+    const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id));
+    return item;
+  }
+
+  async createPortfolioItem(portfolioItem: InsertPortfolioItem): Promise<PortfolioItem> {
+    const [item] = await db.insert(portfolioItems).values(portfolioItem).returning();
+    return item;
+  }
+
+  async updatePortfolioItem(id: number, portfolioItem: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined> {
+    const [item] = await db.update(portfolioItems).set(portfolioItem).where(eq(portfolioItems.id, id)).returning();
+    return item;
+  }
+
+  async deletePortfolioItem(id: number): Promise<boolean> {
+    const result = await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
