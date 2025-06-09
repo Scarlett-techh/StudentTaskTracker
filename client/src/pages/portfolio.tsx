@@ -63,13 +63,13 @@ export default function Portfolio() {
   // Create portfolio item mutation
   const createPortfolioMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (data.type === 'file' && selectedFile) {
+      if ((data.type === 'file' || data.type === 'photo') && selectedFile) {
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('title', data.title);
         formData.append('description', data.description || '');
         formData.append('subject', data.subject || '');
-        formData.append('type', 'file');
+        formData.append('type', data.type);
         
         return apiRequest("POST", "/api/portfolio", formData);
       } else {
