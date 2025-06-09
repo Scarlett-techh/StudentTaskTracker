@@ -1,6 +1,6 @@
 import {
   users, tasks, notes, photos, taskAttachments, subjects, 
-  achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications, moodEntries,
+  achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications, moodEntries, portfolioItems,
   type User, type InsertUser,
   type Task, type InsertTask,
   type Note, type InsertNote,
@@ -12,7 +12,8 @@ import {
   type PointsHistory, type InsertPointsHistory,
   type CoachStudent, type InsertCoachStudent,
   type DailyNotification, type InsertDailyNotification,
-  type MoodEntry, type InsertMoodEntry
+  type MoodEntry, type InsertMoodEntry,
+  type PortfolioItem, type InsertPortfolioItem
 } from "@shared/schema";
 
 export interface IStorage {
@@ -77,6 +78,12 @@ export interface IStorage {
   getTodaysMood(userId: number): Promise<MoodEntry | undefined>;
   createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry>;
   getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]>;
+  
+  // Portfolio methods
+  getPortfolioItems(userId: number): Promise<PortfolioItem[]>;
+  createPortfolioItem(portfolioItem: InsertPortfolioItem): Promise<PortfolioItem>;
+  updatePortfolioItem(id: number, portfolioItem: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined>;
+  deletePortfolioItem(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -90,6 +97,7 @@ export class MemStorage implements IStorage {
   private userAchievements: Map<number, UserAchievement>;
   private pointsHistory: Map<number, PointsHistory>;
   private moodEntries: Map<number, MoodEntry>;
+  private portfolioItems: Map<number, PortfolioItem>;
 
   
   private userCurrentId: number;

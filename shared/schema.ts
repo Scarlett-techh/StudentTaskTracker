@@ -222,6 +222,34 @@ export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 export type PointsHistory = typeof pointsHistory.$inferSelect;
 export type InsertPointsHistory = z.infer<typeof insertPointsHistorySchema>;
 
+export type PortfolioItem = typeof portfolioItems.$inferSelect;
+export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
+
+// Portfolio items table
+export const portfolioItems = pgTable("portfolio_items", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'achievement', 'test', 'project', 'custom'
+  subject: text("subject"),
+  score: text("score"), // For test scores or grades
+  sourceId: integer("source_id"), // Reference to original task/note if applicable
+  featured: boolean("featured").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).pick({
+  userId: true,
+  title: true,
+  description: true,
+  type: true,
+  subject: true,
+  score: true,
+  sourceId: true,
+  featured: true,
+});
+
 // Daily notification tracking
 export const dailyNotifications = pgTable("daily_notifications", {
   id: serial("id").primaryKey(),
