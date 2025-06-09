@@ -435,7 +435,8 @@ export default function Portfolio() {
             {portfolioItems.map((item: any) => (
               <Card 
                 key={item.id} 
-                className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90"
+                className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90 cursor-pointer"
+                onClick={() => handleItemClick(item)}
               >
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -448,7 +449,10 @@ export default function Portfolio() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deletePortfolioMutation.mutate(item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePortfolioMutation.mutate(item.id);
+                      }}
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -466,21 +470,23 @@ export default function Portfolio() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {getThumbnail(item)}
                   {item.description && (
                     <CardDescription className="text-sm text-gray-600 line-clamp-3 mb-3">
                       {item.description}
                     </CardDescription>
                   )}
-                  {item.link && (
-                    <a 
-                      href={item.link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1 mb-3"
-                    >
+                  {item.type === 'link' && item.link && (
+                    <div className="text-blue-600 text-sm flex items-center space-x-1 mb-3">
                       <LinkIcon className="h-3 w-3" />
-                      <span>View Link</span>
-                    </a>
+                      <span className="truncate">{item.link}</span>
+                    </div>
+                  )}
+                  {(item.type === 'file' || item.type === 'photo') && (
+                    <div className="text-green-600 text-sm flex items-center space-x-1 mb-3">
+                      <Upload className="h-3 w-3" />
+                      <span>Click to view</span>
+                    </div>
                   )}
                 </CardContent>
                 <CardFooter>
