@@ -50,6 +50,7 @@ const StudentLogin = () => {
       name: "",
       email: "",
     },
+    mode: "onChange",
   });
 
   const loginMutation = useMutation({
@@ -211,7 +212,14 @@ const StudentLogin = () => {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your full name" {...field} />
+                        <Input 
+                          placeholder="Enter your full name" 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -225,7 +233,14 @@ const StudentLogin = () => {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Choose a username" {...field} />
+                        <Input 
+                          placeholder="Choose a username" 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -239,7 +254,15 @@ const StudentLogin = () => {
                     <FormItem>
                       <FormLabel>Email (Optional)</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Enter your email" {...field} />
+                        <Input 
+                          type="email" 
+                          placeholder="Enter your email" 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -257,7 +280,11 @@ const StudentLogin = () => {
                           <Input 
                             type={showPassword ? "text" : "password"}
                             placeholder="Create a secure password" 
-                            {...field} 
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                           <Button
                             type="button"
