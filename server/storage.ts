@@ -721,7 +721,16 @@ export class MemStorage implements IStorage {
     const id = this.portfolioItemCurrentId++;
     const portfolioItem: PortfolioItem = {
       id,
-      ...insertPortfolioItem,
+      title: insertPortfolioItem.title,
+      description: insertPortfolioItem.description || null,
+      type: insertPortfolioItem.type,
+      subject: insertPortfolioItem.subject || null,
+      score: insertPortfolioItem.score || null,
+      sourceId: insertPortfolioItem.sourceId || null,
+      featured: insertPortfolioItem.featured || false,
+      filePath: insertPortfolioItem.filePath || null,
+      link: insertPortfolioItem.link || null,
+      userId: insertPortfolioItem.userId,
       createdAt: new Date()
     };
     this.portfolioItems.set(id, portfolioItem);

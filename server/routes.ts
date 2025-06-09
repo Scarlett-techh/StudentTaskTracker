@@ -901,8 +901,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      res.sendFile(item.filePath, { root: process.cwd() });
+      const path = require('path');
+      const fs = require('fs');
+      const fullPath = path.resolve(item.filePath);
+      
+      if (!fs.existsSync(fullPath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      res.sendFile(fullPath);
     } catch (err: any) {
+      console.error("File serve error:", err);
       handleError(err, res);
     }
   });
@@ -918,17 +927,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: req.body.type,
         userId,
         link: req.body.link || null,
-        filePath: null as string | null
+        filePath: null as string | null,
+        score: null as string | null,
+        sourceId: null as number | null,
+        featured: false
       };
 
       // Handle file upload
       if (req.file) {
         portfolioData.filePath = req.file.path;
+        console.log("File uploaded:", req.file.path);
       }
 
+      console.log("Creating portfolio item:", portfolioData);
       const portfolioItem = await storage.createPortfolioItem(portfolioData);
+      console.log("Created portfolio item:", portfolioItem);
       res.status(201).json(portfolioItem);
     } catch (err: any) {
+      console.error("Portfolio creation error:", err);
       handleError(err, res);
     }
   });
