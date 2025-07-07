@@ -59,6 +59,7 @@ export interface IStorage {
   createSubject(subject: InsertSubject): Promise<Subject>;
   updateSubject(id: number, subject: Partial<InsertSubject>): Promise<Subject | undefined>;
   deleteSubject(id: number): Promise<boolean>;
+  initializeDefaultSubjectsForUser(userId: number): Promise<void>;
   
   // Gamification methods
   getAchievements(): Promise<Achievement[]>;
@@ -756,6 +757,39 @@ export class MemStorage implements IStorage {
 
   async deletePortfolioItem(id: number): Promise<boolean> {
     return this.portfolioItems.delete(id);
+  }
+
+  // Initialize default subjects for a user (MemStorage implementation)
+  async initializeDefaultSubjectsForUser(userId: number): Promise<void> {
+    // Check if user already has subjects
+    const userSubjects = Array.from(this.subjects.values()).filter(s => s.userId === userId);
+    if (userSubjects.length > 0) {
+      return; // User already has subjects
+    }
+
+    const defaultSubjects = [
+      { name: "Mathematics", color: "#3B82F6", userId }, // Blue
+      { name: "Science", color: "#10B981", userId }, // Green
+      { name: "English", color: "#F59E0B", userId }, // Amber
+      { name: "History", color: "#8B5CF6", userId }, // Purple
+      { name: "Art", color: "#EF4444", userId }, // Red
+      { name: "Music", color: "#EC4899", userId }, // Pink
+      { name: "Physical Education", color: "#06B6D4", userId }, // Cyan
+      { name: "Computer Science", color: "#6B7280", userId }, // Gray
+      { name: "Geography", color: "#84CC16", userId }, // Lime
+      { name: "Languages", color: "#F97316", userId }, // Orange
+    ];
+
+    for (const subject of defaultSubjects) {
+      const id = this.subjectCurrentId++;
+      const newSubject: Subject = {
+        id,
+        name: subject.name,
+        color: subject.color,
+        userId: subject.userId
+      };
+      this.subjects.set(id, newSubject);
+    }
   }
 }
 

@@ -502,6 +502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/subjects", async (req: Request, res: Response) => {
     try {
       const userId = 1; // Hardcoded for demo
+      
+      // Initialize default subjects for user if they don't have any
+      await storage.initializeDefaultSubjectsForUser(userId);
+      
       const subjects = await storage.getSubjects(userId);
       res.json(subjects);
     } catch (err: any) {

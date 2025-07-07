@@ -453,4 +453,34 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
     return (result.rowCount || 0) > 0;
   }
+
+  // Initialize default subjects for a specific user
+  async initializeDefaultSubjectsForUser(userId: number): Promise<void> {
+    try {
+      // Check if user already has subjects
+      const existingSubjects = await db.select().from(subjects).where(eq(subjects.userId, userId)).limit(1);
+      if (existingSubjects.length > 0) {
+        return; // User already has subjects
+      }
+
+      const defaultSubjects = [
+        { name: "Mathematics", color: "#3B82F6", userId }, // Blue
+        { name: "Science", color: "#10B981", userId }, // Green
+        { name: "English", color: "#F59E0B", userId }, // Amber
+        { name: "History", color: "#8B5CF6", userId }, // Purple
+        { name: "Art", color: "#EF4444", userId }, // Red
+        { name: "Music", color: "#EC4899", userId }, // Pink
+        { name: "Physical Education", color: "#06B6D4", userId }, // Cyan
+        { name: "Computer Science", color: "#6B7280", userId }, // Gray
+        { name: "Geography", color: "#84CC16", userId }, // Lime
+        { name: "Languages", color: "#F97316", userId }, // Orange
+      ];
+
+      for (const subject of defaultSubjects) {
+        await db.insert(subjects).values(subject);
+      }
+    } catch (error) {
+      console.log("Default subjects already initialized for user or error occurred:", error);
+    }
+  }
 }
