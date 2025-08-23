@@ -24,6 +24,7 @@ import {
   type MoodEntry,
   type PortfolioItem,
   type InsertUser,
+  type UpsertUser,
   type InsertTask,
   type InsertNote,
   type InsertPhoto,
@@ -74,6 +75,27 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set(updateData)
       .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  // Replit Auth methods
+  async getUserByReplitId(replitId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.replitId, replitId));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.replitId,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
       .returning();
     return user;
   }

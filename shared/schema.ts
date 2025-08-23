@@ -1,23 +1,43 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, varchar } from "drizzle-orm/pg-core";
+import { sql } from 'drizzle-orm';
+import { pgTable, text, serial, integer, boolean, timestamp, json, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema
+// Session storage table - Required for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User schema - Updated for Replit Auth with backward compatibility
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  id: serial("id").primaryKey(), // Keep existing integer ID
+  // Replit Auth fields
+  replitId: varchar("replit_id").unique(), // Replit user ID (string)
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  // Legacy fields for backward compatibility
+  username: text("username").unique(),
+  password: text("password"),
   name: text("name"),
   avatar: text("avatar"),
-  email: text("email"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
+  // App-specific fields
   points: integer("points").notNull().default(0),
   level: integer("level").notNull().default(1),
   streak: integer("streak").notNull().default(0),
   lastActiveDate: timestamp("last_active_date"),
   userType: text("user_type").notNull().default("student"), // "student" or "coach"
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Coach-Student relationship
@@ -28,6 +48,11 @@ export const coachStudents = pgTable("coach_students", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Replit Auth user types
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
+
+// Legacy insert schema for backward compatibility
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -194,8 +219,7 @@ export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick(
   taskId: true,
 });
 
-// Types
-export type User = typeof users.$inferSelect;
+// Types - Updated for mixed compatibility
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Task = typeof tasks.$inferSelect;

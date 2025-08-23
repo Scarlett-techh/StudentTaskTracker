@@ -9,6 +9,7 @@ import { generateRecommendations } from "./recommendation-engine";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 // Configure multer for disk storage
 const upload = multer({ 
@@ -38,6 +39,9 @@ const logRequest = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
   // Error handling middleware
   function handleError(err: any, res: Response) {
     console.error("API Error:", err);
@@ -49,6 +53,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.status(500).json({ message: err.message || "Internal server error" });
   }
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
   
   // Define routes
   

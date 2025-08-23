@@ -1,7 +1,7 @@
 import {
   users, tasks, notes, photos, taskAttachments, subjects, 
   achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications, moodEntries, portfolioItems,
-  type User, type InsertUser,
+  type User, type InsertUser, type UpsertUser,
   type Task, type InsertTask,
   type Note, type InsertNote,
   type Photo, type InsertPhoto,
@@ -18,13 +18,17 @@ import {
 import { DatabaseStorage } from "./db-storage";
 
 export interface IStorage {
-  // User methods
+  // User methods - Legacy
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByResetToken(token: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  
+  // Replit Auth methods
+  getUserByReplitId(replitId: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Task methods
   getTasks(userId: number): Promise<Task[]>;
@@ -229,6 +233,34 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(
       (user) => user.resetToken === token
     );
+  }
+
+  // Replit Auth methods
+  async getUserByReplitId(replitId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.replitId === replitId
+    );
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    // Try to find existing user by replitId first
+    if (userData.replitId) {
+      const existing = await this.getUserByReplitId(userData.replitId);
+      if (existing) {
+        const updated = await this.updateUser(existing.id, userData as any);
+        return updated!;
+      }
+    }
+
+    // Create new user (convert UpsertUser to InsertUser for compatibility)
+    const insertData: InsertUser = {
+      username: userData.username || null,
+      password: userData.password || null,
+      name: userData.name || userData.firstName || null,
+      avatar: userData.avatar || userData.profileImageUrl || null,
+      email: userData.email || null,
+    };
+    return await this.createUser(insertData);
   }
   
   // Task methods
