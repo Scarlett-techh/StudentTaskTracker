@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -23,7 +24,6 @@ import StudentLogin from "@/pages/student-login";
 import CoachLogin from "@/pages/coach-login";
 import CoachDashboard from "@/pages/coach-dashboard";
 import { Landing } from "@/pages/Landing";
-import { Home } from "@/pages/Home";
 
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -31,15 +31,34 @@ import MobileNav from "@/components/layout/mobile-nav";
 import Footer from "@/components/layout/footer";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
-  
-  // Show landing page for unauthenticated users or while loading
-  if (isLoading || !isAuthenticated) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  // ✅ Redirect users to correct dashboard after login
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.userType === "coach") {
+        setLocation("/coach/dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
+    }
+  }, [isAuthenticated, user, setLocation]);
+
+  // ✅ Show a loading screen while auth is being checked
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-600 text-lg">Loading...</p>
+      </div>
+    );
+  }
+
+  // ✅ Show public routes only if NOT authenticated
+  if (!isAuthenticated) {
     return (
       <Switch>
         <Route path="/" component={Landing} />
-        {/* Legacy auth routes for backward compatibility */}
         <Route path="/login" component={StudentLogin} />
         <Route path="/student-login" component={StudentLogin} />
         <Route path="/coach/login" component={CoachLogin} />
@@ -50,15 +69,12 @@ function Router() {
     );
   }
 
-  // Authenticated user routes
+  // ✅ Authenticated user routes
   return (
     <Switch>
-      {/* New authenticated home page */}
-      <Route path="/" component={Home} />
-      
       {/* Coach routes */}
       <Route path="/coach/dashboard" component={CoachDashboard} />
-      
+
       {/* Student routes with layout */}
       <Route path="/dashboard">
         <div className="min-h-screen flex flex-col">
@@ -73,8 +89,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
-      {/* Other student routes with layout */}
+
       <Route path="/tasks">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -88,7 +103,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/calendar">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -102,7 +117,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/resources">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -116,7 +131,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/portfolio">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -130,7 +145,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/analytics">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -144,7 +159,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/share">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -158,7 +173,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/parent">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -172,7 +187,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/profile">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -186,7 +201,7 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
       <Route path="/settings">
         <div className="min-h-screen flex flex-col">
           <Header />
@@ -200,7 +215,8 @@ function Router() {
           <MobileNav currentPath={location} />
         </div>
       </Route>
-      
+
+      {/* Fallback */}
       <Route component={NotFound} />
     </Switch>
   );

@@ -18,31 +18,41 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ currentPath }: SidebarProps) => {
-  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
-    queryKey: ["/api/subjects"],
+  // ✅ Fetch user type to know if student or coach
+  const { data: user } = useQuery<{ userType: string }>({
+    queryKey: ["/api/user"],
   });
 
-  const mainLinks = [
-    { href: "/", icon: <LayoutDashboard className="mr-3 h-5 w-5" />, label: "Dashboard" },
+  const studentLinks = [
+    { href: "/dashboard", icon: <LayoutDashboard className="mr-3 h-5 w-5" />, label: "Dashboard" },
     { href: "/tasks", icon: <BookText className="mr-3 h-5 w-5" />, label: "Tasks" },
     { href: "/calendar", icon: <Calendar className="mr-3 h-5 w-5" />, label: "Calendar" },
     { href: "/resources", icon: <BarChart2 className="mr-3 h-5 w-5" />, label: "Learning Resources" },
     { href: "/portfolio", icon: <Award className="mr-3 h-5 w-5" />, label: "Portfolio" },
-    { href: "/analytics", icon: <BarChart2 className="mr-3 h-5 w-5" />, label: "Analytics" },
     { href: "/share", icon: <Send className="mr-3 h-5 w-5" />, label: "Share Work" },
-    { href: "/coach/login", icon: <Users className="mr-3 h-5 w-5" />, label: "Coach Portal" },
     { href: "/settings", icon: <Settings className="mr-3 h-5 w-5" />, label: "Settings" },
   ];
+
+  const coachLinks = [
+    { href: "/coach/dashboard", icon: <Users className="mr-3 h-5 w-5" />, label: "Coach Dashboard" },
+    { href: "/analytics", icon: <BarChart2 className="mr-3 h-5 w-5" />, label: "Analytics" },
+    { href: "/settings", icon: <Settings className="mr-3 h-5 w-5" />, label: "Settings" },
+  ];
+
+  // ✅ Pick correct links
+  console.log("Sidebar user:", user);
+  const linksToShow = user?.userType === "coach" ? coachLinks : studentLinks;
+
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
+    queryKey: ["/api/subjects"],
+  });
 
   return (
     <aside className="sidebar w-64 bg-white border-r border-gray-200 p-4 hidden md:block">
       <nav className="space-y-1">
-        {mainLinks.map((link) => (
-          <Link 
-            key={link.href} 
-            href={link.href}
-          >
-            <div 
+        {linksToShow.map((link) => (
+          <Link key={link.href} href={link.href}>
+            <div
               className={cn(
                 "flex items-center px-3 py-2 rounded-md font-medium cursor-pointer",
                 currentPath === link.href
@@ -57,29 +67,34 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
         ))}
       </nav>
 
-      <div className="mt-8">
-        <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Current Subjects</h3>
-        <div className="mt-2 space-y-1">
-          {isLoadingSubjects ? (
-            <div className="px-3 py-2 text-sm text-gray-500">Loading subjects...</div>
-          ) : Array.isArray(subjects) && subjects.length > 0 ? (
-            subjects.map((subject: any) => (
-              <div 
-                key={subject.id}
-                className="flex items-center group px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 cursor-pointer"
-              >
-                <span 
-                  className="w-2 h-2 rounded-full mr-3" 
-                  style={{ backgroundColor: subject.color }}
-                ></span>
-                <span className="font-medium">{subject.name}</span>
-              </div>
-            ))
-          ) : (
-            <div className="px-3 py-2 text-sm text-gray-500">No subjects found</div>
-          )}
+      {/* ✅ Subjects still appear for students */}
+      {user?.userType === "student" && (
+        <div className="mt-8">
+          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Current Subjects
+          </h3>
+          <div className="mt-2 space-y-1">
+            {isLoadingSubjects ? (
+              <div className="px-3 py-2 text-sm text-gray-500">Loading subjects...</div>
+            ) : Array.isArray(subjects) && subjects.length > 0 ? (
+              subjects.map((subject: any) => (
+                <div
+                  key={subject.id}
+                  className="flex items-center group px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full mr-3"
+                    style={{ backgroundColor: subject.color }}
+                  ></span>
+                  <span className="font-medium">{subject.name}</span>
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">No subjects found</div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 };

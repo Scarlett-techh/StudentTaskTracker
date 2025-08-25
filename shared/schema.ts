@@ -19,12 +19,12 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(), // Keep existing integer ID
   // Replit Auth fields
   replitId: varchar("replit_id").unique(), // Replit user ID (string)
-  email: varchar("email").unique(),
+  email: text("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   // Legacy fields for backward compatibility
-  username: text("username").unique(),
+  username: text("username"),
   password: text("password"),
   name: text("name"),
   avatar: text("avatar"),
