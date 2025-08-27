@@ -16,7 +16,7 @@ import { generateRecommendations } from "./recommendation-engine";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
-import { setupLocalAuth, isAuthenticated } from "./localAuth"; // ✅ fixed import
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 // Configure multer for disk storage
 const upload = multer({
@@ -47,7 +47,17 @@ const logRequest = (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupLocalAuth(app);
+  await setupAuth(app);
+
+  // Helper function to get authenticated user
+  async function getAuthenticatedUser(req: any): Promise<any> {
+    const replitId = req.user.claims.sub;
+    const user = await storage.getUserByReplitId(replitId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
 
   // Error handling middleware
   function handleError(err: any, res: Response) {
@@ -64,8 +74,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== AUTH ROUTES =====
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id; // ✅ use local auth user ID
-      const user = await storage.getUser(userId);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -76,8 +86,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TASK ROUTES =====
   app.get("/api/tasks", isAuthenticated, async (req: any, res: Response) => {
     try {
-      const userId = req.user.id; // ✅ replaced hardcoded
-      const tasks = await storage.getTasks(userId);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const tasks = await storage.getTasks(user.id);
       res.json(tasks);
     } catch (err: any) {
       handleError(err, res);
@@ -86,9 +100,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tasks/status/:status", isAuthenticated, async (req: any, res: Response) => {
     try {
-      const userId = req.user.id;
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
       const status = req.params.status;
-      const tasks = await storage.getTasksByStatus(userId, status);
+      const tasks = await storage.getTasksByStatus(user.id, status);
       res.json(tasks);
     } catch (err: any) {
       handleError(err, res);
@@ -112,7 +130,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", isAuthenticated, async (req: any, res: Response) => {
     try {
-      const userId = req.user.id;
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
       const existingTasks = await storage.getTasks(userId);
       const maxOrder =
@@ -184,7 +206,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedTask = await storage.updateTask(taskId, updateData);
 
       if (statusChangingToCompleted && updatedTask) {
-        const userId = req.user.id;
+        const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
         let pointsToAward = 10;
 
