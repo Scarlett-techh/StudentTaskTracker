@@ -96,11 +96,9 @@ export function Landing() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleLogin} size="lg" className="text-lg px-8 py-3">
-              Log in with Replit 
-              </Button>
-              <p className="text-sm text-gray-500 mt-4">
-                Secure authentication powered by Replit
+ 
+            <p className="text-sm text-gray-500 mt-4">
+              Secure authentication powered by UseAuth
               </p>
             </CardContent>
           </Card>
