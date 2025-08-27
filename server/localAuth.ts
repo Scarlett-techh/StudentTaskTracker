@@ -51,12 +51,24 @@ export async function setupLocalAuth(app: Express) {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: any, done) => {
     try {
-      const user = await storage.getUser(id);
+      // Handle corrupted session data gracefully
+      if (typeof id === 'object' || typeof id === 'string') {
+        console.warn('Invalid session data detected, logging out user');
+        return done(null, false);
+      }
+      
+      const userId = parseInt(id);
+      if (isNaN(userId)) {
+        return done(null, false);
+      }
+      
+      const user = await storage.getUser(userId);
       done(null, user || false);
     } catch (err) {
-      done(err);
+      console.error('Deserialization error:', err);
+      done(null, false); // Fail gracefully instead of crashing
     }
   });
 
