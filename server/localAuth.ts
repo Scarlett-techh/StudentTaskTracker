@@ -27,7 +27,7 @@ export async function setupLocalAuth(app: Express) {
   passport.use(
     new LocalStrategy(
       { usernameField: "email" },
-      async (email, password, done) => {
+      async (email: string, password: string, done: (error: any, user?: any, options?: any) => void) => {
         try {
           const user = await storage.getUserByEmail(email);
           if (!user) {
@@ -62,7 +62,7 @@ export async function setupLocalAuth(app: Express) {
 
   // login route
   app.post("/api/auth/login", (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: info?.message || "Unauthorized" });
 
@@ -86,9 +86,8 @@ export async function setupLocalAuth(app: Express) {
       const passwordHash = await bcrypt.hash(password, 10);
       const newUser = await storage.createUser({
         email,
-        firstName,
-        lastName,
         passwordHash,
+        name: `${firstName} ${lastName}`.trim() || email,
       });
 
       return res.status(201).json({ message: "User created", user: newUser });
