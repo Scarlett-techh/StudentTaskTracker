@@ -14,14 +14,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// ✅ Updated User schema (safe migration: keep `password`, add nullable `password_hash`)
+// ✅ Updated User schema (snake_case for consistency with storage.ts)
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
 
   // Authentication fields
   email: text("email").notNull().unique(),
-  password: text("password"), // legacy plain-text or old hash
-  passwordHash: text("password_hash"), // new bcrypt hash (nullable until migration)
+  password: text("password"), // legacy plain-text or old hash (nullable)
+  password_hash: text("password_hash"), // ✅ bcrypt hash
 
   // Replit Auth (keep for backward compatibility)
   replitId: varchar("replit_id").unique(),
@@ -61,10 +61,10 @@ export const coachStudents = pgTable("coach_students", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Insert schema for new users (use passwordHash going forward)
+// ✅ Insert schema for new users (now uses password_hash)
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
-  passwordHash: true,
+  password_hash: true,
   username: true,
   name: true,
   avatar: true,
