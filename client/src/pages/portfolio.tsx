@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -272,10 +271,6 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <Helmet>
-        <title>Portfolio - Student Learning Platform</title>
-        <meta name="description" content="Showcase your learning achievements, projects, and progress in your personal portfolio." />
-      </Helmet>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}

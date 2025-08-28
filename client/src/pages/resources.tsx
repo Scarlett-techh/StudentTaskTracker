@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -230,10 +229,6 @@ const Resources = () => {
   
   return (
     <>
-      <Helmet>
-        <title>Learning Resources | Student Work Tracker</title>
-        <meta name="description" content="Access educational resources and learning materials from Khan Academy, YouTube Education, TVO Learn and more." />
-      </Helmet>
       
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

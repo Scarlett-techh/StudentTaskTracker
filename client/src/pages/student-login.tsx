@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,10 +108,6 @@ const StudentLogin = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-      <Helmet>
-        <title>{isRegisterMode ? 'Create Account' : 'Student Login'} | Learning Platform</title>
-        <meta name="description" content="Secure login portal for students to access their learning dashboard and track progress." />
-      </Helmet>
       
       <Card className="w-full max-w-md shadow-xl border-0">
         <CardHeader className="text-center pb-8">

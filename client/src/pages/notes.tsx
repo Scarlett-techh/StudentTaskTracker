@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { PlusIcon } from "lucide-react";
 import NoteCard from "@/components/dashboard/note-card";
 import NoteForm from "@/components/forms/note-form";
-import { Helmet } from "react-helmet-async";
 
 const Notes = () => {
   const [newNoteDialogOpen, setNewNoteDialogOpen] = useState(false);
@@ -17,13 +16,6 @@ const Notes = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Notes - Student Task Tracker</title>
-        <meta 
-          name="description" 
-          content="Keep track of important class notes, research findings, and study materials in one organized location."
-        />
-      </Helmet>
       
       <div className="space-y-6">
         <div className="flex justify-between items-center">

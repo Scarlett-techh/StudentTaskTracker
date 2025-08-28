@@ -14,7 +14,6 @@ import LearningRecommendations from "@/components/dashboard/learning-recommendat
 import { MoodTracker } from "@/components/dashboard/mood-tracker";
 import TaskForm from "@/components/forms/task-form";
 import PhotoUpload from "@/components/forms/photo-upload";
-import { Helmet } from "react-helmet-async";
 
 const Dashboard = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
@@ -108,14 +107,6 @@ const Dashboard = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Dashboard - Student Task Tracker</title>
-        <meta 
-          name="description" 
-          content="View your daily progress, manage tasks, take notes, and organize your academic life all in one place."
-        />
-      </Helmet>
-      
       <div className="space-y-6">
         {/* Personalized Welcome Message */}
         <div className="glass-card rounded-2xl text-gray-900 p-8 animate-slide-up shadow-glow relative overflow-hidden">

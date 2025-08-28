@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Link } from 'wouter';
@@ -51,13 +50,6 @@ export default function ForgotPassword() {
 
   return (
     <>
-      <Helmet>
-        <title>Forgot Password - Student Task Tracker</title>
-        <meta 
-          name="description" 
-          content="Reset your password for the Student Task Tracker. Enter your email address to receive password reset instructions."
-        />
-      </Helmet>
 
       <div className="flex justify-center items-center min-h-screen bg-gray-50 px-4">
         <Card className="w-full max-w-md shadow-lg">
