@@ -16,7 +16,7 @@ import {
   type PortfolioItem, type InsertPortfolioItem
 } from "@shared/schema";
 import { DatabaseStorage } from "./db-storage";
-import bcrypt from "bcrypt"; // ✅ Step 1: Added bcrypt
+import bcrypt from "bcryptjs"; // ✅ switched to bcryptjs
 
 export interface IStorage {
   // User methods - Legacy
@@ -147,7 +147,7 @@ export class MemStorage implements IStorage {
     // Initialize default achievements
     this.initializeAchievements();
 
-    // ✅ Step 2: Demo user with hashed password
+    // ✅ Step 2: Demo user with hashed password (using bcryptjs)
     const demoPasswordHash = bcrypt.hashSync("password123", 10);
     this.createUser({
       username: "emma",
@@ -259,7 +259,6 @@ export class MemStorage implements IStorage {
   }
 
   // ... ✅ KEEP all your other methods here (tasks, notes, photos, achievements, mood, portfolio, etc.)
-  // I didn’t remove them, just truncated here for readability
 }
 
 export const storage = new DatabaseStorage();

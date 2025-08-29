@@ -40,6 +40,7 @@ export const users = pgTable("users", {
 
   // App-specific
   userType: text("user_type").notNull().default("student"), // "student" | "coach"
+  coachId: varchar("coach_id"), // ✅ unique coach identifier for coaches
   points: integer("points").notNull().default(0),
   level: integer("level").notNull().default(1),
   streak: integer("streak").notNull().default(0),
