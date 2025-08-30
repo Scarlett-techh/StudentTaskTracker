@@ -5,8 +5,8 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
-// ✅ Import feature routes
-import { registerPortfolioRoutes } from "./routes/portfolio";
+// ✅ Import feature routes (default export)
+import portfolioRoutes from "./routes/portfolio";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -50,9 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // ✅ Portfolio routes (modularized)
+  // ✅ Portfolio routes (use default export router)
   // ========================
-  registerPortfolioRoutes(app);
+  app.use(portfolioRoutes);
 
   // ========================
   // Create HTTP server
