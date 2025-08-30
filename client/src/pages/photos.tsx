@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { PlusIcon } from "lucide-react";
 import PhotoThumbnail from "@/components/dashboard/photo-thumbnail";
 import PhotoUpload from "@/components/forms/photo-upload";
+import { Helmet } from "react-helmet-async";
 
 const Photos = () => {
   const [photoUploadDialogOpen, setPhotoUploadDialogOpen] = useState(false);
@@ -16,6 +17,13 @@ const Photos = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Photos - Student Task Tracker</title>
+        <meta 
+          name="description" 
+          content="Upload and organize photos of class materials, whiteboards, notes, and more for easy reference."
+        />
+      </Helmet>
       
       <div className="space-y-6">
         <div className="flex justify-between items-center">

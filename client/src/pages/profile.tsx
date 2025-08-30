@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Helmet } from 'react-helmet-async';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,6 +93,13 @@ export default function Profile() {
 
   return (
     <>
+      <Helmet>
+        <title>My Profile - Student Task Tracker</title>
+        <meta 
+          name="description" 
+          content="Manage your personal profile and settings. Upload a profile picture and update your information."
+        />
+      </Helmet>
 
       <div className="space-y-6">
         <div className="flex justify-between items-center">

@@ -7,6 +7,7 @@ import TaskCard from "@/components/dashboard/task-card";
 import TaskForm from "@/components/forms/task-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Helmet } from "react-helmet-async";
 
 const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
@@ -81,6 +82,14 @@ const Tasks = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Tasks - Student Task Tracker</title>
+        <meta 
+          name="description" 
+          content="Manage and organize your academic tasks. Track progress, set due dates, and prioritize your work."
+        />
+      </Helmet>
+      
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold gradient-heading">My Tasks</h2>

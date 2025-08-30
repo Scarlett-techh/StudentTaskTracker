@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Card, 
@@ -166,6 +167,13 @@ const ParentDashboard = () => {
   if (!isAuthenticated) {
     return (
       <>
+        <Helmet>
+          <title>Parent Access | Student Work Tracker</title>
+          <meta 
+            name="description" 
+            content="Parent access to monitor student progress and achievements."
+          />
+        </Helmet>
         
         <div className="min-h-[80vh] flex flex-col items-center justify-center">
           <div className="text-center mb-8">
@@ -230,6 +238,13 @@ const ParentDashboard = () => {
   
   return (
     <>
+      <Helmet>
+        <title>Parent Dashboard | Student Work Tracker</title>
+        <meta 
+          name="description" 
+          content="Monitor your student's progress, achievements, and academic performance."
+        />
+      </Helmet>
       
       <div className="space-y-6">
         <div className="flex justify-between items-center">

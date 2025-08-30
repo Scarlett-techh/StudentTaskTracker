@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +94,10 @@ const CoachDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <Helmet>
+        <title>Coach Dashboard | Student Tracker</title>
+        <meta name="description" content="Learning coach dashboard to assign tasks and track student progress." />
+      </Helmet>
 
       <div className="container mx-auto px-4 py-8">
         {/* Header */}

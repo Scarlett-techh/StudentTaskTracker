@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Helmet } from 'react-helmet-async';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -103,6 +104,13 @@ export default function Calendar() {
 
   return (
     <>
+      <Helmet>
+        <title>Calendar - Student Task Tracker</title>
+        <meta 
+          name="description" 
+          content="Visualize your tasks on a calendar. Easily track due dates and plan your schedule."
+        />
+      </Helmet>
 
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-6">

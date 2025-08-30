@@ -1,59 +1,73 @@
-import express from "express";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { setupLocalAuth } from "./localAuth.js";
-import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic } from "./vite.js";
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
 
 const app = express();
-
-// ===== Middleware =====
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// ✅ Configure session middleware BEFORE passport
-const PgStore = connectPg(session);
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "supersecret", // 🔐 Replace with strong secret in production
-    resave: false,
-    saveUninitialized: false,
-    store: new PgStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true, // ✅ Auto-create the "session" table if missing
-    }),
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // ✅ Only secure in production (HTTPS)
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    },
-  })
-);
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-// ===== Auth (passport setup) =====
-setupLocalAuth(app);
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
 
-// ===== API routes =====
-await registerRoutes(app);
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
 
-// Debugging helper (to test sessions)
-app.get("/api/debug/session", (req, res) => {
-  res.json({
-    session: req.session,
-    user: req.user || null,
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
   });
+
+  next();
 });
 
-const PORT = process.env.PORT || 3000;
+(async () => {
+  const server = await registerRoutes(app);
 
-// ===== Serve frontend =====
-if (process.env.NODE_ENV === "development") {
-  await setupVite(app);
-  app.listen(PORT, () => {
-    console.log(`✅ Dev server running at http://localhost:${PORT}`);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
   });
-} else {
-  serveStatic(app);
-  app.listen(PORT, () => {
-    console.log(`✅ Prod server running at http://localhost:${PORT}`);
-  });
-}
+
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+
+    // 👇 Catch-all: always return index.html for React routes
+    app.get("*", (_req, res) => {
+      res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
+    });
+  }
+
+  // ✅ Use Replit’s provided PORT, fallback to 5000
+  const port = process.env.PORT ? Number(process.env.PORT) : 5000;
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    }
+  );
+})();

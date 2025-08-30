@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -107,6 +108,13 @@ This report shows progress across all learning activities.`;
 
   return (
     <>
+      <Helmet>
+        <title>Analytics | Student Work Tracker</title>
+        <meta 
+          name="description" 
+          content="View detailed analytics and insights about your learning progress across all subjects."
+        />
+      </Helmet>
       
       <div className="space-y-6">
         <div className="flex justify-between items-center">

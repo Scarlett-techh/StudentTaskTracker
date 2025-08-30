@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { 
   Card, 
   CardContent,
@@ -189,6 +190,13 @@ const SharePage = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Share Work | Student Work Tracker</title>
+        <meta 
+          name="description" 
+          content="Share your work with learning coaches, parents, and teachers."
+        />
+      </Helmet>
 
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
