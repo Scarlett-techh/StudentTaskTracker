@@ -36,12 +36,12 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
     },
     server: {
-      host: true, // Listen on all addresses
-      port: 5173, // Explicitly set the port for Vite dev server
+      host: true, // Listen on all addresses (including 0.0.0.0)
+      port: serverPort,  // Use the server's port for development
       strictPort: true, // Throw error if port is taken
       proxy: {
         "/api": {
-          target: `http://localhost:${serverPort}`, // Use the same port as the server
+          target: `http://0.0.0.0:${serverPort}`, // Update to use 0.0.0.0
           changeOrigin: true,
           secure: false,
           // Additional configuration for WebSocket proxy if needed
