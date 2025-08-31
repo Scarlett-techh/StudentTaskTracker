@@ -37,7 +37,7 @@ function Router() {
   // ✅ Redirect users to correct dashboard after login
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.userType === "coach") {
+      if ((user as any).userType === "coach") {
         setLocation("/coach/dashboard");
       } else {
         setLocation("/dashboard");

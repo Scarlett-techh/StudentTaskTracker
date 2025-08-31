@@ -78,20 +78,12 @@ export default function Portfolio() {
   const { data: portfolioItems = [], isLoading, refetch: refetchPortfolio } = useQuery({
     queryKey: ["/api/portfolio"],
     retry: 2,
-    onError: (error: any) => {
-      console.error("Error fetching portfolio:", error);
-      setConnectionError(true);
-    }
   });
 
   // Fetch subjects for the dropdown
   const { data: subjectsData, error: subjectsError, refetch: refetchSubjects } = useQuery({
     queryKey: ["/api/subjects"],
     retry: 1,
-    onError: (error: any) => {
-      console.error("Error fetching subjects:", error);
-      setConnectionError(true);
-    }
   });
 
   // Set subjects data with fallback to sample data
