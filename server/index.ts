@@ -1,11 +1,18 @@
+// server/index.js
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 
+// Import your API routes
+import userRoutes from "./api/user.js";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add API routes before the logging middleware
+app.use("/api/user", userRoutes);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -58,7 +65,7 @@ app.use((req, res, next) => {
     });
   }
 
-  // ✅ Use Replit’s provided PORT, fallback to 5000
+  // ✅ Use Replit's provided PORT, fallback to 5000
   const port = process.env.PORT ? Number(process.env.PORT) : 5000;
   server.listen(
     {
