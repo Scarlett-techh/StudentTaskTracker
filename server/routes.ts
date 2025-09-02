@@ -1,3 +1,4 @@
+// server/routes.ts
 import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -37,13 +38,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // Task Routes (example only, keep others too)
+  // Task Routes - UPDATED WITH AUTH
   // ========================
-  app.get("/api/tasks", async (req, res) => {
+  app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = 1; // TODO: replace with real auth
-      const tasks = await storage.getTasks(userId);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      const tasks = await storage.getTasks(user.id);
       res.json(tasks);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // ========================
+  // NEW: User Stats Endpoint for Analytics
+  // ========================
+  app.get("/api/user-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+
+      // Get task statistics
+      const tasks = await storage.getTasks(user.id);
+      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+
+      res.json({
+        level: user.level || 1,
+        points: user.points || 0,
+        streak: user.streak || 0,
+        totalTasks: tasks.length,
+        completedTasks: completedTasks.length
+      });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // ========================
+  // NEW: Subjects Endpoint for Analytics
+  // ========================
+  app.get("/api/subjects", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      const tasks = await storage.getTasks(user.id);
+
+      // Extract unique subjects from tasks
+      const subjectsMap = new Map();
+      tasks.forEach((task: any) => {
+        if (task.subject && !subjectsMap.has(task.subject)) {
+          subjectsMap.set(task.subject, { name: task.subject });
+        }
+      });
+
+      const subjects = Array.from(subjectsMap.values());
+      res.json(subjects);
     } catch (err: any) {
       handleError(err, res);
     }
