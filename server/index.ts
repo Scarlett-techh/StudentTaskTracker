@@ -1,4 +1,4 @@
-// server/index.js
+// server/index.ts
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -6,6 +6,8 @@ import path from "path";
 
 // Import your API routes
 import userRoutes from "./api/user.js";
+import accountRoutes from "./api/user/account.js";
+import settingsRoutes from "./api/user/settings.js";
 
 const app = express();
 app.use(express.json());
@@ -13,6 +15,8 @@ app.use(express.urlencoded({ extended: false }));
 
 // Add API routes before the logging middleware
 app.use("/api/user", userRoutes);
+app.use("/api/user/account", accountRoutes);
+app.use("/api/user/settings", settingsRoutes);
 
 app.use((req, res, next) => {
   const start = Date.now();

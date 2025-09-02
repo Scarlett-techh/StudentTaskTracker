@@ -29,6 +29,7 @@ import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import MobileNav from "@/components/layout/mobile-nav";
 import Footer from "@/components/layout/footer";
+import { ThemeProvider } from "@/hooks/use-theme"; // Import ThemeProvider
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -227,8 +228,10 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <ThemeProvider> {/* Wrap with ThemeProvider */}
+            <Toaster />
+            <Router />
+          </ThemeProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </HelmetProvider>

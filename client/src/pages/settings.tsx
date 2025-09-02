@@ -10,17 +10,15 @@ import { Settings, User, Bell, Shield, Palette, Save } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useTheme } from "@/hooks/use-theme";
 
 const SettingsPage = () => {
   const { toast } = useToast();
-  const [isChanged, setIsChanged] = useState(false);
-  const [accountInfo, setAccountInfo] = useState({
-    name: "",
-    username: "",
-    email: ""
-  });
+  const { theme, setTheme } = useTheme();
+  const [isAccountChanged, setIsAccountChanged] = useState(false);
+  const [isSettingsChanged, setIsSettingsChanged] = useState(false);
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, refetch } = useQuery({
     queryKey: ["/api/user"],
     onSuccess: (data) => {
       if (data) {
@@ -32,10 +30,22 @@ const SettingsPage = () => {
 
         // Initialize settings from user data if available
         if (data.settings) {
-          setSettings(prev => ({ ...prev, ...data.settings }));
+          const newSettings = { ...data.settings };
+          setSettings(prev => ({ ...prev, ...newSettings }));
+
+          // Sync theme with the theme context
+          if (newSettings.darkMode !== undefined) {
+            setTheme(newSettings.darkMode ? 'dark' : 'light');
+          }
         }
       }
     }
+  });
+
+  const [accountInfo, setAccountInfo] = useState({
+    name: "",
+    username: "",
+    email: ""
   });
 
   const [settings, setSettings] = useState({
@@ -45,78 +55,114 @@ const SettingsPage = () => {
     autoSave: true,
   });
 
-  // Apply dark mode theme when setting changes
+  // Sync settings with theme context
   useEffect(() => {
-    if (settings.darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [settings.darkMode]);
+    setSettings(prev => ({
+      ...prev,
+      darkMode: theme === 'dark'
+    }));
+  }, [theme]);
 
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (newSettings: any) => {
-      // Combine account info and settings
-      const updateData = {
-        name: accountInfo.name,
-        username: accountInfo.username,
-        email: accountInfo.email,
-        settings: newSettings
-      };
-
-      const response = await apiRequest('PATCH', '/api/user', updateData);
+  // Update account information mutation
+  const updateAccountMutation = useMutation({
+    mutationFn: async (accountData: any) => {
+      const response = await apiRequest('PATCH', '/api/user/account', accountData);
 
       // Check if response is JSON
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response, got ${contentType}`);
+        const text = await response.text();
+        throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
       }
 
       return await response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    onSuccess: (data) => {
+      // Update the local state with the new data
+      setAccountInfo({
+        name: data.name || "",
+        username: data.username || "",
+        email: data.email || ""
+      });
+
+      toast({
+        title: "Account Updated",
+        description: "Your account information has been saved successfully!",
+      });
+      setIsAccountChanged(false);
+    },
+    onError: (error: Error) => {
+      console.error("Account Mutation Error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update account information. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update settings mutation
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (settingsData: any) => {
+      const response = await apiRequest('PATCH', '/api/user/settings', settingsData);
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
+      }
+
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      // Update the local state with the new settings
+      if (data.settings) {
+        setSettings(prev => ({ ...prev, ...data.settings }));
+
+        // Update theme context if darkMode changed
+        if (data.settings.darkMode !== undefined) {
+          setTheme(data.settings.darkMode ? 'dark' : 'light');
+        }
+      }
+
       toast({
         title: "Settings Updated",
         description: "Your settings have been saved successfully!",
       });
-      setIsChanged(false);
+      setIsSettingsChanged(false);
+
+      // Refetch user data to ensure everything is in sync
+      refetch();
     },
     onError: (error: Error) => {
-      console.error("Mutation Error:", error);
-
-      let errorMessage = "Failed to update settings. Please try again.";
-
-      // Provide more specific error messages based on the error
-      if (error.message.includes("Expected JSON response")) {
-        errorMessage = "Server responded with an unexpected format. Please contact support.";
-      } else if (error.message.includes("Failed to fetch")) {
-        errorMessage = "Unable to connect to the server. Please check your internet connection.";
-      }
-
+      console.error("Settings Mutation Error:", error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to update settings. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const handleSettingChange = (key: string, value: boolean) => {
+    // Special handling for theme changes
+    if (key === 'darkMode') {
+      setTheme(value ? 'dark' : 'light');
+    }
+
     setSettings(prev => ({ ...prev, [key]: value }));
-    setIsChanged(true);
+    setIsSettingsChanged(true);
   };
 
   const handleAccountInfoChange = (key: string, value: string) => {
     setAccountInfo(prev => ({ ...prev, [key]: value }));
-    setIsChanged(true);
+    setIsAccountChanged(true);
   };
 
-  const handleSaveSettings = () => {
-    // Basic validation
-    if (!accountInfo.email.includes('@')) {
+  const handleSaveAccountInfo = () => {
+    // Only validate email if it's provided and not empty
+    if (accountInfo.email && !accountInfo.email.includes('@')) {
       toast({
         title: "Validation Error",
         description: "Please enter a valid email address",
@@ -125,6 +171,10 @@ const SettingsPage = () => {
       return;
     }
 
+    updateAccountMutation.mutate(accountInfo);
+  };
+
+  const handleSaveSettings = () => {
     updateSettingsMutation.mutate(settings);
   };
 
@@ -147,8 +197,8 @@ const SettingsPage = () => {
         <div className="flex items-center gap-3">
           <Settings className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
-            <p className="text-gray-600 dark:text-gray-400">Manage your account and learning preferences</p>
+            <h1 className="text-3xl font-bold">Settings</h1>
+            <p className="text-gray-600">Manage your account and learning preferences</p>
           </div>
         </div>
 
@@ -195,6 +245,25 @@ const SettingsPage = () => {
                   placeholder="Enter your email address"
                 />
               </div>
+
+              {isAccountChanged && (
+                <div className="flex justify-end pt-4 border-t">
+                  <Button 
+                    onClick={handleSaveAccountInfo}
+                    disabled={updateAccountMutation.isPending}
+                    className="flex items-center gap-2"
+                  >
+                    {updateAccountMutation.isPending ? (
+                      "Saving..."
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Save Account Info
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -238,7 +307,7 @@ const SettingsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="notifications">Push Notifications</Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500">
                       Receive notifications for task updates
                     </p>
                   </div>
@@ -252,7 +321,7 @@ const SettingsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="emailReminders">Email Reminders</Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500">
                       Get email reminders for due tasks
                     </p>
                   </div>
@@ -268,7 +337,7 @@ const SettingsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="autoSave">Auto-save Tasks</Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500">
                       Automatically save task changes
                     </p>
                   </div>
@@ -282,7 +351,7 @@ const SettingsPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="darkMode">Dark Mode</Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500">
                       Use dark theme for better focus
                     </p>
                   </div>
@@ -295,7 +364,7 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            {isChanged && (
+            {isSettingsChanged && (
               <div className="flex justify-end pt-4 border-t">
                 <Button 
                   onClick={handleSaveSettings}
@@ -307,7 +376,7 @@ const SettingsPage = () => {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      Save Changes
+                      Save Settings
                     </>
                   )}
                 </Button>

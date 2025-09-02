@@ -1,34 +1,12 @@
 import express from 'express';
-import { getUserFromRequest, updateUser } from '../lib/db.js';
+import { getUserFromRequest, updateUser } from '../../lib/db.js';
 
 const router = express.Router();
 
-// GET /api/user - Get user data
-router.get('/', (req, res) => {
-  try {
-    const user = getUserFromRequest(req);
-
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Return user data (without sensitive information)
-    res.json({
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      settings: user.settings ? JSON.parse(user.settings) : {}
-    });
-  } catch (error) {
-    console.error('Error getting user:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// PATCH /api/user - Update user (for backward compatibility)
+// PATCH /api/user/account - Update account information
 router.patch('/', async (req, res) => {
   try {
+    // Get user from session or authentication token
     const user = getUserFromRequest(req);
 
     if (!user) {
@@ -36,7 +14,7 @@ router.patch('/', async (req, res) => {
     }
 
     // Extract and validate the update data
-    const { name, username, email, settings } = req.body;
+    const { name, username, email } = req.body;
 
     // Validate email if provided
     if (email && !email.includes('@')) {
@@ -48,7 +26,6 @@ router.patch('/', async (req, res) => {
     if (name !== undefined) updateData.name = name;
     if (username !== undefined) updateData.username = username;
     if (email !== undefined) updateData.email = email;
-    if (settings !== undefined) updateData.settings = JSON.stringify(settings);
 
     // Update user in database
     const updatedUser = updateUser(user.id, updateData);
@@ -62,11 +39,10 @@ router.patch('/', async (req, res) => {
       id: updatedUser.id,
       name: updatedUser.name,
       username: updatedUser.username,
-      email: updatedUser.email,
-      settings: updatedUser.settings ? JSON.parse(updatedUser.settings) : {}
+      email: updatedUser.email
     });
   } catch (error) {
-    console.error('Error updating user:', error);
+    console.error('Error updating user account:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
