@@ -5,9 +5,59 @@ import { storage } from "./storage";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { generateAIAnalysis } from "./ai-analysis"; // Import the AI analysis function
 
 // ✅ Import feature routes (default export)
 import portfolioRoutes from "./routes/portfolio";
+
+// Helper functions for skill calculations
+function calculateCriticalThinkingScore(tasks: any[]) {
+  // Base score on complexity/diversity of completed tasks
+  const diverseSubjects = new Set(tasks.map((t: any) => t.subject)).size;
+  const complexTasks = tasks.filter((t: any) => t.priority === 'high').length;
+  return Math.min(100, (diverseSubjects * 15) + (complexTasks * 5));
+}
+
+function calculateCreativityScore(tasks: any[]) {
+  // Base on creative tasks (like projects, art, etc.)
+  const creativeTasks = tasks.filter((t: any) => 
+    t.subject?.toLowerCase().includes('art') || 
+    t.subject?.toLowerCase().includes('creative') ||
+    t.type === 'project'
+  ).length;
+  return Math.min(100, creativeTasks * 10);
+}
+
+function calculateCollaborationScore(user: any, tasks: any[]) {
+  // Base on shared tasks or group activities
+  const sharedTasks = tasks.filter((t: any) => t.shared === true).length;
+  const groupTasks = tasks.filter((t: any) => t.type === 'group').length;
+  return Math.min(100, (sharedTasks * 10) + (groupTasks * 15));
+}
+
+function calculateCommunicationScore(tasks: any[]) {
+  // Base on tasks that involve communication (presentations, writing, etc.)
+  const communicationTasks = tasks.filter((t: any) => 
+    t.type === 'presentation' || 
+    t.type === 'writing' ||
+    t.subject?.toLowerCase().includes('language')
+  ).length;
+  return Math.min(100, communicationTasks * 8);
+}
+
+function calculateSelfDirectionScore(user: any, tasks: any[]) {
+  // Base on consistency and independent work
+  const streakBonus = (user.streak || 0) * 2;
+  const selfInitiated = tasks.filter((t: any) => t.assignedBy === 'self').length;
+  return Math.min(100, streakBonus + (selfInitiated * 8));
+}
+
+function calculateSocialEmotionalScore(user: any) {
+  // Base on user engagement and consistency
+  const streak = user.streak || 0;
+  const moodScore = user.moodRating || 5; // Assuming 1-10 scale
+  return Math.min(100, (streak * 3) + (moodScore * 5));
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -94,6 +144,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const subjects = Array.from(subjectsMap.values());
       res.json(subjects);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // ========================
+  // NEW: AI Learning Analysis Endpoint
+  // ========================
+  // ========================
+  // NEW: AI Learning Analysis Endpoint (Simplified)
+  // ========================
+  app.get("/api/ai-learning-analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      const tasks = await storage.getTasks(user.id);
+      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+
+      // Simple analysis without external dependency
+      const analysis = {
+        analysis: `Based on your learning patterns, you've completed ${completedTasks.length} out of ${tasks.length} tasks. ${completedTasks.length > 5 ? "Great job maintaining consistency!" : "Keep going to build momentum!"}`,
+        strengths: ["Task completion", "Learning engagement"],
+        recommendations: ["Try to complete at least one task daily", "Explore different subject areas"],
+        achievements: [`Completed ${completedTasks.length} tasks`, `${user.streak || 0}-day streak`],
+        learningStyle: "Developing learning style"
+      };
+
+      res.json(analysis);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+  // ========================
+  // NEW: Skill Metrics Endpoint
+  // ========================
+  app.get("/api/skill-metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      const tasks = await storage.getTasks(user.id);
+      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+
+      // Calculate skill metrics based on actual behavior
+      const metrics = {
+        criticalThinking: calculateCriticalThinkingScore(completedTasks),
+        creativity: calculateCreativityScore(completedTasks),
+        collaboration: calculateCollaborationScore(user, tasks),
+        communication: calculateCommunicationScore(completedTasks),
+        selfDirection: calculateSelfDirectionScore(user, completedTasks),
+        socialEmotional: calculateSocialEmotionalScore(user)
+      };
+
+      res.json(metrics);
     } catch (err: any) {
       handleError(err, res);
     }
