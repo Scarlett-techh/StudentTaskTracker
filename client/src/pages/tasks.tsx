@@ -9,46 +9,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Helmet } from "react-helmet-async";
 
-// Add interface for Task
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate?: string;
-  completed: boolean;
-  subject?: string;
-  status: "pending" | "in-progress" | "completed";
-  // Add other properties as needed
-}
-
 const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
-  // Fetch tasks with error handling
-  const { data: tasks = [], isLoading, error, refetch } = useQuery<Task[]>({
+  // Fetch tasks
+  const { data: tasks = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/tasks"],
-    queryFn: async () => {
-      const response = await fetch("/api/tasks");
-      if (!response.ok) {
-        throw new Error("Failed to fetch tasks");
-      }
-      return response.json();
-    },
-    retry: 2,
   });
-
-  // Show error if tasks query fails
-  if (error) {
-    toast({
-      title: "Error loading tasks",
-      description: "Please try again later",
-      variant: "destructive",
-    });
-  }
-
+  
   // Fetch task attachments for all tasks
   const { data: allAttachments = [] } = useQuery({
     queryKey: ["/api/tasks/attachments"],
@@ -71,41 +42,35 @@ const Tasks = () => {
 
   const handleDrop = async () => {
     if (dragItem.current === null || dragOverItem.current === null || !Array.isArray(tasks)) return;
-
+    
     // Make a copy of the tasks array
     const _tasks = [...tasks];
-
+    
     // Get the dragged item
     const draggedItemContent = _tasks[dragItem.current];
-
+    
     // Remove the dragged item
     _tasks.splice(dragItem.current, 1);
-
+    
     // Add the dragged item at the new position
     _tasks.splice(dragOverItem.current, 0, draggedItemContent);
-
+    
     // Reset refs
     dragItem.current = null;
     dragOverItem.current = null;
-
+    
     // Update the order property for each task
     const tasksWithNewOrder = _tasks.map((task, index) => ({
       id: task.id,
       order: index,
     }));
-
+    
     // Update the tasks order in the backend
     try {
       await apiRequest("PATCH", "/api/tasks/reorder", { tasks: tasksWithNewOrder });
-
-      // Invalidate all task-related queries
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          Array.isArray(query.queryKey) && 
-          query.queryKey.some(key => 
-            typeof key === 'string' && key.includes('task')
-          )
-      });
+      
+      // Refetch tasks to get the updated order
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     } catch (error: any) {
       toast({
         title: "Error reordering tasks",
@@ -124,7 +89,7 @@ const Tasks = () => {
           content="Manage and organize your academic tasks. Track progress, set due dates, and prioritize your work."
         />
       </Helmet>
-
+      
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold gradient-heading">My Tasks</h2>
@@ -140,13 +105,6 @@ const Tasks = () => {
               <div className="h-8 w-24 bg-muted rounded mb-4"></div>
               <div className="h-32 w-full max-w-md bg-muted rounded"></div>
             </div>
-          </div>
-        ) : error ? (
-          <div className="bg-white rounded-xl card-shadow p-8 text-center">
-            <h3 className="text-xl font-medium text-gray-900 mb-4">Error Loading Tasks</h3>
-            <Button onClick={() => refetch()} className="btn-bounce bg-primary hover:bg-primary/90 text-white shadow-md">
-              Try Again
-            </Button>
           </div>
         ) : !Array.isArray(tasks) || tasks.length === 0 ? (
           <div className="bg-white rounded-xl card-shadow p-8 text-center">
@@ -191,10 +149,10 @@ const Tasks = () => {
                 </Button>
               </div>
             </div>
-
+            
             <div className="p-4">
               <div className="space-y-4">
-                {tasks.map((task: Task, index: number) => (
+                {tasks.map((task: any, index: number) => (
                   <div
                     key={task.id}
                     draggable
@@ -206,17 +164,7 @@ const Tasks = () => {
                   >
                     <TaskCard 
                       task={task} 
-                      onTaskUpdate={() => {
-                        refetch();
-                        // Invalidate all task-related queries
-                        queryClient.invalidateQueries({ 
-                          predicate: (query) => 
-                            Array.isArray(query.queryKey) && 
-                            query.queryKey.some(key => 
-                              typeof key === 'string' && key.includes('task')
-                            )
-                        });
-                      }}
+                      onTaskUpdate={refetch}
                     />
                   </div>
                 ))}
@@ -239,14 +187,6 @@ const Tasks = () => {
             onSuccess={() => {
               setNewTaskDialogOpen(false);
               refetch();
-              // Invalidate all task-related queries
-              queryClient.invalidateQueries({ 
-                predicate: (query) => 
-                  Array.isArray(query.queryKey) && 
-                  query.queryKey.some(key => 
-                    typeof key === 'string' && key.includes('task')
-                  )
-              });
             }} 
             onCancel={() => {
               setNewTaskDialogOpen(false);

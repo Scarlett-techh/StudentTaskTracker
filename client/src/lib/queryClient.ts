@@ -7,15 +7,14 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// In lib/queryClient.ts, update the apiRequest function:
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<any> {
+): Promise<Response> {
   // Handle FormData objects differently (don't set Content-Type or stringify)
   const isFormData = data instanceof FormData;
-
+  
   const res = await fetch(url, {
     method,
     headers: data && !isFormData ? { "Content-Type": "application/json" } : {},
@@ -24,15 +23,7 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
-
-  // Check if response is JSON
-  const contentType = res.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    return res.json();
-  } else {
-    // If not JSON, return the text response
-    return res.text();
-  }
+  return res;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

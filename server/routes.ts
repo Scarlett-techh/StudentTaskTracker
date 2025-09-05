@@ -6,11 +6,9 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { generateAIAnalysis } from "./ai-analysis"; // Import the AI analysis function
-import { db } from "./db"; // Add this import
-import { sql } from "drizzle-orm"; // Add this import
 
 // ✅ Import feature routes (default export)
-import portfolioRoutes from "./portfolio";
+import portfolioRoutes from "./routes/portfolio";
 
 // Helper functions for skill calculations
 function calculateCriticalThinkingScore(tasks: any[]) {
@@ -103,60 +101,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST endpoint for creating tasks
-  app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
-    try {
-      console.log("Creating task with data:", req.body);
-
-      const userId = req.user.claims.sub;
-      console.log("User ID from token:", userId);
-
-      const user = await storage.getUserByReplitId(userId);
-      console.log("Found user:", user);
-
-      if (!user) {
-        console.error("User not found for replitId:", userId);
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const taskData = {
-        ...req.body,
-        userId: user.id,
-      };
-
-      console.log("Creating task with data:", taskData);
-      const task = await storage.createTask(taskData);
-      console.log("Task created successfully:", task);
-
-      res.status(201).json(task);
-    } catch (err: any) {
-      console.error("Error creating task:", err);
-      handleError(err, res);
-    }
-  });
-
-  // PATCH endpoint for updating tasks
-  app.patch("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
-      const taskId = parseInt(req.params.id);
-      const updates = req.body;
-
-      // Verify the task belongs to the user
-      const task = await storage.getTask(taskId);
-      if (!task || task.userId !== user.id) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-
-      // Update the task
-      const updatedTask = await storage.updateTask(taskId, updates);
-      res.json(updatedTask);
-    } catch (err: any) {
-      handleError(err, res);
-    }
-  });
-
   // ========================
   // NEW: User Stats Endpoint for Analytics
   // ========================
@@ -208,6 +152,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========================
   // NEW: AI Learning Analysis Endpoint
   // ========================
+  // ========================
+  // NEW: AI Learning Analysis Endpoint (Simplified)
+  // ========================
   app.get("/api/ai-learning-analysis", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -229,22 +176,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       handleError(err, res);
     }
   });
-
-  // ========================
-  // Health check endpoint
-  // ========================
-  app.get("/api/health", async (req, res) => {
-    try {
-      // Test database connection
-      const result = await db.execute(sql`SELECT 1 as test`);
-      console.log("Database connection test result:", result);
-      res.json({ status: "OK", database: "Connected" });
-    } catch (error: any) {
-      console.error("Database connection test failed:", error);
-      res.status(500).json({ status: "Error", database: "Connection failed", error: error.message });
-    }
-  });
-
   // ========================
   // NEW: Skill Metrics Endpoint
   // ========================
