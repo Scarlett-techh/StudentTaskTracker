@@ -13,6 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+
 // Add API routes before the logging middleware
 app.use("/api/user", userRoutes);
 app.use("/api/user/account", accountRoutes);

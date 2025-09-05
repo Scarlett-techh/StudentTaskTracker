@@ -54,7 +54,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      
+
       // Check file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         toast({
@@ -64,16 +64,16 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
         });
         return;
       }
-      
+
       setSelectedFile(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
-      
+
       // Update form title with filename if empty
       if (!form.getValues("title")) {
         const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
@@ -91,20 +91,20 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
         taskId: data.get('taskId'),
         fileExists: data.get('file') !== null
       });
-      
+
       const response = await fetch("/api/photos", {
         method: "POST",
         body: data,
         // Don't set Content-Type header, let the browser set it with the boundary
         credentials: "include",
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Photo upload error:", errorText);
         throw new Error(errorText || response.statusText);
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -133,21 +133,21 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
       });
       return;
     }
-    
+
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.append("title", data.title);
-    
+
     // Only append subject if it's not "none"
     if (data.subject && data.subject !== "none") {
       formData.append("subject", data.subject);
     }
-    
+
     // Only append taskId if it's not "none"
     if (data.taskId && data.taskId !== "none") {
       formData.append("taskId", data.taskId);
     }
-    
+
     console.log("Submitting form with data:", {
       title: data.title,
       subject: data.subject,
@@ -155,7 +155,7 @@ const PhotoUpload: FC<PhotoUploadProps> = ({ onSuccess, onCancel }) => {
       fileSize: selectedFile.size,
       fileName: selectedFile.name
     });
-    
+
     uploadPhotoMutation.mutate(formData);
   };
 
