@@ -35,16 +35,16 @@ function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // ✅ Redirect users to correct dashboard after login
+  // ✅ Redirect users to correct dashboard after login (only from public pages)
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && (location === "/" || location === "/login" || location === "/student-login" || location === "/coach/login")) {
       if (user.userType === "coach") {
         setLocation("/coach/dashboard");
       } else {
         setLocation("/dashboard");
       }
     }
-  }, [isAuthenticated, user, setLocation]);
+  }, [isAuthenticated, user, location, setLocation]);
 
   // ✅ Show a loading screen while auth is being checked
   if (isLoading) {
