@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
-import { storage } from "../storage";
+import { storage } from "./storage";
 
 const router = express.Router();
 

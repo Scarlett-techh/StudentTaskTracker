@@ -10,7 +10,7 @@ import { db } from "./db"; // Add this import
 import { sql } from "drizzle-orm"; // Add this import
 
 // ✅ Import feature routes (default export)
-import portfolioRoutes from "./routes/portfolio";
+import portfolioRoutes from "./portfolio";
 
 // Helper functions for skill calculations
 function calculateCriticalThinkingScore(tasks: any[]) {
