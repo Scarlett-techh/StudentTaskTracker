@@ -1,0 +1,73 @@
+Issue: Task creation appears successful in the UI but tasks don't appear in the task section or analytics. The error message shows: "Failed to communicate with the server. Please check your connection and try again."
+
+Background:
+
+Frontend: React with TypeScript, using TanStack Query for data fetching
+
+Backend: Express.js with Neon PostgreSQL database
+
+The task creation form submits data, shows success message, but tasks don't appear in UI
+
+API endpoints exist for GET /api/tasks (works) and POST /api/tasks (problematic)
+
+Database storage layer is implemented with Drizzle ORM
+
+What's been tried:
+
+Added comprehensive query invalidation in frontend
+
+Verified task API endpoints exist in routes.ts
+
+Checked that DatabaseStorage has createTask method implementation
+
+Added debug logging to task creation endpoint
+
+Database connection test endpoint (/api/health) works
+
+Request:
+Please diagnose and fix the task creation issue by:
+
+Check server logs for errors when POST /api/tasks is called
+
+Verify database connection is properly established and tables exist
+
+Test the createTask method in isolation to ensure it works correctly
+
+Check authentication middleware isn't blocking the POST request
+
+Ensure CORS is properly configured for POST requests
+
+Validate the data flow from frontend form → API → database → response
+
+Fix any issues found without breaking existing functionality
+
+Add proper error handling to provide clearer error messages
+
+Key areas to focus on:
+
+Database connection and schema validation
+
+API endpoint parameter handling
+
+Authentication middleware for POST requests
+
+Data returned from createTask operation
+
+Frontend cache updating after successful creation
+
+Please provide:
+
+Specific error messages found in logs
+
+Steps taken to resolve the issue
+
+Verification that tasks now appear in both task list and analytics
+
+Confirmation that no existing functionality was broken
+
+Priority: Fix the root cause rather than applying temporary workarounds.
+
+This prompt gives the AI agent clear direction about what to investigate while emphasizing the importance of maintaining existing functionality. It focuses on the specific issue without asking for unnecessary changes to other parts of the system.
+
+
+Message DeepSeek

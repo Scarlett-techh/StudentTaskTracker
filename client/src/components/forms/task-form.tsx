@@ -17,7 +17,6 @@ const taskFormSchema = z.object({
   description: z.string().optional(),
   subject: z.string().optional(),
   resourceLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-  // Remove category field
   status: z.enum(["pending", "in-progress", "completed"]),
   dueDate: z.string().optional(),
   dueTime: z.string().optional(),
@@ -58,14 +57,65 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
-      if (isEditing) {
-        return apiRequest("PATCH", `/api/tasks/${task.id}`, data);
-      } else {
-        return apiRequest("POST", "/api/tasks", data);
+      console.log("Sending task data:", data);
+
+      try {
+        if (isEditing) {
+          const response = await fetch(`/api/tasks/${task.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify(data),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          return await response.json();
+        } else {
+          const response = await fetch("/api/tasks", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify(data),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          return await response.json();
+        }
+      } catch (error) {
+        console.error("API request failed:", error);
+        throw new Error("Failed to communicate with the server. Please check your connection and try again.");
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    onSuccess: (data) => {
+      console.log("Task created successfully:", data);
+
+      // Update the cache with the new task data
+      if (isEditing) {
+        // For edits, update the specific task in the cache
+        queryClient.setQueryData(["/api/tasks"], (oldData: any) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.map((task: any) => 
+            task.id === data.id ? data : task
+          );
+        });
+      } else {
+        // For new tasks, add the task to the cache
+        queryClient.setQueryData(["/api/tasks"], (oldData: any) => {
+          if (!Array.isArray(oldData)) return [data];
+          return [...oldData, data];
+        });
+      }
+
       toast({
         title: isEditing ? "Task updated" : "Task created",
         description: isEditing 
@@ -74,7 +124,8 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
       });
       if (onSuccess) onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Task creation error:", error);
       toast({
         title: isEditing ? "Error updating task" : "Error creating task",
         description: error.message,
@@ -170,8 +221,6 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
               </FormItem>
             )}
           />
-
-          {/* Category field removed */}
 
           <FormField
             control={form.control}
