@@ -29,14 +29,14 @@ interface MoodEntry {
 }
 
 const moodOptions = [
-  { type: "happy", label: "Happy", icon: Smile, color: "text-green-500", bgColor: "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50" },
-  { type: "excited", label: "Excited", icon: Zap, color: "text-yellow-500", bgColor: "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50" },
-  { type: "focused", label: "Focused", icon: Star, color: "text-blue-500", bgColor: "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50" },
-  { type: "calm", label: "Calm", icon: Heart, color: "text-purple-500", bgColor: "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50" },
-  { type: "tired", label: "Tired", icon: Battery, color: "text-orange-500", bgColor: "bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50" },
-  { type: "bored", label: "Bored", icon: Meh, color: "text-gray-500", bgColor: "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700" },
-  { type: "stressed", label: "Stressed", icon: Frown, color: "text-red-500", bgColor: "bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50" },
-  { type: "motivated", label: "Motivated", icon: Coffee, color: "text-emerald-500", bgColor: "bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50" },
+  { type: "happy", label: "Happy", icon: Smile, color: "text-green-500", bgColor: "bg-green-100 hover:bg-green-200" },
+  { type: "excited", label: "Excited", icon: Zap, color: "text-yellow-500", bgColor: "bg-yellow-100 hover:bg-yellow-200" },
+  { type: "focused", label: "Focused", icon: Star, color: "text-blue-500", bgColor: "bg-blue-100 hover:bg-blue-200" },
+  { type: "calm", label: "Calm", icon: Heart, color: "text-purple-500", bgColor: "bg-purple-100 hover:bg-purple-200" },
+  { type: "tired", label: "Tired", icon: Battery, color: "text-orange-500", bgColor: "bg-orange-100 hover:bg-orange-200" },
+  { type: "bored", label: "Bored", icon: Meh, color: "text-gray-500", bgColor: "bg-gray-100 hover:bg-gray-200" },
+  { type: "stressed", label: "Stressed", icon: Frown, color: "text-red-500", bgColor: "bg-red-100 hover:bg-red-200" },
+  { type: "motivated", label: "Motivated", icon: Coffee, color: "text-emerald-500", bgColor: "bg-emerald-100 hover:bg-emerald-200" },
 ];
 
 export const MoodTracker = () => {
@@ -105,13 +105,13 @@ export const MoodTracker = () => {
   const selectedMoodOption = moodOptions.find(m => m.type === selectedMood);
 
   return (
-    <Card className="w-full dark:bg-gray-800 dark:border-gray-700">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+        <CardTitle className="flex items-center gap-2">
           <Heart className="h-5 w-5 text-primary" />
           How are you feeling today?
         </CardTitle>
-        <CardDescription className="text-gray-600 dark:text-white">
+        <CardDescription>
           {todaysMood 
             ? `You shared that you're feeling ${todaysMood.moodType} today` 
             : "Share your mood to help your coaches understand how you're doing"
@@ -128,7 +128,7 @@ export const MoodTracker = () => {
                 return (
                   <>
                     <Icon className={cn("h-6 w-6", moodOption?.color)} />
-                    <span className="text-lg font-medium capitalize text-gray-900 dark:text-white">
+                    <span className="text-lg font-medium capitalize">
                       {todaysMood.moodType}
                     </span>
                   </>
@@ -143,13 +143,13 @@ export const MoodTracker = () => {
                     "h-4 w-4",
                     level <= todaysMood.intensity
                       ? "text-yellow-400 fill-yellow-400"
-                      : "text-gray-300 dark:text-gray-500"
+                      : "text-gray-300"
                   )}
                 />
               ))}
             </div>
             {todaysMood.note && (
-              <p className="text-sm text-muted-foreground italic dark:text-gray-300">
+              <p className="text-sm text-muted-foreground italic">
                 "{todaysMood.note}"
               </p>
             )}
@@ -158,7 +158,7 @@ export const MoodTracker = () => {
           <div className="space-y-4">
             {/* Mood Selection */}
             <div>
-              <Label className="text-sm font-medium mb-3 block text-gray-900 dark:text-white">
+              <Label className="text-sm font-medium mb-3 block">
                 Pick your mood:
               </Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -171,15 +171,12 @@ export const MoodTracker = () => {
                       className={cn(
                         "h-auto p-3 flex flex-col items-center gap-2",
                         mood.bgColor,
-                        selectedMood === mood.type && "ring-2 ring-primary dark:ring-primary/70",
-                        "transition-all duration-200"
+                        selectedMood === mood.type && "ring-2 ring-primary"
                       )}
                       onClick={() => setSelectedMood(mood.type)}
                     >
                       <Icon className={cn("h-5 w-5", mood.color)} />
-                      <span className="text-xs font-medium text-gray-900 dark:text-white">
-                        {mood.label}
-                      </span>
+                      <span className="text-xs font-medium">{mood.label}</span>
                     </Button>
                   );
                 })}
@@ -189,7 +186,7 @@ export const MoodTracker = () => {
             {/* Intensity Slider */}
             {selectedMood && (
               <div>
-                <Label className="text-sm font-medium mb-2 block text-gray-900 dark:text-white">
+                <Label className="text-sm font-medium mb-2 block">
                   How much? (1 = a little, 5 = a lot)
                 </Label>
                 <div className="flex items-center gap-2">
@@ -201,8 +198,8 @@ export const MoodTracker = () => {
                       className={cn(
                         "h-8 w-8 p-0",
                         intensity >= level
-                          ? "text-yellow-400 dark:text-yellow-300"
-                          : "text-gray-300 hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-400"
+                          ? "text-yellow-400"
+                          : "text-gray-300 hover:text-gray-400"
                       )}
                       onClick={() => setIntensity(level)}
                     >
@@ -216,7 +213,7 @@ export const MoodTracker = () => {
             {/* Optional Note */}
             {selectedMood && (
               <div>
-                <Label htmlFor="mood-note" className="text-sm font-medium mb-2 block text-gray-900 dark:text-white">
+                <Label htmlFor="mood-note" className="text-sm font-medium mb-2 block">
                   Want to add a note? (optional)
                 </Label>
                 <Textarea
@@ -224,7 +221,7 @@ export const MoodTracker = () => {
                   placeholder="Tell us more about how you're feeling..."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                  className="resize-none"
                   rows={2}
                 />
               </div>

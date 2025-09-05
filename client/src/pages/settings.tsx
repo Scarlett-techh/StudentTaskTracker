@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,46 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, User, Bell, Shield, Palette, Save } from "lucide-react";
+import { Settings, User, Bell, Shield, Palette } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useTheme } from "@/hooks/use-theme";
 
 const SettingsPage = () => {
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
-  const [isAccountChanged, setIsAccountChanged] = useState(false);
-  const [isSettingsChanged, setIsSettingsChanged] = useState(false);
+  const [isChanged, setIsChanged] = useState(false);
 
-  const { data: user, isLoading, refetch } = useQuery({
+  const { data: user } = useQuery({
     queryKey: ["/api/user"],
-    onSuccess: (data) => {
-      if (data) {
-        setAccountInfo({
-          name: data.name || "",
-          username: data.username || "",
-          email: data.email || ""
-        });
-
-        // Initialize settings from user data if available
-        if (data.settings) {
-          const newSettings = { ...data.settings };
-          setSettings(prev => ({ ...prev, ...newSettings }));
-
-          // Sync theme with the theme context
-          if (newSettings.darkMode !== undefined) {
-            setTheme(newSettings.darkMode ? 'dark' : 'light');
-          }
-        }
-      }
-    }
-  });
-
-  const [accountInfo, setAccountInfo] = useState({
-    name: "",
-    username: "",
-    email: ""
   });
 
   const [settings, setSettings] = useState({
@@ -55,132 +26,36 @@ const SettingsPage = () => {
     autoSave: true,
   });
 
-  // Sync settings with theme context
-  useEffect(() => {
-    setSettings(prev => ({
-      ...prev,
-      darkMode: theme === 'dark'
-    }));
-  }, [theme]);
-
-  // Update account information mutation
-  const updateAccountMutation = useMutation({
-    mutationFn: async (accountData: any) => {
-      const response = await apiRequest('PATCH', '/api/user/account', accountData);
-
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        const text = await response.text();
-        throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
-      }
-
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Update the local state with the new data
-      setAccountInfo({
-        name: data.name || "",
-        username: data.username || "",
-        email: data.email || ""
-      });
-
-      toast({
-        title: "Account Updated",
-        description: "Your account information has been saved successfully!",
-      });
-      setIsAccountChanged(false);
-    },
-    onError: (error: Error) => {
-      console.error("Account Mutation Error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update account information. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: async (settingsData: any) => {
-      const response = await apiRequest('PATCH', '/api/user/settings', settingsData);
-
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        const text = await response.text();
-        throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
-      }
-
-      return await response.json();
+    mutationFn: async (newSettings: any) => {
+      const response = await apiRequest('PATCH', '/api/user', newSettings);
+      return response.json();
     },
-    onSuccess: (data) => {
-      // Update the local state with the new settings
-      if (data.settings) {
-        setSettings(prev => ({ ...prev, ...data.settings }));
-
-        // Update theme context if darkMode changed
-        if (data.settings.darkMode !== undefined) {
-          setTheme(data.settings.darkMode ? 'dark' : 'light');
-        }
-      }
-
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       toast({
         title: "Settings Updated",
         description: "Your settings have been saved successfully!",
       });
-      setIsSettingsChanged(false);
-
-      // Refetch user data to ensure everything is in sync
-      refetch();
+      setIsChanged(false);
     },
-    onError: (error: Error) => {
-      console.error("Settings Mutation Error:", error);
+    onError: () => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update settings. Please try again.",
+        description: "Failed to update settings. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const handleSettingChange = (key: string, value: boolean) => {
-    // Special handling for theme changes
-    if (key === 'darkMode') {
-      setTheme(value ? 'dark' : 'light');
-    }
-
     setSettings(prev => ({ ...prev, [key]: value }));
-    setIsSettingsChanged(true);
-  };
-
-  const handleAccountInfoChange = (key: string, value: string) => {
-    setAccountInfo(prev => ({ ...prev, [key]: value }));
-    setIsAccountChanged(true);
-  };
-
-  const handleSaveAccountInfo = () => {
-    // Only validate email if it's provided and not empty
-    if (accountInfo.email && !accountInfo.email.includes('@')) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updateAccountMutation.mutate(accountInfo);
+    setIsChanged(true);
   };
 
   const handleSaveSettings = () => {
     updateSettingsMutation.mutate(settings);
   };
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
-  }
 
   return (
     <>
@@ -191,13 +66,13 @@ const SettingsPage = () => {
           content="Customize your learning experience with personal settings and preferences."
         />
       </Helmet>
-
+      
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Settings className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Settings</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
             <p className="text-gray-600">Manage your account and learning preferences</p>
           </div>
         </div>
@@ -220,8 +95,7 @@ const SettingsPage = () => {
                   <Label htmlFor="name">Full Name</Label>
                   <Input
                     id="name"
-                    value={accountInfo.name}
-                    onChange={(e) => handleAccountInfoChange('name', e.target.value)}
+                    defaultValue={user?.name || ""}
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -229,8 +103,7 @@ const SettingsPage = () => {
                   <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
-                    value={accountInfo.username}
-                    onChange={(e) => handleAccountInfoChange('username', e.target.value)}
+                    defaultValue={user?.username || ""}
                     placeholder="Enter your username"
                   />
                 </div>
@@ -240,30 +113,10 @@ const SettingsPage = () => {
                 <Input
                   id="email"
                   type="email"
-                  value={accountInfo.email}
-                  onChange={(e) => handleAccountInfoChange('email', e.target.value)}
+                  defaultValue={user?.email || ""}
                   placeholder="Enter your email address"
                 />
               </div>
-
-              {isAccountChanged && (
-                <div className="flex justify-end pt-4 border-t">
-                  <Button 
-                    onClick={handleSaveAccountInfo}
-                    disabled={updateAccountMutation.isPending}
-                    className="flex items-center gap-2"
-                  >
-                    {updateAccountMutation.isPending ? (
-                      "Saving..."
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        Save Account Info
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -317,7 +170,7 @@ const SettingsPage = () => {
                     onCheckedChange={(checked) => handleSettingChange('notifications', checked)}
                   />
                 </div>
-
+                
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="emailReminders">Email Reminders</Label>
@@ -364,21 +217,13 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            {isSettingsChanged && (
+            {isChanged && (
               <div className="flex justify-end pt-4 border-t">
                 <Button 
                   onClick={handleSaveSettings}
                   disabled={updateSettingsMutation.isPending}
-                  className="flex items-center gap-2"
                 >
-                  {updateSettingsMutation.isPending ? (
-                    "Saving..."
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Save Settings
-                    </>
-                  )}
+                  {updateSettingsMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             )}

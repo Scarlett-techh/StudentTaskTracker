@@ -14,36 +14,30 @@ import { Separator } from '@/components/ui/separator';
 export default function Profile() {
   const { toast } = useToast();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-
+  
   // Fetch user data
   const { data: user, isLoading } = useQuery<{
     id: number;
     username: string;
-    name: string;
-    email: string;
+    name: string | null;
     avatar: string | null;
   }>({
     queryKey: ['/api/user']
   });
-
+  
   // Update form when user data is loaded
   useEffect(() => {
-    if (user) {
-      if (user.name) setName(user.name);
-      if (user.email) setEmail(user.email);
-      if (user.username) setUsername(user.username);
+    if (user && user.name) {
+      setName(user.name);
     }
   }, [user]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      // Use the correct endpoint for account information
-      return apiRequest('PATCH', '/api/user/account', formData);
+      return apiRequest('PATCH', '/api/user', formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -53,7 +47,6 @@ export default function Profile() {
       });
     },
     onError: (error: any) => {
-      console.error('Profile update error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update profile',
@@ -76,16 +69,14 @@ export default function Profile() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-
+    
     const formData = new FormData();
     formData.append('name', name);
-    formData.append('email', email);
-    formData.append('username', username);
-
+    
     if (avatarFile) {
       formData.append('avatar', avatarFile);
     }
-
+    
     updateProfileMutation.mutate(formData);
   };
 
@@ -99,14 +90,6 @@ export default function Profile() {
       .toUpperCase()
       .substring(0, 2);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-600">Loading profile...</p>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -171,28 +154,17 @@ export default function Profile() {
                       placeholder="Enter your name" 
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input 
-                      id="email" 
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email" 
-                    />
-                  </div>
-
+                  
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
                     <Input 
                       id="username" 
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your username" 
+                      value={user?.username || ''}
+                      disabled
+                      className="bg-gray-50"
                     />
                     <p className="text-xs text-gray-500">
-                      Username can be changed but must be unique
+                      Username cannot be changed
                     </p>
                   </div>
                 </div>
