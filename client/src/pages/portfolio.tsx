@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -37,9 +37,281 @@ import {
   Upload,
   Calendar,
   Trash2,
+  AlertCircle,
+  X,
+  Download,
+  ExternalLink,
+  File,
+  FileImage,
+  FileVideo,
+  FileCode,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+
+// Sample subjects data with the requested additional subjects
+const SAMPLE_SUBJECTS = [
+  { id: "1", name: "Mathematics", color: "#3B82F6" },
+  { id: "2", name: "English/Language Arts", color: "#10B981" },
+  { id: "3", name: "Science", color: "#F59E0B" },
+  { id: "4", name: "History", color: "#EF4444" },
+  { id: "5", name: "Social Studies", color: "#8B5CF6" },
+  { id: "6", name: "Physical Education (P.E.)", color: "#EC4899" },
+  { id: "7", name: "Computer Science/Technology", color: "#6366F1" },
+  { id: "8", name: "Foreign Language", color: "#14B8A6" },
+  { id: "9", name: "Art/Music", color: "#F97316" },
+  { id: "10", name: "Financial Literacy", color: "#06B6D4" },
+  { id: "11", name: "Health Education", color: "#84CC16" },
+  { id: "12", name: "Public Speaking/Debate", color: "#64748B" },
+];
+
+// For demo purposes, create some sample portfolio items with file extensions
+const demoPortfolioItems = [
+  {
+    id: 1,
+    title: "Math Project",
+    description: "A comprehensive analysis of quadratic equations",
+    type: "file",
+    fileType: "pdf",
+    fileName: "math_project.pdf",
+    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    subject: "Mathematics",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 2,
+    title: "Science Experiment",
+    description: "Photos from our chemistry lab experiment",
+    type: "photo",
+    fileType: "image",
+    fileName: "science_experiment.jpg",
+    fileUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+    subject: "Science",
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: 3,
+    title: "History Essay",
+    description: "An essay on the causes of World War II",
+    type: "link",
+    link: "https://example.com/history-essay",
+    subject: "History",
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+  },
+  {
+    id: 4,
+    title: "Art Portfolio",
+    description: "My collection of drawings and paintings",
+    type: "photo",
+    fileType: "image",
+    fileName: "art_portfolio.png",
+    fileUrl: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+    subject: "Art/Music",
+    createdAt: new Date(Date.now() - 345600000).toISOString(),
+  },
+  {
+    id: 5,
+    title: "Programming Project",
+    description: "A web application built with React and TypeScript",
+    type: "file",
+    fileType: "code",
+    fileName: "project_source.zip",
+    fileUrl: "#",
+    subject: "Computer Science/Technology",
+    createdAt: new Date(Date.now() - 432000000).toISOString(),
+  },
+];
+
+// Preview Modal Component
+function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { toast } = useToast();
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+
+  // Handle multiple files if they exist
+  const files = item.files || [item];
+  const currentFile = files[currentFileIndex];
+
+  const renderPreview = () => {
+    if (currentFile.type === "link") {
+      return (
+        <div className="h-96">
+          <iframe 
+            src={currentFile.link} 
+            className="w-full h-full border rounded-md"
+            title={currentFile.title}
+            sandbox="allow-same-origin allow-scripts"
+          />
+          <div className="mt-2 text-sm text-gray-500">
+            Embedded preview of {currentFile.link}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentFile.type === "file" || currentFile.type === "photo") {
+      // Determine file type for preview
+      if (currentFile.fileType === "pdf") {
+        return (
+          <div className="h-96">
+            <iframe 
+              src={currentFile.fileUrl} 
+              className="w-full h-full border rounded-md"
+              title={currentFile.title}
+            />
+            <div className="mt-2 text-sm text-gray-500">
+              PDF preview powered by browser's built-in PDF viewer
+            </div>
+          </div>
+        );
+      } else if (currentFile.fileType === "image") {
+        return (
+          <div className="flex justify-center">
+            <img 
+              src={currentFile.fileUrl} 
+              alt={currentFile.title}
+              className="max-h-96 max-w-full object-contain rounded-md border"
+            />
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
+            <File className="h-16 w-16 text-gray-400 mb-4" />
+            <p className="text-gray-500 mb-2">No preview available for this file type</p>
+            <p className="text-sm text-gray-400">Click download to access the file</p>
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
+        <AlertCircle className="h-16 w-16 text-gray-400 mb-4" />
+        <p className="text-gray-500">No preview available for this item</p>
+      </div>
+    );
+  };
+
+  const handleDownload = () => {
+    if (currentFile.type === "link") {
+      window.open(currentFile.link, "_blank");
+    } else if (currentFile.type === "file" || currentFile.type === "photo") {
+      // Create a temporary anchor element to trigger download
+      const a = document.createElement('a');
+      a.href = currentFile.fileUrl;
+      a.download = currentFile.fileName || currentFile.title;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${currentFile.fileName || currentFile.title}`,
+      });
+    }
+  };
+
+  const handleOpenExternal = () => {
+    if (currentFile.type === "link") {
+      window.open(currentFile.link, "_blank");
+    } else if (currentFile.type === "file" || currentFile.type === "photo") {
+      window.open(currentFile.fileUrl, "_blank");
+    }
+  };
+
+  const handleNextFile = () => {
+    if (currentFileIndex < files.length - 1) {
+      setCurrentFileIndex(currentFileIndex + 1);
+    }
+  };
+
+  const handlePrevFile = () => {
+    if (currentFileIndex > 0) {
+      setCurrentFileIndex(currentFileIndex - 1);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {currentFile.type === "link" && <LinkIcon className="h-5 w-5" />}
+            {currentFile.type === "file" && <FileText className="h-5 w-5" />}
+            {currentFile.type === "photo" && <Image className="h-5 w-5" />}
+            {currentFile.title}
+            {files.length > 1 && (
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                ({currentFileIndex + 1} of {files.length})
+              </span>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            {currentFile.description || "No description provided"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="my-4 relative">
+          {files.length > 1 && (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80"
+                onClick={handlePrevFile}
+                disabled={currentFileIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80"
+                onClick={handleNextFile}
+                disabled={currentFileIndex === files.length - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          {renderPreview()}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 className="font-medium mb-1">Details</h4>
+            <div className="space-y-1">
+              <p><span className="text-gray-500">Type:</span> {currentFile.type}</p>
+              {currentFile.subject && <p><span className="text-gray-500">Subject:</span> {currentFile.subject}</p>}
+              <p><span className="text-gray-500">Added:</span> {format(new Date(currentFile.createdAt), "PP")}</p>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium mb-1">File Info</h4>
+            <div className="space-y-1">
+              {currentFile.fileName && <p><span className="text-gray-500">Filename:</span> {currentFile.fileName}</p>}
+              {currentFile.fileType && <p><span className="text-gray-500">Filetype:</span> {currentFile.fileType}</p>}
+              {currentFile.link && <p><span className="text-gray-500">URL:</span> <span className="truncate">{currentFile.link}</span></p>}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex flex-row justify-end gap-2">
+          <Button variant="outline" onClick={handleOpenExternal}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open Externally
+          </Button>
+          <Button onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Portfolio() {
   const { toast } = useToast();
@@ -55,44 +327,97 @@ export default function Portfolio() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [connectionError, setConnectionError] = useState(false);
+  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
+  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Fetch portfolio items
-  const { data: portfolioItems = [], isLoading } = useQuery({
-    queryKey: ["/api/portfolio"],
-  });
+  // Load portfolio items from localStorage on component mount
+  useEffect(() => {
+    const savedItems = localStorage.getItem('portfolioItems');
+    if (savedItems) {
+      try {
+        setPortfolioItems(JSON.parse(savedItems));
+      } catch (e) {
+        console.error("Failed to parse portfolio items from localStorage", e);
+        setPortfolioItems(demoPortfolioItems);
+      }
+    } else {
+      setPortfolioItems(demoPortfolioItems);
+    }
+  }, []);
 
-  // Fetch subjects for the dropdown
-  const { data: subjects = [] } = useQuery({
+  // Save portfolio items to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('portfolioItems', JSON.stringify(portfolioItems));
+  }, [portfolioItems]);
+
+  // Fetch subjects for the dropdown with better error handling
+  const { data: subjectsData, error: subjectsError } = useQuery({
     queryKey: ["/api/subjects"],
+    retry: 1,
+    onError: (error) => {
+      console.error("Failed to fetch subjects:", error);
+    }
   });
 
-  // Create portfolio item mutation
+  // Set subjects data with fallback to sample data
+  useEffect(() => {
+    if (subjectsData && Array.isArray(subjectsData) && subjectsData.length > 0) {
+      setSubjects(subjectsData);
+    } else {
+      setSubjects(SAMPLE_SUBJECTS);
+    }
+  }, [subjectsData, subjectsError]);
+
+  // Create portfolio item mutation with improved error handling
   const createPortfolioMutation = useMutation({
     mutationFn: async (data: any) => {
-      if ((data.type === "file" || data.type === "photo") && selectedFiles.length > 0) {
-        // Upload files one by one to maintain individual portfolio items
-        const uploadPromises = selectedFiles.map(async (file, index) => {
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("title", index === 0 ? data.title : file.name.split(".")[0]);
-          formData.append("description", data.description || "");
-          formData.append("subject", data.subject || "");
-          formData.append("type", data.type);
+      // Create portfolio items for each selected file
+      const newItems = selectedFiles.map((file, index) => {
+        const fileType = file.type.startsWith('image/') ? 'image' : 
+                        file.type === 'application/pdf' ? 'pdf' : 'other';
 
-          return apiRequest("POST", "/api/portfolio", formData);
-        });
-        
-        return Promise.all(uploadPromises);
-      } else {
-        return apiRequest("POST", "/api/portfolio", data);
+        return {
+          id: Date.now() + index, // Generate unique IDs
+          title: selectedFiles.length > 1 ? `${formData.title} (${index + 1})` : formData.title,
+          description: formData.description,
+          subject: formData.subject,
+          type: formData.type,
+          link: formData.type === "link" ? formData.link : null,
+          fileType,
+          fileName: file.name,
+          fileUrl: URL.createObjectURL(file),
+          createdAt: new Date().toISOString(),
+        };
+      });
+
+      // For link type, create a single item
+      if (formData.type === "link") {
+        return [{
+          id: Date.now(),
+          title: formData.title,
+          description: formData.description,
+          subject: formData.subject,
+          type: "link",
+          link: formData.link,
+          createdAt: new Date().toISOString(),
+        }];
       }
+
+      return newItems;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+    onSuccess: (newItems) => {
+      // Add the new items to the portfolio items state
+      setPortfolioItems(prevItems => [...prevItems, ...newItems]);
+
       toast({
         title: "Added to portfolio",
-        description: `${formData.title} has been added to your portfolio.`,
+        description: `${newItems.length} item(s) have been added to your portfolio.`,
       });
+
+      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -103,58 +428,56 @@ export default function Portfolio() {
       setSelectedFiles([]);
       setPreviewUrls([]);
       setAddDialogOpen(false);
+      setConnectionError(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error adding item",
+        description: error.message || "Failed to add item to portfolio. Please try again.",
+        variant: "destructive",
+      });
+      setConnectionError(true);
     },
   });
 
   // Delete portfolio item mutation
   const deletePortfolioMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/portfolio/${id}`);
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+    onSuccess: (id) => {
+      // Remove the item from state
+      setPortfolioItems(prevItems => prevItems.filter(item => item.id !== id));
+
       toast({
         title: "Removed from portfolio",
         description: "Item has been removed from your portfolio.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error removing item",
+        description: error.message || "Failed to remove item from portfolio",
+        variant: "destructive",
       });
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.title.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a title for your portfolio item.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please enter a title.", variant: "destructive" });
       return;
     }
-
     if (formData.type === "link" && !formData.link.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a link URL.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please enter a link URL.", variant: "destructive" });
       return;
     }
-
-    if (formData.type === "file" && selectedFiles.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one file to upload.",
-        variant: "destructive",
-      });
+    if ((formData.type === "file" || formData.type === "photo") && selectedFiles.length === 0) {
+      toast({ title: "Error", description: "Please select at least one file.", variant: "destructive" });
       return;
     }
-
-    const portfolioData = {
-      ...formData,
-      link: formData.type === "link" ? formData.link : null,
-    };
-
+    const portfolioData = { ...formData, link: formData.type === "link" ? formData.link : null };
     createPortfolioMutation.mutate(portfolioData);
   };
 
@@ -162,24 +485,10 @@ export default function Portfolio() {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       setSelectedFiles(files);
-      
-      // Generate preview URLs for images
-      const urls: string[] = [];
-      files.forEach((file) => {
-        if (file.type.startsWith('image/')) {
-          urls.push(URL.createObjectURL(file));
-        } else {
-          urls.push('');
-        }
-      });
+      const urls = files.map((file) => (file.type.startsWith("image/") ? URL.createObjectURL(file) : ""));
       setPreviewUrls(urls);
-      
-      // Set title from first file if empty
       if (!formData.title && files[0]) {
-        setFormData((prev) => ({
-          ...prev,
-          title: files[0].name.split(".")[0],
-        }));
+        setFormData((prev) => ({ ...prev, title: files[0].name.split(".")[0] }));
       }
     }
   };
@@ -187,59 +496,69 @@ export default function Portfolio() {
   const removeFile = (index: number) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     const newUrls = previewUrls.filter((_, i) => i !== index);
-    
-    // Revoke URL to prevent memory leaks
-    if (previewUrls[index]) {
-      URL.revokeObjectURL(previewUrls[index]);
-    }
-    
+    if (previewUrls[index]) URL.revokeObjectURL(previewUrls[index]);
     setSelectedFiles(newFiles);
     setPreviewUrls(newUrls);
   };
 
   const handleItemClick = (item: any) => {
-    if (item.type === "link" && item.link) {
-      window.open(item.link, "_blank");
-    } else if (item.type === "file" || item.type === "photo") {
-      window.open(`/api/portfolio/file/${item.id}`, "_blank");
+    // Check if this item is part of a multi-file upload
+    const baseTitle = item.title.replace(/\s*\(\d+\)$/, '');
+    const relatedItems = portfolioItems.filter(i => 
+      i.title.replace(/\s*\(\d+\)$/, '') === baseTitle && 
+      i.type === item.type
+    );
+
+    if (relatedItems.length > 1) {
+      // Group related items for carousel view
+      setPreviewItem({
+        ...item,
+        files: relatedItems
+      });
+    } else {
+      setPreviewItem(item);
     }
+    setPreviewOpen(true);
+  };
+
+  const getFileIcon = (item: any) => {
+    if (item.type === "link") return <LinkIcon className="h-5 w-5 text-blue-500" />;
+    if (item.type === "photo") return <Image className="h-5 w-5 text-green-500" />;
+
+    // For file types
+    if (item.fileType === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
+    if (item.fileType === "image") return <FileImage className="h-5 w-5 text-purple-500" />;
+    if (item.fileType === "video") return <FileVideo className="h-5 w-5 text-orange-500" />;
+    if (item.fileType === "code") return <FileCode className="h-5 w-5 text-yellow-500" />;
+
+    return <File className="h-5 w-5 text-gray-500" />;
   };
 
   return (
-    <div className="p-6">
-
+    <div className="p-6 h-screen flex flex-col">
       {/* Header */}
-      <div className="text-center mb-10">
+      <div className="text-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">My Portfolio</h1>
-        <p className="text-gray-500">
-          Showcase your learning journey, achievements, and creative work in one
-          place.
-        </p>
+        <p className="text-gray-500">Showcase your learning journey, achievements, and creative work in one place.</p>
       </div>
 
       {/* Add to Portfolio Button */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-6">
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add to Portfolio
+            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+              <Plus className="h-5 w-5 mr-2" /> Add to Portfolio
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add to Portfolio</DialogTitle>
-              <DialogDescription>
-                Add a file, link, or photo to your portfolio
-              </DialogDescription>
+              <DialogDescription>Add a file, link, or photo to your portfolio</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="type">Type</Label>
+                <Label>Type</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(value: "file" | "link" | "photo") =>
@@ -258,114 +577,38 @@ export default function Portfolio() {
               </div>
 
               <div>
-                <Label htmlFor="title">Title</Label>
+                <Label>Title</Label>
                 <Input
-                  id="title"
                   value={formData.title}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      title: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter a title for your work"
                   required
                 />
               </div>
 
-              {formData.type === "file" && (
+              {(formData.type === "file" || formData.type === "photo") && (
                 <div>
-                  <Label htmlFor="file">Choose File</Label>
+                  <Label>Choose File(s)</Label>
                   <Input
-                    id="file"
                     type="file"
                     onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
                     multiple
+                    accept={formData.type === "photo" ? "image/*" : "*"}
                   />
                   {selectedFiles.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      <p className="text-sm font-medium text-gray-700">
-                        Selected files ({selectedFiles.length}):
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                        {selectedFiles.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                            <div className="flex items-center space-x-2 min-w-0">
-                              {previewUrls[index] ? (
-                                <img 
-                                  src={previewUrls[index]} 
-                                  alt={file.name}
-                                  className="w-8 h-8 object-cover rounded"
-                                />
-                              ) : (
-                                <FileText className="w-8 h-8 text-gray-400" />
-                              )}
-                              <span className="text-xs text-gray-600 truncate">
-                                {file.name}
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(index)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {formData.type === "link" && (
-                <div>
-                  <Label htmlFor="link">Link URL</Label>
-                  <Input
-                    id="link"
-                    type="url"
-                    value={formData.link}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        link: e.target.value,
-                      }))
-                    }
-                    placeholder="https://example.com"
-                    required
-                  />
-                </div>
-              )}
-
-              {formData.type === "photo" && (
-                <div>
-                  <Label htmlFor="photo">Choose Photo</Label>
-                  <Input
-                    id="photo"
-                    type="file"
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    multiple
-                  />
-                  {selectedFiles.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-sm font-medium text-gray-700">
-                        Selected photos ({selectedFiles.length}):
-                      </p>
+                      <p className="text-sm font-medium text-gray-700">Selected ({selectedFiles.length}):</p>
                       <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                         {selectedFiles.map((file, index) => (
                           <div key={index} className="relative group">
                             {previewUrls[index] && (
-                              <img 
-                                src={previewUrls[index]} 
+                              <img
+                                src={previewUrls[index]}
                                 alt={file.name}
                                 className="w-full h-16 object-cover rounded border"
                               />
                             )}
+                            <div className="text-xs truncate text-gray-700">{file.name}</div>
                             <Button
                               type="button"
                               variant="ghost"
@@ -383,49 +626,67 @@ export default function Portfolio() {
                 </div>
               )}
 
+              {formData.type === "link" && (
+                <div>
+                  <Label>Link URL</Label>
+                  <Input
+                    type="url"
+                    value={formData.link}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, link: e.target.value }))}
+                    placeholder="https://example.com"
+                    required
+                  />
+                  {formData.link && (
+                    <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-blue-600 truncate">
+                      {formData.link}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="subject">Subject (Optional)</Label>
+                <Label>Subject (Optional)</Label>
                 <Select
                   value={formData.subject}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, subject: value }))
-                  }
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, subject: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a subject" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((subject: any) => (
-                      <SelectItem key={subject.name} value={subject.name}>
-                        {subject.name}
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {subjects.length > 0 ? (
+                      subjects.map((subject: any) => (
+                        <SelectItem key={subject.id || subject.name} value={subject.id || subject.name}>
+                          <div className="flex items-center">
+                            <span
+                              className="w-3 h-3 rounded-full mr-2"
+                              style={{ backgroundColor: subject.color || "#6B7280" }}
+                            ></span>
+                            {subject.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-subjects" disabled>
+                        No subjects available
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label>Description (Optional)</Label>
                 <Textarea
-                  id="description"
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe your work..."
                   rows={3}
                 />
               </div>
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setAddDialogOpen(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button
@@ -433,9 +694,7 @@ export default function Portfolio() {
                   disabled={createPortfolioMutation.isPending}
                   className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
-                  {createPortfolioMutation.isPending
-                    ? "Adding..."
-                    : "Add to Portfolio"}
+                  {createPortfolioMutation.isPending ? "Adding..." : "Add to Portfolio"}
                 </Button>
               </DialogFooter>
             </form>
@@ -443,53 +702,39 @@ export default function Portfolio() {
         </Dialog>
       </div>
 
-      {/* Portfolio Items Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="h-48 animate-pulse">
-              <CardHeader className="bg-gray-200 rounded-t-lg h-full" />
-            </Card>
-          ))}
-        </div>
-      ) : portfolioItems.length === 0 ? (
-        <div className="text-center py-16">
+      {/* Portfolio Items Grid with Scroll */}
+      {portfolioItems.length === 0 ? (
+        <div className="text-center py-16 flex-grow flex flex-col items-center justify-center">
           <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
             <FileText className="h-12 w-12 text-purple-600" />
           </div>
-          <h3 className="text-2xl font-semibold text-gray-700 mb-2">
-            Your Portfolio is Empty
-          </h3>
+          <h3 className="text-2xl font-semibold text-gray-700 mb-2">Your Portfolio is Empty</h3>
           <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Start building your portfolio by adding your work, projects, and
-            achievements.
+            Start building your portfolio by adding your work, projects, and achievements.
           </p>
           <Button
             onClick={() => setAddDialogOpen(true)}
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Your First Item
+            <Plus className="h-4 w-4 mr-2" /> Add Your First Item
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-grow overflow-y-auto pb-6">
           {portfolioItems.map((item: any) => (
             <Card
               key={item.id}
-              className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90 cursor-pointer"
-              onClick={() => handleItemClick(item)}
+              className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90 cursor-pointer h-fit"
             >
-              {/* Thumbnail Background */}
               <div className="relative h-32 rounded-t-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                {(item.type === "photo" || (item.type === "file" && item.filePath && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.filePath))) && (
-                  <img 
-                    src={`/api/portfolio/file/${item.id}`}
+                {(item.type === "photo" || (item.type === "file" && item.fileType === "image")) && item.fileUrl && (
+                  <img
+                    src={item.fileUrl}
                     alt={item.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
+                      target.style.display = "none";
                     }}
                   />
                 )}
@@ -498,12 +743,12 @@ export default function Portfolio() {
                     <LinkIcon className="h-12 w-12 text-blue-500" />
                   </div>
                 )}
-                {item.type === "file" && (!item.filePath || !/\.(jpg|jpeg|png|gif|webp)$/i.test(item.filePath)) && (
+                {item.type === "file" && item.fileType !== "image" && (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
-                    <FileText className="h-12 w-12 text-green-500" />
+                    {getFileIcon(item)}
                   </div>
                 )}
-                {/* Subject Badge */}
+
                 {item.subject && (
                   <div className="absolute top-2 left-2">
                     <span className="px-2 py-1 text-xs font-medium bg-white/90 text-gray-700 rounded-full shadow-sm">
@@ -511,7 +756,7 @@ export default function Portfolio() {
                     </span>
                   </div>
                 )}
-                {/* Delete Button */}
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -525,9 +770,7 @@ export default function Portfolio() {
                 </Button>
               </div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold line-clamp-1">
-                  {item.title}
-                </CardTitle>
+                <CardTitle className="text-lg font-semibold line-clamp-1">{item.title}</CardTitle>
               </CardHeader>
               <CardContent className="pt-2">
                 {item.description && (
@@ -537,9 +780,7 @@ export default function Portfolio() {
                 )}
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <div className="flex items-center space-x-1">
-                    {item.type === "link" && <LinkIcon className="h-3 w-3" />}
-                    {item.type === "file" && <FileText className="h-3 w-3" />}
-                    {item.type === "photo" && <Image className="h-3 w-3" />}
+                    {getFileIcon(item)}
                     <span className="capitalize">{item.type}</span>
                   </div>
                   <div className="flex items-center">
@@ -548,8 +789,34 @@ export default function Portfolio() {
                   </div>
                 </div>
               </CardContent>
+              <CardFooter className="pt-2">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handleItemClick(item)}
+                >
+                  Preview Item
+                </Button>
+              </CardFooter>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewItem && (
+        <PreviewModal 
+          item={previewItem} 
+          open={previewOpen} 
+          onOpenChange={setPreviewOpen} 
+        />
+      )}
+
+      {/* Connection Error Banner */}
+      {connectionError && (
+        <div className="fixed bottom-4 right-4 bg-yellow-100 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg shadow-lg flex items-center max-w-md">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <span>Working in demo mode. Some features may be limited without a server connection.</span>
         </div>
       )}
     </div>

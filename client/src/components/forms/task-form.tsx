@@ -1,3 +1,4 @@
+// client/src/components/forms/task-form.tsx
 import { FC } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +18,6 @@ const taskFormSchema = z.object({
   description: z.string().optional(),
   subject: z.string().optional(),
   resourceLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-  // Remove category field
   status: z.enum(["pending", "in-progress", "completed"]),
   dueDate: z.string().optional(),
   dueTime: z.string().optional(),
@@ -55,17 +55,35 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
     },
   });
 
-  // Create task mutation
+  // Create task mutation - FIXED
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
       if (isEditing) {
-        return apiRequest("PATCH", `/api/tasks/${task.id}`, data);
+        return await apiRequest("PATCH", `/api/tasks/${task.id}`, data);
       } else {
-        return apiRequest("POST", "/api/tasks", data);
+        return await apiRequest("POST", "/api/tasks", data);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    onSuccess: (data) => {
+      if (!data) {
+        toast({
+          title: "Error",
+          description: "No data returned from server",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update the query cache with the new task
+      queryClient.setQueryData(["/api/tasks"], (oldData: any[] | undefined) => {
+        if (isEditing) {
+          return oldData ? oldData.map(task => task.id === data.id ? data : task) : [data];
+        } else {
+          // Ensure we're not adding undefined values
+          return oldData ? [...oldData.filter(Boolean), data] : [data];
+        }
+      });
+
       toast({
         title: isEditing ? "Task updated" : "Task created",
         description: isEditing 
@@ -74,10 +92,10 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
       });
       if (onSuccess) onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: isEditing ? "Error updating task" : "Error creating task",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     },
@@ -170,8 +188,6 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
               </FormItem>
             )}
           />
-
-          {/* Category field removed */}
 
           <FormField
             control={form.control}

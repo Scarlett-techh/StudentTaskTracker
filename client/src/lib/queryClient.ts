@@ -1,3 +1,4 @@
+// lib/queryClient.ts
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
@@ -11,10 +12,10 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<Response> {
+): Promise<any> { // Changed return type to any to handle JSON parsing
   // Handle FormData objects differently (don't set Content-Type or stringify)
   const isFormData = data instanceof FormData;
-  
+
   const res = await fetch(url, {
     method,
     headers: data && !isFormData ? { "Content-Type": "application/json" } : {},
@@ -23,7 +24,15 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
-  return res;
+
+  // Parse JSON response for non-empty responses
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return await res.json();
+  }
+
+  // For empty responses (like 204 No Content), return nothing
+  return;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

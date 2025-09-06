@@ -9,7 +9,8 @@ import {
   Settings, 
   Send,
   Users,
-  Calendar
+  Calendar,
+  TrendingUp // Added for Analytics
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
     { href: "/calendar", icon: <Calendar />, label: "Calendar" },
     { href: "/resources", icon: <BarChart2 />, label: "Learning Resources" },
     { href: "/portfolio", icon: <Award />, label: "Portfolio" },
+    { href: "/analytics", icon: <TrendingUp />, label: "Analytics" }, // Added Analytics for students
     { href: "/share", icon: <Send />, label: "Share Work" },
     { href: "/settings", icon: <Settings />, label: "Settings" },
   ];

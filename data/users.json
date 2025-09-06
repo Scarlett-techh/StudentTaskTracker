@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "name": "Jayden",
+    "username": "Jay",
+    "email": "meglagrotta26@gmail.com",
+    "settings": "{\"notifications\":true,\"emailReminders\":true,\"darkMode\":true,\"autoSave\":true}"
+  }
+]

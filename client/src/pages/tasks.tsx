@@ -19,12 +19,15 @@ const Tasks = () => {
   const { data: tasks = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/tasks"],
   });
-  
+
   // Fetch task attachments for all tasks
   const { data: allAttachments = [] } = useQuery({
     queryKey: ["/api/tasks/attachments"],
     enabled: Array.isArray(tasks) && tasks.length > 0,
   });
+
+  // Filter out undefined tasks to prevent rendering errors
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => task !== undefined && task !== null) : [];
 
   // Open task creation dialog
   const openNewTaskDialog = () => {
@@ -41,34 +44,34 @@ const Tasks = () => {
   };
 
   const handleDrop = async () => {
-    if (dragItem.current === null || dragOverItem.current === null || !Array.isArray(tasks)) return;
-    
+    if (dragItem.current === null || dragOverItem.current === null || !Array.isArray(filteredTasks)) return;
+
     // Make a copy of the tasks array
-    const _tasks = [...tasks];
-    
+    const _tasks = [...filteredTasks];
+
     // Get the dragged item
     const draggedItemContent = _tasks[dragItem.current];
-    
+
     // Remove the dragged item
     _tasks.splice(dragItem.current, 1);
-    
+
     // Add the dragged item at the new position
     _tasks.splice(dragOverItem.current, 0, draggedItemContent);
-    
+
     // Reset refs
     dragItem.current = null;
     dragOverItem.current = null;
-    
+
     // Update the order property for each task
     const tasksWithNewOrder = _tasks.map((task, index) => ({
       id: task.id,
       order: index,
     }));
-    
+
     // Update the tasks order in the backend
     try {
       await apiRequest("PATCH", "/api/tasks/reorder", { tasks: tasksWithNewOrder });
-      
+
       // Refetch tasks to get the updated order
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     } catch (error: any) {
@@ -89,7 +92,7 @@ const Tasks = () => {
           content="Manage and organize your academic tasks. Track progress, set due dates, and prioritize your work."
         />
       </Helmet>
-      
+
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold gradient-heading">My Tasks</h2>
@@ -106,7 +109,7 @@ const Tasks = () => {
               <div className="h-32 w-full max-w-md bg-muted rounded"></div>
             </div>
           </div>
-        ) : !Array.isArray(tasks) || tasks.length === 0 ? (
+        ) : filteredTasks.length === 0 ? (
           <div className="bg-white rounded-xl card-shadow p-8 text-center">
             <div className="mb-4 p-4 rounded-full bg-primary/10 inline-flex">
               <svg 
@@ -149,10 +152,10 @@ const Tasks = () => {
                 </Button>
               </div>
             </div>
-            
+
             <div className="p-4">
               <div className="space-y-4">
-                {tasks.map((task: any, index: number) => (
+                {filteredTasks.map((task: any, index: number) => (
                   <div
                     key={task.id}
                     draggable

@@ -19,7 +19,7 @@ import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
-import Analytics from "@/pages/analytics-new";
+import Analytics from "@/pages/analytics";
 import StudentLogin from "@/pages/student-login";
 import CoachLogin from "@/pages/coach-login";
 import CoachDashboard from "@/pages/coach-dashboard";
@@ -29,6 +29,7 @@ import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import MobileNav from "@/components/layout/mobile-nav";
 import Footer from "@/components/layout/footer";
+import { ThemeProvider } from "@/hooks/use-theme"; // Import ThemeProvider
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -227,8 +228,10 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <ThemeProvider> {/* Wrap with ThemeProvider */}
+            <Toaster />
+            <Router />
+          </ThemeProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </HelmetProvider>
