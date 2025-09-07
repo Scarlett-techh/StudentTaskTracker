@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,14 +32,25 @@ interface TaskFormProps {
   onCancel?: () => void;
 }
 
+// Predefined subjects
+const PREDEFINED_SUBJECTS = [
+  { id: "1", name: "Mathematics", color: "#3B82F6" },
+  { id: "2", name: "English/Language Arts", color: "#10B981" },
+  { id: "3", name: "Science", color: "#F59E0B" },
+  { id: "4", name: "History", color: "#EF4444" },
+  { id: "5", name: "Social Studies", color: "#8B5CF6" },
+  { id: "6", name: "Physical Education (P.E.)", color: "#EC4899" },
+  { id: "7", name: "Computer Science/Technology", color: "#6366F1" },
+  { id: "8", name: "Foreign Language", color: "#14B8A6" },
+  { id: "9", name: "Art/Music", color: "#F97316" },
+  { id: "10", name: "Financial Literacy", color: "#06B6D4" },
+  { id: "11", name: "Health Education", color: "#84CC16" },
+  { id: "12", name: "Geography", color: "#64748B" },
+];
+
 const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel }) => {
   const { toast } = useToast();
   const isEditing = !!task;
-
-  // Get subjects for dropdown
-  const { data: subjects = [] } = useQuery({
-    queryKey: ["/api/subjects"],
-  });
 
   // Initialize form with default values, initial values, or existing task
   const form = useForm<TaskFormValues>({
@@ -177,7 +188,7 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {Array.isArray(subjects) && subjects.map((subject: any) => (
+                    {PREDEFINED_SUBJECTS.map((subject) => (
                       <SelectItem key={subject.id} value={subject.name}>
                         {subject.name}
                       </SelectItem>

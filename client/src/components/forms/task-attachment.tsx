@@ -1,16 +1,24 @@
+// client/src/components/forms/task-attachment.tsx
 import { useState, useRef, FC } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Paperclip, X, Image, FileText, Upload } from "lucide-react";
+import { Paperclip, X, Image, FileText, Upload, CheckCircle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
 interface TaskAttachmentProps {
   taskId: number;
   onAttachmentAdded?: () => void;
+  showCompletionOption?: boolean;
+  onMarkComplete?: () => void;
 }
 
-const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) => {
+const TaskAttachment: FC<TaskAttachmentProps> = ({ 
+  taskId, 
+  onAttachmentAdded,
+  showCompletionOption = false,
+  onMarkComplete 
+}) => {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -31,7 +39,7 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      
+
       // Check file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         toast({
@@ -41,9 +49,9 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
         });
         return;
       }
-      
+
       setSelectedFile(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -57,39 +65,39 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
   const uploadAttachmentMutation = useMutation({
     mutationFn: async () => {
       if (!selectedFile) return null;
-      
+
       setIsUploading(true);
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("title", selectedFile.name.split('.')[0] || 'Untitled attachment');
       formData.append("taskId", String(taskId));
-      
-      const response = await fetch("/api/photos", {
+
+      const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
         credentials: "include",
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || response.statusText);
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/photos"] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-      
+
       toast({
         title: "Attachment uploaded",
         description: "Your file has been attached to the task successfully.",
       });
-      
+
       setSelectedFile(null);
       setPreviewUrl(null);
       setIsUploading(false);
-      
+
       if (onAttachmentAdded) onAttachmentAdded();
     },
     onError: (error) => {
@@ -116,22 +124,22 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
         }),
         credentials: "include",
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || response.statusText);
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-      
+
       toast({
         title: "Photo linked",
         description: "Photo has been linked to the task successfully.",
       });
-      
+
       if (onAttachmentAdded) onAttachmentAdded();
     },
     onError: (error) => {
@@ -157,22 +165,22 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
         }),
         credentials: "include",
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || response.statusText);
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-      
+
       toast({
         title: "Note linked",
         description: "Note has been linked to the task successfully.",
       });
-      
+
       if (onAttachmentAdded) onAttachmentAdded();
     },
     onError: (error) => {
@@ -213,7 +221,7 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
           <Paperclip className="mr-2 h-4 w-4" />
           Attach File
         </Button>
-        
+
         <input
           type="file"
           ref={fileInputRef}
@@ -221,10 +229,10 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
           className="hidden"
           accept="image/*,application/pdf"
         />
-        
+
         <div className="flex-grow"></div>
       </div>
-      
+
       {selectedFile && (
         <div className="bg-gray-50 p-3 rounded-md relative">
           <button 
@@ -233,7 +241,7 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
           >
             <X className="h-4 w-4" />
           </button>
-          
+
           {previewUrl && selectedFile.type.startsWith('image/') ? (
             <div className="flex flex-col items-center">
               <img 
@@ -249,7 +257,7 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
               <span className="text-xs text-gray-500">{selectedFile.name}</span>
             </div>
           )}
-          
+
           <div className="mt-3 flex justify-center">
             <Button 
               onClick={handleUpload}
@@ -263,18 +271,31 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
           </div>
         </div>
       )}
-      
+
       {!selectedFile && (
         <div className="text-xs text-gray-500 italic">
           Select a file to attach to this task.
         </div>
       )}
-      
+
+      {/* Completion option */}
+      {showCompletionOption && onMarkComplete && (
+        <div className="pt-4 border-t border-gray-200">
+          <Button 
+            onClick={onMarkComplete}
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Mark Task as Complete
+          </Button>
+        </div>
+      )}
+
       {/* If there are existing photos/notes, show options to link them */}
       {(photos.length > 0 || notes.length > 0) && !selectedFile && (
         <div className="mt-2">
           <p className="text-sm font-medium mb-2">Or link existing items:</p>
-          
+
           {photos.length > 0 && (
             <div className="mb-3">
               <p className="text-xs text-gray-500 mb-1">Photos:</p>
@@ -302,7 +323,7 @@ const TaskAttachment: FC<TaskAttachmentProps> = ({ taskId, onAttachmentAdded }) 
               </div>
             </div>
           )}
-          
+
           {notes.length > 0 && (
             <div>
               <p className="text-xs text-gray-500 mb-1">Notes:</p>

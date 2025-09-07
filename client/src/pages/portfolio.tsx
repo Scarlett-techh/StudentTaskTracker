@@ -64,7 +64,14 @@ const SAMPLE_SUBJECTS = [
   { id: "9", name: "Art/Music", color: "#F97316" },
   { id: "10", name: "Financial Literacy", color: "#06B6D4" },
   { id: "11", name: "Health Education", color: "#84CC16" },
-  { id: "12", name: "Public Speaking/Debate", color: "#64748B" },
+  { id: "12", name: "Geography", color: "#64748B" },
+  // Add the subjects from your task form
+  { id: "13", name: "Physical Activity", color: "#EC4899" },
+  { id: "14", name: "Life Skills", color: "#F97316" },
+  { id: "15", name: "Interest / Passion", color: "#14B8A6" },
+  { id: "16", name: "Art", color: "#EF4444" },
+  { id: "17", name: "Game Design", color: "#8B5CF6" },
+  { id: "18", name: "Coding", color: "#059669" },
 ];
 
 // For demo purposes, create some sample portfolio items with file extensions
@@ -353,23 +360,11 @@ export default function Portfolio() {
     localStorage.setItem('portfolioItems', JSON.stringify(portfolioItems));
   }, [portfolioItems]);
 
-  // Fetch subjects for the dropdown with better error handling
-  const { data: subjectsData, error: subjectsError } = useQuery({
-    queryKey: ["/api/subjects"],
-    retry: 1,
-    onError: (error) => {
-      console.error("Failed to fetch subjects:", error);
-    }
-  });
-
   // Set subjects data with fallback to sample data
   useEffect(() => {
-    if (subjectsData && Array.isArray(subjectsData) && subjectsData.length > 0) {
-      setSubjects(subjectsData);
-    } else {
-      setSubjects(SAMPLE_SUBJECTS);
-    }
-  }, [subjectsData, subjectsError]);
+    // Always use the full sample subjects list for portfolio
+    setSubjects(SAMPLE_SUBJECTS);
+  }, []);
 
   // Create portfolio item mutation with improved error handling
   const createPortfolioMutation = useMutation({
@@ -656,7 +651,7 @@ export default function Portfolio() {
                   <SelectContent className="max-h-60 overflow-y-auto">
                     {subjects.length > 0 ? (
                       subjects.map((subject: any) => (
-                        <SelectItem key={subject.id || subject.name} value={subject.id || subject.name}>
+                        <SelectItem key={subject.id || subject.name} value={subject.name}>
                           <div className="flex items-center">
                             <span
                               className="w-3 h-3 rounded-full mr-2"

@@ -11,7 +11,8 @@ import {
   Menu as MenuIcon,
   Share2,
   Paperclip,
-  ExternalLink
+  ExternalLink,
+  CheckSquare
 } from "lucide-react";
 
 import TaskAttachmentSimple from "./task-attachment-simple";
@@ -22,6 +23,7 @@ import TaskForm from "@/components/forms/task-form";
 import { format } from "date-fns";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import CompletionModal from "./completion-modal";
 
 interface TaskCardProps {
   task: {
@@ -37,6 +39,7 @@ interface TaskCardProps {
     order: number;
     isCoachTask?: boolean;
     assignedByCoachId?: number;
+    proofUrl?: string;
   };
   onTaskUpdate?: () => void;
   isDraggable?: boolean;
@@ -52,6 +55,7 @@ const TaskCard: FC<TaskCardProps> = ({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
 
   // Status badge configuration
   const statusConfig = {
@@ -71,7 +75,7 @@ const TaskCard: FC<TaskCardProps> = ({
       variant: "default" as const
     }
   };
-  
+
   const currentStatus = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.pending;
 
   // Task status toggle mutation
@@ -84,16 +88,16 @@ const TaskCard: FC<TaskCardProps> = ({
       queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user-achievements"] });
       queryClient.invalidateQueries({ queryKey: ["/api/points-history"] });
-      
+
       if (onTaskUpdate) onTaskUpdate();
-      
+
       // Show special toast when completing a task (earning points)
       if (variables === 'completed') {
         // Base points + category bonus
         const basePoints = 10;
         const categoryBonus = task.category ? 5 : 0;
         const totalPoints = basePoints + categoryBonus;
-        
+
         toast({
           title: "Task completed! 🎉",
           description: `You earned ${totalPoints} points for completing this task!`,
@@ -168,8 +172,39 @@ const TaskCard: FC<TaskCardProps> = ({
   });
 
   const handleStatusToggle = () => {
-    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-    toggleStatusMutation.mutate(newStatus);
+    // Open completion modal instead of directly toggling status
+    if (task.status !== 'completed') {
+      setCompletionDialogOpen(true);
+    } else {
+      // If already completed, allow marking as pending
+      toggleStatusMutation.mutate('pending');
+    }
+  };
+
+  const handleCompleteWithProof = async (proofUrl: string) => {
+    try {
+      // Update task with proof and mark as completed
+      await apiRequest("PATCH", `/api/tasks/${task.id}`, { 
+        status: 'completed',
+        proofUrl 
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      if (onTaskUpdate) onTaskUpdate();
+
+      toast({
+        title: "Task completed! 🎉",
+        description: proofUrl 
+          ? "Your task has been marked as completed with proof." 
+          : "Your task has been marked as completed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error completing task",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteTask = () => {
@@ -192,16 +227,16 @@ const TaskCard: FC<TaskCardProps> = ({
   // Format due time for display
   const formatDueTime = () => {
     if (!task.dueTime) return null;
-    
+
     try {
       // Parse the time string (assuming format like "13:00")
       const [hours, minutes] = task.dueTime.split(':').map(Number);
-      
+
       if (isNaN(hours) || isNaN(minutes)) return task.dueTime;
-      
+
       const date = new Date();
       date.setHours(hours, minutes);
-      
+
       return format(date, 'h:mm a');
     } catch (error) {
       return task.dueTime;
@@ -231,15 +266,24 @@ const TaskCard: FC<TaskCardProps> = ({
             <div className="flex-1">
               <div className="flex items-center">
                 <div className="mr-3">
-                  <Checkbox 
-                    id={`task-${task.id}`}
-                    checked={task.status === 'completed'}
-                    onCheckedChange={handleStatusToggle}
-                    className={cn(
-                      task.status === 'completed' ? "border-emerald-500 bg-emerald-500" : "",
-                      "transition-all duration-300 hover:scale-110"
-                    )}
-                  />
+                  {/* Enhanced completion button */}
+                  {task.status !== 'completed' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCompletionDialogOpen(true)}
+                      className={cn(
+                        "h-8 w-8 p-0 rounded-full transition-all duration-300 hover:scale-110",
+                        "bg-white border-2 border-amber-400 hover:bg-amber-50"
+                      )}
+                    >
+                      <CheckSquare className="h-4 w-4 text-amber-600" />
+                    </Button>
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-emerald-100 border-2 border-emerald-400 flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h4 
@@ -295,7 +339,7 @@ const TaskCard: FC<TaskCardProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               {task.description && (
                 <div className={cn(
                   "mt-2 pl-8 text-sm",
@@ -306,7 +350,25 @@ const TaskCard: FC<TaskCardProps> = ({
                   {task.description}
                 </div>
               )}
-              
+
+              {/* Show proof if task is completed and has proof */}
+              {task.status === 'completed' && task.proofUrl && (
+                <div className="mt-2 pl-8">
+                  <div className="flex items-center text-sm text-emerald-700 bg-emerald-50 rounded-lg p-2 border border-emerald-200">
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    <span>Proof attached</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2 h-6 px-2 text-xs"
+                      onClick={() => window.open(task.proofUrl, '_blank')}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {task.resourceLink && (
                 <div className="mt-2 pl-8">
                   <a 
@@ -322,7 +384,7 @@ const TaskCard: FC<TaskCardProps> = ({
               )}
             </div>
           </div>
-          
+
           <div className="flex flex-col items-end ml-4">
             <div className="flex space-x-1">
               {task.status === 'completed' && (
@@ -377,11 +439,11 @@ const TaskCard: FC<TaskCardProps> = ({
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-red-50 p-4 rounded-lg my-2 border border-red-100">
             <p className="text-sm text-red-800">Are you sure you want to delete this task?</p>
           </div>
-          
+
           <DialogFooter className="gap-2 mt-2">
             <Button 
               variant="outline" 
@@ -431,7 +493,7 @@ const TaskCard: FC<TaskCardProps> = ({
               Add this completed task to your portfolio to showcase your achievements.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-blue-50 p-4 rounded-lg my-4 border border-blue-200">
             <h4 className="font-semibold text-blue-900 mb-2">{task.title}</h4>
             {task.description && (
@@ -443,7 +505,7 @@ const TaskCard: FC<TaskCardProps> = ({
               </span>
             )}
           </div>
-          
+
           <DialogFooter className="gap-2 mt-4">
             <Button 
               variant="outline" 
@@ -462,12 +524,20 @@ const TaskCard: FC<TaskCardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Task Attachment Dialog */}
       <TaskAttachmentSimple
         open={attachmentDialogOpen}
         onOpenChange={setAttachmentDialogOpen}
         taskId={task.id}
+      />
+
+      {/* Completion Modal */}
+      <CompletionModal
+        open={completionDialogOpen}
+        onOpenChange={setCompletionDialogOpen}
+        task={task}
+        onComplete={handleCompleteWithProof}
       />
     </>
   );

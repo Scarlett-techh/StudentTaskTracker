@@ -62,9 +62,9 @@ const Dashboard = () => {
     
     // Time-based greeting
     let greeting = "Hello";
-    if (hour < 12) greeting = "Good morning";
+    if (hour < 12) greeting = "Good Morning";
     else if (hour < 17) greeting = "Good Afternoon";
-    else greeting = "Good evening";
+    else greeting = "Good Evening";
 
     // Progress-based encouragement
     let progressMessage = "";

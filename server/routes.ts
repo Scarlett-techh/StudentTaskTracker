@@ -1,14 +1,38 @@
 // server/routes.ts
-import type { Express, Response } from "express";
+import express, { type Express, type Response } from "express"; // Added express import
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { generateAIAnalysis } from "./ai-analysis";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // ✅ Import feature routes (default export)
 import portfolioRoutes from "./routes/portfolio";
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: 'uploads/',
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images and PDFs
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images and PDF files are allowed'));
+    }
+  }
+});
+
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
+}
 
 // Helper functions for skill calculations
 function calculateCriticalThinkingScore(tasks: any[]) {
@@ -96,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: Task Creation Endpoint (This was missing!)
+  // Task Creation Endpoint
   // ========================
   app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
@@ -116,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: Task Update Endpoint
+  // Task Update Endpoint (PUT)
   // ========================
   app.put("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
@@ -140,7 +164,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: Task Deletion Endpoint
+  // Task Update Endpoint (PATCH) - For partial updates
+  // ========================
+  app.patch("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      const taskId = parseInt(req.params.id);
+      const taskData = req.body;
+
+      // Verify the task belongs to the user
+      const task = await storage.getTask(taskId);
+      if (!task || task.userId !== user.id) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Update the task
+      const updatedTask = await storage.updateTask(taskId, taskData);
+      res.json(updatedTask);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // ========================
+  // Task Deletion Endpoint
   // ========================
   app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
@@ -163,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: Task Reorder Endpoint (for drag-and-drop)
+  // Task Reorder Endpoint (for drag-and-drop)
   // ========================
   app.patch("/api/tasks/reorder", isAuthenticated, async (req: any, res) => {
     try {
@@ -186,7 +234,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: User Stats Endpoint for Analytics
+  // File Upload Endpoint for Proof/Attachments
+  // ========================
+  app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+
+      // Generate a public URL for the uploaded file
+      const fileUrl = `/uploads/${req.file.filename}`;
+
+      // Store file metadata in database
+      const fileData = {
+        userId: user.id,
+        originalName: req.file.originalname,
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        url: fileUrl
+      };
+
+      const savedFile = await storage.createFile(fileData);
+
+      res.json({
+        id: savedFile.id,
+        url: fileUrl,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype
+      });
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  // ========================
+  // Serve uploaded files
+  // ========================
+  app.use('/uploads', isAuthenticated, express.static('uploads'));
+
+  // ========================
+  // User Stats Endpoint for Analytics
   // ========================
   app.get("/api/user-stats", isAuthenticated, async (req: any, res) => {
     try {
@@ -210,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: Subjects Endpoint for Analytics
+  // Subjects Endpoint for Analytics
   // ========================
   app.get("/api/subjects", isAuthenticated, async (req: any, res) => {
     try {
@@ -234,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: AI Learning Analysis Endpoint (Simplified)
+  // AI Learning Analysis Endpoint (Simplified)
   // ========================
   app.get("/api/ai-learning-analysis", isAuthenticated, async (req: any, res) => {
     try {
@@ -259,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // NEW: Skill Metrics Endpoint
+  // Skill Metrics Endpoint
   // ========================
   app.get("/api/skill-metrics", isAuthenticated, async (req: any, res) => {
     try {
