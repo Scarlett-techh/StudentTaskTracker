@@ -1,5 +1,5 @@
 // server/routes.ts
-import express, { type Express, type Response } from "express"; // Added express import
+import express, { type Express, type Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { ZodError } from "zod";
@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // File Upload Endpoint for Proof/Attachments
+  // File Upload Endpoint for Proof/Attachments - SIMPLIFIED VERSION
   // ========================
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
@@ -242,27 +242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
-
       // Generate a public URL for the uploaded file
       const fileUrl = `/uploads/${req.file.filename}`;
 
-      // Store file metadata in database
-      const fileData = {
-        userId: user.id,
-        originalName: req.file.originalname,
-        filename: req.file.filename,
-        path: req.file.path,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-        url: fileUrl
-      };
-
-      const savedFile = await storage.createFile(fileData);
-
+      // Return file info without storing in database
       res.json({
-        id: savedFile.id,
         url: fileUrl,
         originalName: req.file.originalname,
         mimetype: req.file.mimetype

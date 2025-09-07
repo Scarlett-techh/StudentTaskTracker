@@ -282,7 +282,7 @@ export class DatabaseStorage implements IStorage {
     yesterday.setDate(yesterday.getDate() - 1);
 
     const lastStreakDate = user.lastStreakDate ? new Date(user.lastStreakDate) : null;
-    
+
     let newStreak = 1;
     if (lastStreakDate) {
       const daysDiff = Math.floor((today.getTime() - lastStreakDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -304,7 +304,7 @@ export class DatabaseStorage implements IStorage {
   async getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }> {
     const user = await this.getUser(userId);
     const pointsHistoryRecords = await this.getPointsHistory(userId);
-    
+
     const totalPoints = pointsHistoryRecords.reduce((sum, record) => sum + record.amount, 0);
     const level = Math.floor(totalPoints / 100) + 1;
     const streak = user?.streak || 0;
@@ -331,7 +331,7 @@ export class DatabaseStorage implements IStorage {
 
     const allTasks = await db.select().from(tasks).where(sql`user_id IN (${studentIds.join(',')})`);
     const coachTasks = allTasks.filter(task => task.isCoachTask);
-    
+
     const today = new Date().toISOString().split('T')[0];
     const completedToday = allTasks.filter(task => 
       task.status === 'completed' && 
@@ -504,5 +504,26 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.log("Default subjects already initialized for user or error occurred:", error);
     }
+  }
+
+  // File methods - NEW
+  async createFile(insertFile: any): Promise<any> {
+    // Simple implementation that returns mock data
+    // In a real implementation, you would store file metadata in a database table
+    return {
+      id: Date.now(),
+      ...insertFile,
+      createdAt: new Date()
+    };
+  }
+
+  async getFile(id: number): Promise<any> {
+    // Simple implementation - return undefined since we're not storing files in DB
+    return undefined;
+  }
+
+  async getFilesByUserId(userId: number): Promise<any[]> {
+    // Simple implementation - return empty array since we're not storing files in DB
+    return [];
   }
 }
