@@ -73,7 +73,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
         if (response && response.url) {
           proofUrl = response.url;
         } else {
-          throw new Error("Invalid response from server");
+          throw new Error("Invalid response from server - no URL returned");
         }
       }
 

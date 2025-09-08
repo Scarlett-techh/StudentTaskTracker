@@ -10,8 +10,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// ✅ Import feature routes (default export)
-import portfolioRoutes from "./routes/portfolio";
+// ✅ Import portfolio routes
+import portfolioRoutes from "./routes/portfolio.js";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -361,9 +361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // ✅ Portfolio routes (use default export router)
+  // ✅ Portfolio routes (use the imported router)
   // ========================
-  app.use(portfolioRoutes);
+  app.use("/api/portfolio", portfolioRoutes);
 
   // ========================
   // Create HTTP server

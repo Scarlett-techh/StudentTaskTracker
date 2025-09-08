@@ -2,7 +2,8 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
-import { storage } from "../storage";
+import { storage } from "../storage.js";
+import { isAuthenticated } from "../replitAuth.js";
 
 const router = express.Router();
 
@@ -19,14 +20,39 @@ const upload = multer({ dest: uploadDir });
 // Portfolio Routes
 // ========================
 
-// Get portfolio items
-router.get("/api/portfolio", async (req, res) => {
-  const items = await storage.getPortfolioItems();
-  res.json(items);
+// Get portfolio items for authenticated user
+router.get("/", isAuthenticated, async (req: any, res) => {
+  try {
+    const userId = req.user.claims.sub;
+    const user = await storage.getUserByReplitId(userId);
+    const items = await storage.getPortfolioItems(user.id);
+    res.json(items || []);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
-// Upload portfolio items (allow multiple files)
-router.post("/api/portfolio", upload.array("files"), async (req, res) => {
+// Create a new portfolio item
+router.post("/", isAuthenticated, async (req: any, res) => {
+  try {
+    const userId = req.user.claims.sub;
+    const user = await storage.getUserByReplitId(userId);
+    const portfolioData = req.body;
+
+    // Add user ID to the portfolio data
+    portfolioData.userId = user.id;
+
+    // Create the portfolio item
+    const newItem = await storage.createPortfolioItem(portfolioData);
+    res.status(201).json(newItem);
+  } catch (error: any) {
+    console.error("Error creating portfolio item:", error);
+    res.status(500).json({ message: error.message || "Failed to create portfolio item" });
+  }
+});
+
+// Upload portfolio files
+router.post("/upload", isAuthenticated, upload.array("files"), async (req: any, res) => {
   try {
     const files = req.files as Express.Multer.File[];
     const savedItems = await Promise.all(
@@ -45,9 +71,19 @@ router.post("/api/portfolio", upload.array("files"), async (req, res) => {
 });
 
 // Delete portfolio item
-router.delete("/api/portfolio/:id", async (req, res) => {
+router.delete("/:id", isAuthenticated, async (req: any, res) => {
   try {
-    await storage.deletePortfolioItem(Number(req.params.id));
+    const userId = req.user.claims.sub;
+    const user = await storage.getUserByReplitId(userId);
+    const itemId = Number(req.params.id);
+
+    // Verify the portfolio item belongs to the user
+    const item = await storage.getPortfolioItem(itemId);
+    if (!item || item.userId !== user.id) {
+      return res.status(404).json({ message: "Portfolio item not found" });
+    }
+
+    await storage.deletePortfolioItem(itemId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
