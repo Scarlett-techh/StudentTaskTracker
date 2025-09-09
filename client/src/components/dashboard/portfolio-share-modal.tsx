@@ -14,6 +14,7 @@ interface PortfolioShareModalProps {
     description?: string;
     subject?: string;
     proofUrl?: string;
+    proofFiles?: string[];
   };
 }
 
@@ -24,31 +25,58 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
   // Share to portfolio mutation
   const shareToPortfolioMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/portfolio", {
-        title: task.title,
-        description: task.description || "",
-        subject: task.subject || "General",
-        type: "task",
-        sourceId: task.id,
-        proofUrl: task.proofUrl || "",
-        featured: false
-      });
+      // Get proof files (support both single proofUrl and multiple proofFiles)
+      const proofFiles = task.proofFiles && task.proofFiles.length > 0 
+        ? task.proofFiles 
+        : task.proofUrl 
+          ? [task.proofUrl] 
+          : [];
 
-      // Handle potential undefined response
-      if (!response) {
-        throw new Error("No response from server");
+      if (proofFiles.length > 0) {
+        // Create separate portfolio items for each proof file to better showcase images
+        const uploadPromises = proofFiles.map(async (proofFile, index) => {
+          return apiRequest("POST", "/api/portfolio", {
+            title: index === 0 ? task.title : `${task.title} (${index + 1})`,
+            description: task.description || "",
+            subject: task.subject || "General",
+            type: proofFile.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? "photo" : "file",
+            sourceId: task.id,
+            filePath: proofFile,
+            featured: index === 0 // Only feature the first one
+          });
+        });
+        
+        const responses = await Promise.all(uploadPromises);
+        return responses;
+      } else {
+        // Create single portfolio item without proof
+        const response = await apiRequest("POST", "/api/portfolio", {
+          title: task.title,
+          description: task.description || "",
+          subject: task.subject || "General",
+          type: "task",
+          sourceId: task.id,
+          featured: false
+        });
+
+        if (!response) {
+          throw new Error("No response from server");
+        }
+
+        return [response];
       }
-
-      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate both portfolio queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
 
+      const itemCount = Array.isArray(data) ? data.length : 1;
       toast({
         title: "Added to Portfolio",
-        description: "Task has been added to your portfolio successfully.",
+        description: itemCount === 1 
+          ? "Task has been added to your portfolio successfully."
+          : `Task has been added to your portfolio as ${itemCount} items successfully.`,
       });
       onOpenChange(false);
     },
@@ -95,6 +123,11 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
 
           <div className="pt-2 text-sm text-gray-500">
             <p>Adding this to your portfolio will allow you to showcase your work to coaches and peers.</p>
+            {(task.proofFiles && task.proofFiles.length > 1) || (task.proofUrl && task.proofFiles && task.proofFiles.length > 0) ? (
+              <p className="mt-1 text-xs text-blue-600">
+                Multiple proof files will be added as separate portfolio items for better display.
+              </p>
+            ) : null}
           </div>
         </div>
 
