@@ -10,7 +10,7 @@ interface CompletionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: any;
-  onComplete: (proofUrl: string) => void;
+  onComplete: (proofUrls: string[]) => void;
 }
 
 const CompletionModal: FC<CompletionModalProps> = ({ 
@@ -20,37 +20,52 @@ const CompletionModal: FC<CompletionModalProps> = ({
   onComplete 
 }) => {
   const { toast } = useToast();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
+    if (event.target.files && event.target.files.length > 0) {
+      const files = Array.from(event.target.files);
+      const validFiles: File[] = [];
+      const newPreviewUrls: string[] = [];
 
-      // Check file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "The maximum file size is 10MB.",
-          variant: "destructive",
-        });
-        return;
-      }
+      files.forEach((file) => {
+        // Check file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: `${file.name} is too large. Maximum file size is 10MB.`,
+            variant: "destructive",
+          });
+          return;
+        }
 
-      setSelectedFile(file);
+        validFiles.push(file);
 
-      // Create preview for images
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setPreviewUrl(null);
+        // Create preview for images
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            newPreviewUrls[files.indexOf(file)] = reader.result as string;
+            // Update state when all image previews are ready
+            if (newPreviewUrls.filter(url => url !== undefined).length === validFiles.filter(f => f.type.startsWith('image/')).length) {
+              setPreviewUrls([...previewUrls, ...newPreviewUrls.filter(url => url)]);
+            }
+          };
+          reader.readAsDataURL(file);
+        } else {
+          newPreviewUrls[files.indexOf(file)] = '';
+        }
+      });
+
+      setSelectedFiles([...selectedFiles, ...validFiles]);
+      
+      // If no images, update preview URLs immediately
+      if (validFiles.every(file => !file.type.startsWith('image/'))) {
+        setPreviewUrls([...previewUrls, ...newPreviewUrls]);
       }
     }
   };
@@ -60,31 +75,32 @@ const CompletionModal: FC<CompletionModalProps> = ({
     setIsUploading(true);
 
     try {
-      let proofUrl = "";
+      const proofUrls: string[] = [];
 
-      // Upload file if selected
-      if (selectedFile) {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
+      // Upload files if selected
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
 
-        // Use the correct endpoint /api/upload instead of /api/upload/proof
-        const response = await apiRequest("POST", "/api/upload", formData);
+          const response = await apiRequest("POST", "/api/upload", formData);
 
-        if (response && response.url) {
-          proofUrl = response.url;
-        } else {
-          throw new Error("Invalid response from server - no URL returned");
+          if (response && response.url) {
+            proofUrls.push(response.url);
+          } else {
+            throw new Error(`Invalid response from server for file ${file.name} - no URL returned`);
+          }
         }
       }
 
       // Complete task with or without proof
-      onComplete(proofUrl);
+      onComplete(proofUrls);
       onOpenChange(false);
 
       toast({
         title: "Task completed!",
-        description: selectedFile 
-          ? "Your task has been marked as completed with proof." 
+        description: proofUrls.length > 0 
+          ? `Your task has been marked as completed with ${proofUrls.length} proof file(s).` 
           : "Your task has been marked as completed.",
       });
     } catch (error: any) {
@@ -104,11 +120,24 @@ const CompletionModal: FC<CompletionModalProps> = ({
   };
 
   const clearSelection = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    const newUrls = previewUrls.filter((_, i) => i !== index);
+    
+    // Revoke URL to prevent memory leaks for image previews
+    if (previewUrls[index] && previewUrls[index].startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrls[index]);
+    }
+    
+    setSelectedFiles(newFiles);
+    setPreviewUrls(newUrls);
   };
 
   return (
@@ -135,46 +164,71 @@ const CompletionModal: FC<CompletionModalProps> = ({
           <div>
             <p className="text-sm font-medium mb-2">Upload proof of completion (optional):</p>
 
-            {!selectedFile ? (
-              <div 
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
-                onClick={triggerFileInput}
-              >
-                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG, PDF up to 10MB</p>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept="image/*,application/pdf"
-                />
-              </div>
-            ) : (
-              <div className="bg-gray-50 p-3 rounded-md relative">
-                <button 
-                  onClick={clearSelection}
-                  className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+            <div 
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
+              onClick={triggerFileInput}
+            >
+              <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+              <p className="text-xs text-gray-500 mt-1">PNG, JPG, PDF up to 10MB (multiple files allowed)</p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*,application/pdf"
+                multiple
+              />
+            </div>
 
-                {previewUrl ? (
-                  <div className="flex flex-col items-center">
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
-                      className="h-28 w-auto object-contain mb-2 rounded" 
-                    />
-                    <span className="text-xs text-gray-500">{selectedFile.name}</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <FileText className="h-20 w-20 text-gray-400 mb-2" />
-                    <span className="text-xs text-gray-500">{selectedFile.name}</span>
-                  </div>
-                )}
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-700">
+                    Selected files ({selectedFiles.length}):
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto">
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="relative bg-gray-50 p-2 rounded border">
+                      <button 
+                        onClick={() => removeFile(index)}
+                        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100 z-10"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+
+                      {previewUrls[index] ? (
+                        <div className="flex flex-col items-center">
+                          <img 
+                            src={previewUrls[index]} 
+                            alt={`Preview ${index + 1}`} 
+                            className="h-16 w-auto object-contain mb-1 rounded" 
+                          />
+                          <span className="text-xs text-gray-500 truncate w-full text-center">
+                            {file.name}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          <FileText className="h-16 w-16 text-gray-400 mb-1" />
+                          <span className="text-xs text-gray-500 truncate w-full text-center">
+                            {file.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
