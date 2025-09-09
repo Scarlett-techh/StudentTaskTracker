@@ -74,60 +74,18 @@ const SAMPLE_SUBJECTS = [
   { id: "18", name: "Coding", color: "#059669" },
 ];
 
-// For demo purposes, create some sample portfolio items with file extensions
+// Demo portfolio items for offline mode
 const demoPortfolioItems = [
   {
     id: 1,
-    title: "Math Project",
-    description: "A comprehensive analysis of quadratic equations",
+    title: "Sample Project",
+    description: "This is a sample portfolio item",
+    subject: "Computer Science/Technology",
     type: "file",
     fileType: "pdf",
-    fileName: "math_project.pdf",
-    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    subject: "Mathematics",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 2,
-    title: "Science Experiment",
-    description: "Photos from our chemistry lab experiment",
-    type: "photo",
-    fileType: "image",
-    fileName: "science_experiment.jpg",
-    fileUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-    subject: "Science",
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-  },
-  {
-    id: 3,
-    title: "History Essay",
-    description: "An essay on the causes of World War II",
-    type: "link",
-    link: "https://example.com/history-essay",
-    subject: "History",
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-  },
-  {
-    id: 4,
-    title: "Art Portfolio",
-    description: "My collection of drawings and paintings",
-    type: "photo",
-    fileType: "image",
-    fileName: "art_portfolio.png",
-    fileUrl: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-    subject: "Art/Music",
-    createdAt: new Date(Date.now() - 345600000).toISOString(),
-  },
-  {
-    id: 5,
-    title: "Programming Project",
-    description: "A web application built with React and TypeScript",
-    type: "file",
-    fileType: "code",
-    fileName: "project_source.zip",
-    fileUrl: "#",
-    subject: "Computer Science/Technology",
-    createdAt: new Date(Date.now() - 432000000).toISOString(),
+    fileName: "sample.pdf",
+    fileUrl: "/sample.pdf",
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -157,13 +115,13 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
       );
     }
 
-    if (currentFile.type === "file" || currentFile.type === "photo") {
+    if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
       // Determine file type for preview
-      if (currentFile.fileType === "pdf") {
+      if (currentFile.fileType === "pdf" || currentFile.proofUrl?.endsWith('.pdf')) {
         return (
           <div className="h-96">
             <iframe 
-              src={currentFile.fileUrl} 
+              src={currentFile.fileUrl || currentFile.proofUrl} 
               className="w-full h-full border rounded-md"
               title={currentFile.title}
             />
@@ -172,11 +130,12 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
             </div>
           </div>
         );
-      } else if (currentFile.fileType === "image") {
+      } else if (currentFile.fileType === "image" || 
+                 (currentFile.proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(currentFile.proofUrl))) {
         return (
           <div className="flex justify-center">
             <img 
-              src={currentFile.fileUrl} 
+              src={currentFile.fileUrl || currentFile.proofUrl} 
               alt={currentFile.title}
               className="max-h-96 max-w-full object-contain rounded-md border"
             />
@@ -204,27 +163,31 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
   const handleDownload = () => {
     if (currentFile.type === "link") {
       window.open(currentFile.link, "_blank");
-    } else if (currentFile.type === "file" || currentFile.type === "photo") {
+    } else if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
       // Create a temporary anchor element to trigger download
-      const a = document.createElement('a');
-      a.href = currentFile.fileUrl;
-      a.download = currentFile.fileName || currentFile.title;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const url = currentFile.fileUrl || currentFile.proofUrl;
+      if (url) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentFile.fileName || currentFile.title;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-      toast({
-        title: "Download Started",
-        description: `Downloading ${currentFile.fileName || currentFile.title}`,
-      });
+        toast({
+          title: "Download Started",
+          description: `Downloading ${currentFile.fileName || currentFile.title}`,
+        });
+      }
     }
   };
 
   const handleOpenExternal = () => {
     if (currentFile.type === "link") {
       window.open(currentFile.link, "_blank");
-    } else if (currentFile.type === "file" || currentFile.type === "photo") {
-      window.open(currentFile.fileUrl, "_blank");
+    } else if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
+      const url = currentFile.fileUrl || currentFile.proofUrl;
+      if (url) window.open(url, "_blank");
     }
   };
 
@@ -246,7 +209,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {currentFile.type === "link" && <LinkIcon className="h-5 w-5" />}
-            {currentFile.type === "file" && <FileText className="h-5 w-5" />}
+            {(currentFile.type === "file" || currentFile.type === "task") && <FileText className="h-5 w-5" />}
             {currentFile.type === "photo" && <Image className="h-5 w-5" />}
             {currentFile.title}
             {files.length > 1 && (
@@ -282,7 +245,8 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </>
-          )}
+          )
+          }
           {renderPreview()}
         </div>
 
@@ -301,6 +265,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
               {currentFile.fileName && <p><span className="text-gray-500">Filename:</span> {currentFile.fileName}</p>}
               {currentFile.fileType && <p><span className="text-gray-500">Filetype:</span> {currentFile.fileType}</p>}
               {currentFile.link && <p><span className="text-gray-500">URL:</span> <span className="truncate">{currentFile.link}</span></p>}
+              {currentFile.proofUrl && <p><span className="text-gray-500">Proof URL:</span> <span className="truncate">{currentFile.proofUrl}</span></p>}
             </div>
           </div>
         </div>
@@ -458,6 +423,22 @@ export default function Portfolio() {
     },
   });
 
+  // Fetch shared tasks from API and add them to portfolio
+  const { data: sharedTasks = [] } = useQuery({
+    queryKey: ["/api/portfolio"],
+    onSuccess: (tasks) => {
+      if (tasks && tasks.length > 0) {
+        // Add shared tasks to portfolio without duplicates
+        setPortfolioItems(prevItems => {
+          const newItems = tasks.filter((task: any) => 
+            !prevItems.some(item => item.id === task.id)
+          );
+          return [...prevItems, ...newItems];
+        });
+      }
+    }
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
@@ -519,6 +500,7 @@ export default function Portfolio() {
   const getFileIcon = (item: any) => {
     if (item.type === "link") return <LinkIcon className="h-5 w-5 text-blue-500" />;
     if (item.type === "photo") return <Image className="h-5 w-5 text-green-500" />;
+    if (item.type === "task") return <FileText className="h-5 w-5 text-purple-500" />;
 
     // For file types
     if (item.fileType === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
@@ -527,6 +509,16 @@ export default function Portfolio() {
     if (item.fileType === "code") return <FileCode className="h-5 w-5 text-yellow-500" />;
 
     return <File className="h-5 w-5 text-gray-500" />;
+  };
+
+  // Determine file type for task items
+  const getFileTypeForTask = (item: any) => {
+    if (item.proofUrl) {
+      if (/\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl)) return "image";
+      if (/\.(pdf)$/i.test(item.proofUrl)) return "pdf";
+      if (/\.(mp4|mov|avi|wmv)$/i.test(item.proofUrl)) return "video";
+    }
+    return "task";
   };
 
   return (
@@ -720,11 +712,13 @@ export default function Portfolio() {
             <Card
               key={item.id}
               className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90 cursor-pointer h-fit"
+              onClick={() => handleItemClick(item)}
             >
               <div className="relative h-32 rounded-t-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                {(item.type === "photo" || (item.type === "file" && item.fileType === "image")) && item.fileUrl && (
+                {(item.type === "photo" || (item.type === "file" && item.fileType === "image") || 
+                  (item.type === "task" && item.proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl))) && (
                   <img
-                    src={item.fileUrl}
+                    src={item.fileUrl || item.proofUrl}
                     alt={item.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -738,7 +732,8 @@ export default function Portfolio() {
                     <LinkIcon className="h-12 w-12 text-blue-500" />
                   </div>
                 )}
-                {item.type === "file" && item.fileType !== "image" && (
+                {(item.type === "file" && item.fileType !== "image") || 
+                 (item.type === "task" && (!item.proofUrl || !/\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl))) && (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
                     {getFileIcon(item)}
                   </div>

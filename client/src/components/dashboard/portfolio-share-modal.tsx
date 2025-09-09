@@ -24,18 +24,28 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
   // Share to portfolio mutation
   const shareToPortfolioMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/portfolio", {
+      const response = await apiRequest("POST", "/api/portfolio", {
         title: task.title,
-        description: task.description,
-        subject: task.subject,
+        description: task.description || "",
+        subject: task.subject || "General",
         type: "task",
         sourceId: task.id,
-        proofUrl: task.proofUrl,
+        proofUrl: task.proofUrl || "",
         featured: false
       });
+
+      // Handle potential undefined response
+      if (!response) {
+        throw new Error("No response from server");
+      }
+
+      return response;
     },
     onSuccess: () => {
+      // Invalidate both portfolio queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
+
       toast({
         title: "Added to Portfolio",
         description: "Task has been added to your portfolio successfully.",

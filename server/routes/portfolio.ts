@@ -25,18 +25,30 @@ router.get("/", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.user.claims.sub;
     const user = await storage.getUserByReplitId(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get portfolio items for the user
     const items = await storage.getPortfolioItems(user.id);
     res.json(items || []);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching portfolio items:", error);
+    res.status(500).json({ message: error.message || "Failed to fetch portfolio items" });
   }
 });
 
-// Create a new portfolio item
+// Create a new portfolio item from a task
 router.post("/", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.user.claims.sub;
     const user = await storage.getUserByReplitId(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const portfolioData = req.body;
 
     // Add user ID to the portfolio data
@@ -44,6 +56,11 @@ router.post("/", isAuthenticated, async (req: any, res) => {
 
     // Create the portfolio item
     const newItem = await storage.createPortfolioItem(portfolioData);
+
+    if (!newItem) {
+      return res.status(500).json({ message: "Failed to create portfolio item" });
+    }
+
     res.status(201).json(newItem);
   } catch (error: any) {
     console.error("Error creating portfolio item:", error);
@@ -51,7 +68,7 @@ router.post("/", isAuthenticated, async (req: any, res) => {
   }
 });
 
-// Upload portfolio files
+// Upload portfolio items (allow multiple files)
 router.post("/upload", isAuthenticated, upload.array("files"), async (req: any, res) => {
   try {
     const files = req.files as Express.Multer.File[];
@@ -75,6 +92,11 @@ router.delete("/:id", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.user.claims.sub;
     const user = await storage.getUserByReplitId(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const itemId = Number(req.params.id);
 
     // Verify the portfolio item belongs to the user
