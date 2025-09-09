@@ -74,18 +74,60 @@ const SAMPLE_SUBJECTS = [
   { id: "18", name: "Coding", color: "#059669" },
 ];
 
-// Demo portfolio items for offline mode
+// For demo purposes, create some sample portfolio items with file extensions
 const demoPortfolioItems = [
   {
     id: 1,
-    title: "Sample Project",
-    description: "This is a sample portfolio item",
-    subject: "Computer Science/Technology",
+    title: "Math Project",
+    description: "A comprehensive analysis of quadratic equations",
     type: "file",
     fileType: "pdf",
-    fileName: "sample.pdf",
-    fileUrl: "/sample.pdf",
-    createdAt: new Date().toISOString(),
+    fileName: "math_project.pdf",
+    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    subject: "Mathematics",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 2,
+    title: "Science Experiment",
+    description: "Photos from our chemistry lab experiment",
+    type: "photo",
+    fileType: "image",
+    fileName: "science_experiment.jpg",
+    fileUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+    subject: "Science",
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: 3,
+    title: "History Essay",
+    description: "An essay on the causes of World War II",
+    type: "link",
+    link: "https://example.com/history-essay",
+    subject: "History",
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+  },
+  {
+    id: 4,
+    title: "Art Portfolio",
+    description: "My collection of drawings and paintings",
+    type: "photo",
+    fileType: "image",
+    fileName: "art_portfolio.png",
+    fileUrl: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+    subject: "Art/Music",
+    createdAt: new Date(Date.now() - 345600000).toISOString(),
+  },
+  {
+    id: 5,
+    title: "Programming Project",
+    description: "A web application built with React and TypeScript",
+    type: "file",
+    fileType: "code",
+    fileName: "project_source.zip",
+    fileUrl: "#",
+    subject: "Computer Science/Technology",
+    createdAt: new Date(Date.now() - 432000000).toISOString(),
   },
 ];
 
@@ -245,8 +287,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </>
-          )
-          }
+          )}
           {renderPreview()}
         </div>
 
@@ -301,29 +342,36 @@ export default function Portfolio() {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [connectionError, setConnectionError] = useState(false);
-  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Load portfolio items from localStorage on component mount
+  // Fetch portfolio items from API
+  const { data: serverPortfolioItems = [], isLoading, refetch } = useQuery({
+    queryKey: ["/api/portfolio"],
+  });
+
+  // Load manually added portfolio items from localStorage
+  const [manualPortfolioItems, setManualPortfolioItems] = useState<any[]>([]);
+
   useEffect(() => {
-    const savedItems = localStorage.getItem('portfolioItems');
+    const savedItems = localStorage.getItem('manualPortfolioItems');
     if (savedItems) {
       try {
-        setPortfolioItems(JSON.parse(savedItems));
+        setManualPortfolioItems(JSON.parse(savedItems));
       } catch (e) {
-        console.error("Failed to parse portfolio items from localStorage", e);
-        setPortfolioItems(demoPortfolioItems);
+        console.error("Failed to parse manual portfolio items from localStorage", e);
+        setManualPortfolioItems([]);
       }
-    } else {
-      setPortfolioItems(demoPortfolioItems);
     }
   }, []);
 
-  // Save portfolio items to localStorage whenever they change
+  // Save manual portfolio items to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('portfolioItems', JSON.stringify(portfolioItems));
-  }, [portfolioItems]);
+    localStorage.setItem('manualPortfolioItems', JSON.stringify(manualPortfolioItems));
+  }, [manualPortfolioItems]);
+
+  // Combine server items and manual items
+  const portfolioItems = [...serverPortfolioItems, ...manualPortfolioItems];
 
   // Set subjects data with fallback to sample data
   useEffect(() => {
@@ -331,7 +379,7 @@ export default function Portfolio() {
     setSubjects(SAMPLE_SUBJECTS);
   }, []);
 
-  // Create portfolio item mutation with improved error handling
+  // Create portfolio item mutation for manual uploads
   const createPortfolioMutation = useMutation({
     mutationFn: async (data: any) => {
       // Create portfolio items for each selected file
@@ -350,6 +398,7 @@ export default function Portfolio() {
           fileName: file.name,
           fileUrl: URL.createObjectURL(file),
           createdAt: new Date().toISOString(),
+          source: "manual" // Mark as manually added
         };
       });
 
@@ -363,14 +412,15 @@ export default function Portfolio() {
           type: "link",
           link: formData.link,
           createdAt: new Date().toISOString(),
+          source: "manual" // Mark as manually added
         }];
       }
 
       return newItems;
     },
     onSuccess: (newItems) => {
-      // Add the new items to the portfolio items state
-      setPortfolioItems(prevItems => [...prevItems, ...newItems]);
+      // Add the new items to the manual portfolio items state
+      setManualPortfolioItems(prevItems => [...prevItems, ...newItems]);
 
       toast({
         title: "Added to portfolio",
@@ -402,12 +452,24 @@ export default function Portfolio() {
 
   // Delete portfolio item mutation
   const deletePortfolioMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return id;
+    mutationFn: async (item: any) => {
+      if (item.source === "manual") {
+        // For manual items, just return the ID for local deletion
+        return item.id;
+      } else {
+        // For server items, make API call to delete
+        await apiRequest("DELETE", `/api/portfolio/${item.id}`);
+        return item.id;
+      }
     },
-    onSuccess: (id) => {
-      // Remove the item from state
-      setPortfolioItems(prevItems => prevItems.filter(item => item.id !== id));
+    onSuccess: (id, item) => {
+      if (item.source === "manual") {
+        // Remove the item from manual items state
+        setManualPortfolioItems(prevItems => prevItems.filter(item => item.id !== id));
+      } else {
+        // Refetch server items after deletion
+        refetch();
+      }
 
       toast({
         title: "Removed from portfolio",
@@ -421,22 +483,6 @@ export default function Portfolio() {
         variant: "destructive",
       });
     },
-  });
-
-  // Fetch shared tasks from API and add them to portfolio
-  const { data: sharedTasks = [] } = useQuery({
-    queryKey: ["/api/portfolio"],
-    onSuccess: (tasks) => {
-      if (tasks && tasks.length > 0) {
-        // Add shared tasks to portfolio without duplicates
-        setPortfolioItems(prevItems => {
-          const newItems = tasks.filter((task: any) => 
-            !prevItems.some(item => item.id === task.id)
-          );
-          return [...prevItems, ...newItems];
-        });
-      }
-    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -482,7 +528,8 @@ export default function Portfolio() {
     const baseTitle = item.title.replace(/\s*\(\d+\)$/, '');
     const relatedItems = portfolioItems.filter(i => 
       i.title.replace(/\s*\(\d+\)$/, '') === baseTitle && 
-      i.type === item.type
+      i.type === item.type &&
+      i.source === item.source
     );
 
     if (relatedItems.length > 1) {
@@ -520,6 +567,15 @@ export default function Portfolio() {
     }
     return "task";
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="mt-4 text-gray-600">Loading portfolio items...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 h-screen flex flex-col">
@@ -752,7 +808,7 @@ export default function Portfolio() {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    deletePortfolioMutation.mutate(item.id);
+                    deletePortfolioMutation.mutate(item);
                   }}
                   className="absolute top-2 right-2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                 >
@@ -761,6 +817,9 @@ export default function Portfolio() {
               </div>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-semibold line-clamp-1">{item.title}</CardTitle>
+                {item.source === "manual" && (
+                  <div className="text-xs text-gray-500">Manually added</div>
+                )}
               </CardHeader>
               <CardContent className="pt-2">
                 {item.description && (

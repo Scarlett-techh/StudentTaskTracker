@@ -1,4 +1,4 @@
-import { useState, useRef, FC } from "react";
+import { useState, useRef, FC, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,12 @@ interface CompletionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: any;
-  onComplete: (proofUrls: string[]) => void;
+  onComplete: (proofUrls: string[], previews: string[]) => void;
+}
+
+interface FileWithPreview {
+  file: File;
+  previewUrl: string;
 }
 
 const CompletionModal: FC<CompletionModalProps> = ({ 
@@ -20,54 +25,48 @@ const CompletionModal: FC<CompletionModalProps> = ({
   onComplete 
 }) => {
   const { toast } = useToast();
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const files = Array.from(event.target.files);
-      const validFiles: File[] = [];
-      const newPreviewUrls: string[] = [];
-
-      files.forEach((file) => {
-        // Check file size (10MB limit)
-        if (file.size > 10 * 1024 * 1024) {
-          toast({
-            title: "File too large",
-            description: `${file.name} is too large. Maximum file size is 10MB.`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        validFiles.push(file);
-
-        // Create preview for images
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            newPreviewUrls[files.indexOf(file)] = reader.result as string;
-            // Update state when all image previews are ready
-            if (newPreviewUrls.filter(url => url !== undefined).length === validFiles.filter(f => f.type.startsWith('image/')).length) {
-              setPreviewUrls([...previewUrls, ...newPreviewUrls.filter(url => url)]);
-            }
-          };
-          reader.readAsDataURL(file);
-        } else {
-          newPreviewUrls[files.indexOf(file)] = '';
+  // Clean up object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      filesWithPreviews.forEach(({ previewUrl }) => {
+        if (previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(previewUrl);
         }
       });
+    };
+  }, []);
 
-      setSelectedFiles([...selectedFiles, ...validFiles]);
-      
-      // If no images, update preview URLs immediately
-      if (validFiles.every(file => !file.type.startsWith('image/'))) {
-        setPreviewUrls([...previewUrls, ...newPreviewUrls]);
+  // Handle file selection
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+
+    const newFiles: FileWithPreview[] = [];
+
+    Array.from(event.target.files).forEach((file) => {
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is too large. Maximum file size is 10MB.`,
+          variant: "destructive",
+        });
+        return;
       }
-    }
+
+      // Create preview for images
+      let previewUrl = '';
+      if (file.type.startsWith('image/')) {
+        previewUrl = URL.createObjectURL(file);
+      }
+
+      newFiles.push({ file, previewUrl });
+    });
+
+    setFilesWithPreviews(prev => [...prev, ...newFiles]);
   };
 
   // Upload proof and complete task
@@ -76,10 +75,11 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
     try {
       const proofUrls: string[] = [];
+      const previewUrls: string[] = [];
 
       // Upload files if selected
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+      if (filesWithPreviews.length > 0) {
+        for (const { file, previewUrl } of filesWithPreviews) {
           const formData = new FormData();
           formData.append("file", file);
 
@@ -87,6 +87,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
           if (response && response.url) {
             proofUrls.push(response.url);
+            previewUrls.push(previewUrl);
           } else {
             throw new Error(`Invalid response from server for file ${file.name} - no URL returned`);
           }
@@ -94,7 +95,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
       }
 
       // Complete task with or without proof
-      onComplete(proofUrls);
+      onComplete(proofUrls, previewUrls);
       onOpenChange(false);
 
       toast({
@@ -120,24 +121,28 @@ const CompletionModal: FC<CompletionModalProps> = ({
   };
 
   const clearSelection = () => {
-    setSelectedFiles([]);
-    setPreviewUrls([]);
+    // Revoke all object URLs
+    filesWithPreviews.forEach(({ previewUrl }) => {
+      if (previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    });
+
+    setFilesWithPreviews([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const removeFile = (index: number) => {
-    const newFiles = selectedFiles.filter((_, i) => i !== index);
-    const newUrls = previewUrls.filter((_, i) => i !== index);
-    
+    const fileToRemove = filesWithPreviews[index];
+
     // Revoke URL to prevent memory leaks for image previews
-    if (previewUrls[index] && previewUrls[index].startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrls[index]);
+    if (fileToRemove.previewUrl && fileToRemove.previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(fileToRemove.previewUrl);
     }
-    
-    setSelectedFiles(newFiles);
-    setPreviewUrls(newUrls);
+
+    setFilesWithPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -181,11 +186,11 @@ const CompletionModal: FC<CompletionModalProps> = ({
               />
             </div>
 
-            {selectedFiles.length > 0 && (
+            {filesWithPreviews.length > 0 && (
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-700">
-                    Selected files ({selectedFiles.length}):
+                    Selected files ({filesWithPreviews.length}):
                   </p>
                   <Button
                     type="button"
@@ -198,7 +203,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto">
-                  {selectedFiles.map((file, index) => (
+                  {filesWithPreviews.map(({ file, previewUrl }, index) => (
                     <div key={index} className="relative bg-gray-50 p-2 rounded border">
                       <button 
                         onClick={() => removeFile(index)}
@@ -207,10 +212,10 @@ const CompletionModal: FC<CompletionModalProps> = ({
                         <X className="h-3 w-3" />
                       </button>
 
-                      {previewUrls[index] ? (
+                      {previewUrl ? (
                         <div className="flex flex-col items-center">
                           <img 
-                            src={previewUrls[index]} 
+                            src={previewUrl} 
                             alt={`Preview ${index + 1}`} 
                             className="h-16 w-auto object-contain mb-1 rounded" 
                           />

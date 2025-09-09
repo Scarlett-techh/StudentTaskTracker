@@ -409,12 +409,7 @@ const TaskCard: FC<TaskCardProps> = ({
                         ? "bg-white/90 text-emerald-800 border-emerald-300"
                         : "text-emerald-700 bg-emerald-50 border-emerald-200"
                     )}>
-                      {/* Show image icon instead of paperclip for image proofs */}
-                      {hasImageProofs ? (
-                        <ImageIcon className="h-4 w-4 mr-2 text-emerald-600" />
-                      ) : (
-                        <Paperclip className="h-4 w-4 mr-2 text-emerald-600" />
-                      )}
+                      <Paperclip className="h-4 w-4 mr-2" />
                       <span>{proofFiles.length} proof file{proofFiles.length !== 1 ? 's' : ''} attached</span>
                       <Button 
                         variant="ghost" 
