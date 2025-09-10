@@ -95,6 +95,9 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   assignedByCoachId: true,
   isCoachTask: true,
   order: true,
+  proofUrl: true,
+  proofFiles: true,
+  proofPreviews: true,
 });
 
 // Note schema
