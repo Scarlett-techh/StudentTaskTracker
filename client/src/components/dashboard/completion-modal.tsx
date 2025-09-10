@@ -3,14 +3,14 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Paperclip, X, Image, FileText, Upload, CheckCircle } from "lucide-react";
+import { Paperclip, X, Image, FileText, Upload, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CompletionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: any;
-  onComplete: (proofUrls: string[], previews: string[]) => void;
+  onComplete: (proofUrls: string[], previewUrls: string[]) => void;
 }
 
 interface FileWithPreview {
@@ -27,6 +27,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
   const { toast } = useToast();
   const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Clean up object URLs when component unmounts
@@ -39,6 +40,14 @@ const CompletionModal: FC<CompletionModalProps> = ({
       });
     };
   }, []);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setFilesWithPreviews([]);
+      setCurrentPreviewIndex(0);
+    }
+  }, [open]);
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +96,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
           if (response && response.url) {
             proofUrls.push(response.url);
-            previewUrls.push(previewUrl);
+            previewUrls.push(previewUrl); // Store preview URLs for immediate display
           } else {
             throw new Error(`Invalid response from server for file ${file.name} - no URL returned`);
           }
@@ -129,6 +138,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
     });
 
     setFilesWithPreviews([]);
+    setCurrentPreviewIndex(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -143,11 +153,28 @@ const CompletionModal: FC<CompletionModalProps> = ({
     }
 
     setFilesWithPreviews(prev => prev.filter((_, i) => i !== index));
+
+    // Adjust current preview index if needed
+    if (currentPreviewIndex >= index && currentPreviewIndex > 0) {
+      setCurrentPreviewIndex(prev => prev - 1);
+    }
+  };
+
+  const handleNextPreview = () => {
+    if (currentPreviewIndex < filesWithPreviews.length - 1) {
+      setCurrentPreviewIndex(currentPreviewIndex + 1);
+    }
+  };
+
+  const handlePrevPreview = () => {
+    if (currentPreviewIndex > 0) {
+      setCurrentPreviewIndex(currentPreviewIndex - 1);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border-0 rounded-xl shadow-lg sm:max-w-md">
+      <DialogContent className="bg-white border-0 rounded-xl shadow-lg sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-600" />
@@ -202,35 +229,91 @@ const CompletionModal: FC<CompletionModalProps> = ({
                     Clear All
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto">
+
+                {/* Large Preview Area */}
+                <div className="bg-gray-100 rounded-lg p-4 relative">
+                  {filesWithPreviews.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80"
+                        onClick={handlePrevPreview}
+                        disabled={currentPreviewIndex === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80"
+                        onClick={handleNextPreview}
+                        disabled={currentPreviewIndex === filesWithPreviews.length - 1}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+
+                  {filesWithPreviews[currentPreviewIndex].previewUrl ? (
+                    <div className="flex flex-col items-center">
+                      <img 
+                        src={filesWithPreviews[currentPreviewIndex].previewUrl} 
+                        alt={`Preview ${currentPreviewIndex + 1}`} 
+                        className="h-40 w-auto object-contain mb-2 rounded" 
+                      />
+                      <span className="text-sm text-gray-700 font-medium">
+                        {filesWithPreviews[currentPreviewIndex].file.name}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({currentPreviewIndex + 1} of {filesWithPreviews.length})
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <FileText className="h-24 w-24 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-700 font-medium">
+                        {filesWithPreviews[currentPreviewIndex].file.name}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({currentPreviewIndex + 1} of {filesWithPreviews.length})
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Thumbnail Grid */}
+                <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
                   {filesWithPreviews.map(({ file, previewUrl }, index) => (
-                    <div key={index} className="relative bg-gray-50 p-2 rounded border">
+                    <div 
+                      key={index} 
+                      className={`relative bg-gray-50 p-1 rounded border cursor-pointer ${index === currentPreviewIndex ? 'ring-2 ring-blue-500' : ''}`}
+                      onClick={() => setCurrentPreviewIndex(index)}
+                    >
                       <button 
-                        onClick={() => removeFile(index)}
-                        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(index);
+                        }}
+                        className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm hover:bg-gray-100 z-10"
                       >
                         <X className="h-3 w-3" />
                       </button>
 
                       {previewUrl ? (
-                        <div className="flex flex-col items-center">
-                          <img 
-                            src={previewUrl} 
-                            alt={`Preview ${index + 1}`} 
-                            className="h-16 w-auto object-contain mb-1 rounded" 
-                          />
-                          <span className="text-xs text-gray-500 truncate w-full text-center">
-                            {file.name}
-                          </span>
-                        </div>
+                        <img 
+                          src={previewUrl} 
+                          alt={`Thumbnail ${index + 1}`} 
+                          className="h-12 w-full object-cover rounded" 
+                        />
                       ) : (
-                        <div className="flex flex-col items-center">
-                          <FileText className="h-16 w-16 text-gray-400 mb-1" />
-                          <span className="text-xs text-gray-500 truncate w-full text-center">
-                            {file.name}
-                          </span>
+                        <div className="h-12 w-full flex items-center justify-center bg-gray-100 rounded">
+                          <FileText className="h-6 w-6 text-gray-400" />
                         </div>
                       )}
+                      <div className="text-xs text-gray-500 truncate text-center mt-1">
+                        {file.name.length > 12 ? file.name.substring(0, 9) + '...' : file.name}
+                      </div>
                     </div>
                   ))}
                 </div>

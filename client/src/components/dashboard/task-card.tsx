@@ -44,6 +44,7 @@ interface TaskCardProps {
     assignedByCoachId?: number;
     proofUrl?: string;
     proofFiles?: string[]; // Add support for multiple proof files
+    proofPreviews?: string[]; // Add support for preview URLs
   };
   onTaskUpdate?: () => void;
   isDraggable?: boolean;
@@ -90,15 +91,19 @@ const TaskCard: FC<TaskCardProps> = ({
       ? [task.proofUrl] 
       : [];
 
+  // Get preview URLs if available
+  const proofPreviews = task.proofPreviews || [];
+
   // Check if we have any image proofs
   const hasImageProofs = proofFiles.some(file => 
     file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
   );
 
   // Get the first image proof for background (if available)
-  const firstImageProof = proofFiles.find(file => 
-    file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
-  );
+  // Prefer preview URLs for immediate display, fall back to actual file URLs
+  const firstImageProof = proofPreviews.length > 0 
+    ? proofPreviews[0] 
+    : proofFiles.find(file => file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file));
 
   // Get the correct URL for a proof file
   const getProofUrl = (fileUrl: string) => {
@@ -189,12 +194,13 @@ const TaskCard: FC<TaskCardProps> = ({
     }
   };
 
-  const handleCompleteWithProof = async (proofUrls: string[]) => {
+  const handleCompleteWithProof = async (proofUrls: string[], previewUrls: string[]) => {
     try {
       // Update task with proof and mark as completed
       await apiRequest("PATCH", `/api/tasks/${task.id}`, { 
         status: 'completed',
-        proofFiles: proofUrls // Store as array for multiple files
+        proofFiles: proofUrls, // Store as array for multiple files
+        proofPreviews: previewUrls // Store preview URLs for immediate display
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -273,7 +279,7 @@ const TaskCard: FC<TaskCardProps> = ({
         )}
         data-task-id={task.id}
         style={backgroundProofUrl && task.status === 'completed' ? {
-          backgroundImage: `url(${backgroundProofUrl})`,
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${backgroundProofUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -287,7 +293,7 @@ const TaskCard: FC<TaskCardProps> = ({
       >
         {/* Background overlay for better readability - stronger overlay for image backgrounds */}
         {backgroundProofUrl && task.status === 'completed' ? (
-          <div className="absolute inset-0 bg-black bg-opacity-60 z-0" />
+          <div className="absolute inset-0 bg-black bg-opacity-40 z-0" />
         ) : task.status === 'completed' ? (
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-50/80 to-white/80 z-0" />
         ) : null}

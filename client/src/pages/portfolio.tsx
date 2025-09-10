@@ -32,7 +32,7 @@ import {
 import {
   Plus,
   FileText,
-  Image,
+  Image as ImageIcon,
   Link as LinkIcon,
   Upload,
   Calendar,
@@ -159,11 +159,13 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
 
     if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
       // Determine file type for preview
-      if (currentFile.fileType === "pdf" || currentFile.proofUrl?.endsWith('.pdf')) {
+      const fileUrl = currentFile.fileUrl || currentFile.proofUrl;
+
+      if (currentFile.fileType === "pdf" || (fileUrl && fileUrl.endsWith('.pdf'))) {
         return (
           <div className="h-96">
             <iframe 
-              src={currentFile.fileUrl || currentFile.proofUrl} 
+              src={fileUrl} 
               className="w-full h-full border rounded-md"
               title={currentFile.title}
             />
@@ -172,12 +174,11 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
             </div>
           </div>
         );
-      } else if (currentFile.fileType === "image" || 
-                 (currentFile.proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(currentFile.proofUrl))) {
+      } else if (currentFile.fileType === "image" || (fileUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl))) {
         return (
           <div className="flex justify-center">
             <img 
-              src={currentFile.fileUrl || currentFile.proofUrl} 
+              src={fileUrl} 
               alt={currentFile.title}
               className="max-h-96 max-w-full object-contain rounded-md border"
             />
@@ -252,7 +253,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
           <DialogTitle className="flex items-center gap-2">
             {currentFile.type === "link" && <LinkIcon className="h-5 w-5" />}
             {(currentFile.type === "file" || currentFile.type === "task") && <FileText className="h-5 w-5" />}
-            {currentFile.type === "photo" && <Image className="h-5 w-5" />}
+            {currentFile.type === "photo" && <ImageIcon className="h-5 w-5" />}
             {currentFile.title}
             {files.length > 1 && (
               <span className="text-sm font-normal text-gray-500 ml-2">
@@ -342,6 +343,7 @@ export default function Portfolio() {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [connectionError, setConnectionError] = useState(false);
+  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -524,6 +526,25 @@ export default function Portfolio() {
   };
 
   const handleItemClick = (item: any) => {
+    // For task items with multiple proof files, create a files array for the carousel
+    if (item.type === "task" && item.proofFiles && item.proofFiles.length > 1) {
+      const files = item.proofFiles.map((proofUrl: string, index: number) => ({
+        ...item,
+        type: "task",
+        fileUrl: proofUrl,
+        proofUrl: proofUrl,
+        title: `${item.title} (Proof ${index + 1})`,
+        fileType: proofUrl.split('.').pop()?.toLowerCase() || 'unknown'
+      }));
+
+      setPreviewItem({
+        ...item,
+        files: files
+      });
+      setPreviewOpen(true);
+      return;
+    }
+
     // Check if this item is part of a multi-file upload
     const baseTitle = item.title.replace(/\s*\(\d+\)$/, '');
     const relatedItems = portfolioItems.filter(i => 
@@ -546,7 +567,7 @@ export default function Portfolio() {
 
   const getFileIcon = (item: any) => {
     if (item.type === "link") return <LinkIcon className="h-5 w-5 text-blue-500" />;
-    if (item.type === "photo") return <Image className="h-5 w-5 text-green-500" />;
+    if (item.type === "photo") return <ImageIcon className="h-5 w-5 text-green-500" />;
     if (item.type === "task") return <FileText className="h-5 w-5 text-purple-500" />;
 
     // For file types
@@ -764,91 +785,112 @@ export default function Portfolio() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-grow overflow-y-auto pb-6">
-          {portfolioItems.map((item: any) => (
-            <Card
-              key={item.id}
-              className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90 cursor-pointer h-fit"
-              onClick={() => handleItemClick(item)}
-            >
-              <div className="relative h-32 rounded-t-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                {(item.type === "photo" || (item.type === "file" && item.fileType === "image") || 
-                  (item.type === "task" && item.proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl))) && (
-                  <img
-                    src={item.fileUrl || item.proofUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                    }}
-                  />
-                )}
-                {item.type === "link" && item.link && (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
-                    <LinkIcon className="h-12 w-12 text-blue-500" />
-                  </div>
-                )}
-                {(item.type === "file" && item.fileType !== "image") || 
-                 (item.type === "task" && (!item.proofUrl || !/\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl))) && (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
-                    {getFileIcon(item)}
-                  </div>
+          {portfolioItems.map((item: any) => {
+            // Get the background image URL for task items with proof files
+            const backgroundImageUrl = item.type === "task" && item.proofPreviews && item.proofPreviews.length > 0 
+              ? item.proofPreviews[0] 
+              : item.type === "task" && item.proofFiles && item.proofFiles.length > 0
+                ? item.proofFiles.find((file: string) => file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file))
+                : item.fileUrl;
+
+            return (
+              <Card
+                key={item.id}
+                className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm hover:bg-white/90 cursor-pointer h-fit"
+                onClick={() => handleItemClick(item)}
+                style={backgroundImageUrl && (item.type === "photo" || item.type === "task") ? {
+                  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url(${backgroundImageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                } : undefined}
+              >
+                {/* Background overlay for better readability */}
+                {backgroundImageUrl && (item.type === "photo" || item.type === "task") && (
+                  <div className="absolute inset-0 bg-black bg-opacity-30 z-0" />
                 )}
 
-                {item.subject && (
-                  <div className="absolute top-2 left-2">
-                    <span className="px-2 py-1 text-xs font-medium bg-white/90 text-gray-700 rounded-full shadow-sm">
-                      {item.subject}
-                    </span>
-                  </div>
-                )}
+                <div className="relative z-10">
+                  <div className="relative h-32 rounded-t-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                    {(item.type === "photo" || (item.type === "file" && item.fileType === "image") || 
+                      (item.type === "task" && item.proofFiles && item.proofFiles.some((file: string) => file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)))) && backgroundImageUrl && (
+                      <img
+                        src={backgroundImageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    )}
+                    {item.type === "link" && item.link && (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
+                        <LinkIcon className="h-12 w-12 text-blue-500" />
+                      </div>
+                    )}
+                    {((item.type === "file" && item.fileType !== "image") || 
+                      (item.type === "task" && (!item.proofFiles || !item.proofFiles.some((file: string) => file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file))))) && (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
+                        {getFileIcon(item)}
+                      </div>
+                    )}
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deletePortfolioMutation.mutate(item);
-                  }}
-                  className="absolute top-2 right-2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold line-clamp-1">{item.title}</CardTitle>
-                {item.source === "manual" && (
-                  <div className="text-xs text-gray-500">Manually added</div>
-                )}
-              </CardHeader>
-              <CardContent className="pt-2">
-                {item.description && (
-                  <CardDescription className="text-sm text-gray-600 line-clamp-2 mb-2">
-                    {item.description}
-                  </CardDescription>
-                )}
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center space-x-1">
-                    {getFileIcon(item)}
-                    <span className="capitalize">{item.type}</span>
+                    {item.subject && (
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-1 text-xs font-medium bg-white/90 text-gray-700 rounded-full shadow-sm">
+                          {item.subject}
+                        </span>
+                      </div>
+                    )}
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePortfolioMutation.mutate(item);
+                      }}
+                      className="absolute top-2 right-2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {format(new Date(item.createdAt), "MMM d")}
-                  </div>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-semibold line-clamp-1">{item.title}</CardTitle>
+                    {item.source === "manual" && (
+                      <div className="text-xs text-gray-500">Manually added</div>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {item.description && (
+                      <CardDescription className="text-sm text-gray-600 line-clamp-2 mb-2">
+                        {item.description}
+                      </CardDescription>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        {getFileIcon(item)}
+                        <span className="capitalize">{item.type}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {format(new Date(item.createdAt), "MMM d")}
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-2">
+                    <Button 
+                      className="w-full" 
+                      variant="outline"
+                      onClick={() => handleItemClick(item)}
+                    >
+                      Preview Item
+                    </Button>
+                  </CardFooter>
                 </div>
-              </CardContent>
-              <CardFooter className="pt-2">
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => handleItemClick(item)}
-                >
-                  Preview Item
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
