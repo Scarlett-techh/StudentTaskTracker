@@ -343,7 +343,6 @@ export default function Portfolio() {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [connectionError, setConnectionError] = useState(false);
-  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -373,7 +372,7 @@ export default function Portfolio() {
   }, [manualPortfolioItems]);
 
   // Combine server items and manual items
-  const portfolioItems = [...serverPortfolioItems, ...manualPortfolioItems];
+  const portfolioItems = [...(Array.isArray(serverPortfolioItems) ? serverPortfolioItems : []), ...manualPortfolioItems];
 
   // Set subjects data with fallback to sample data
   useEffect(() => {
