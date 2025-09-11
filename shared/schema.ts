@@ -76,9 +76,6 @@ export const tasks = pgTable("tasks", {
   assignedByCoachId: integer("assigned_by_coach_id"), // null for self-created tasks
   isCoachTask: boolean("is_coach_task").notNull().default(false),
   order: integer("order").notNull().default(0),
-  proofUrl: text("proof_url"), // Single proof file URL (for backward compatibility)
-  proofFiles: text("proof_files").array(), // Array of proof file URLs
-  proofPreviews: text("proof_previews").array(), // Array of preview URLs for immediate display
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -95,9 +92,6 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   assignedByCoachId: true,
   isCoachTask: true,
   order: true,
-  proofUrl: true,
-  proofFiles: true,
-  proofPreviews: true,
 });
 
 // Note schema
