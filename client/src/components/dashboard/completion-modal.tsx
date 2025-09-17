@@ -3,20 +3,27 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Paperclip, X, Image, FileText, Upload, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Paperclip, X, Image, FileText, Upload, CheckCircle, Link, Text } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CompletionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: any;
-  onComplete: (proofUrls: string[], previewUrls: string[]) => void;
+  onComplete: (proofUrls: string[], previews: string[]) => void;
 }
 
 interface FileWithPreview {
   file: File;
   previewUrl: string;
 }
+
+// Second Navigation Tabs
+const TABS = [
+  { id: 'files', label: 'Files', icon: Paperclip },
+  { id: 'text', label: 'Text', icon: Text },
+  { id: 'links', label: 'Links', icon: Link }
+];
 
 const CompletionModal: FC<CompletionModalProps> = ({ 
   open, 
@@ -27,8 +34,11 @@ const CompletionModal: FC<CompletionModalProps> = ({
   const { toast } = useToast();
   const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState('files');
+  const [textProof, setTextProof] = useState('');
+  const [links, setLinks] = useState<string[]>(['']);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const proofSectionRef = useRef<HTMLDivElement>(null);
 
   // Clean up object URLs when component unmounts
   useEffect(() => {
@@ -40,14 +50,6 @@ const CompletionModal: FC<CompletionModalProps> = ({
       });
     };
   }, []);
-
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!open) {
-      setFilesWithPreviews([]);
-      setCurrentPreviewIndex(0);
-    }
-  }, [open]);
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,6 +80,27 @@ const CompletionModal: FC<CompletionModalProps> = ({
     setFilesWithPreviews(prev => [...prev, ...newFiles]);
   };
 
+  // Handle adding new link field
+  const addLinkField = () => {
+    setLinks(prev => [...prev, '']);
+  };
+
+  // Handle removing link field
+  const removeLinkField = (index: number) => {
+    if (links.length === 1) {
+      setLinks(['']);
+    } else {
+      setLinks(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Handle link input change
+  const handleLinkChange = (index: number, value: string) => {
+    const newLinks = [...links];
+    newLinks[index] = value;
+    setLinks(newLinks);
+  };
+
   // Upload proof and complete task
   const handleCompleteTask = async () => {
     setIsUploading(true);
@@ -86,8 +109,9 @@ const CompletionModal: FC<CompletionModalProps> = ({
       const proofUrls: string[] = [];
       const previewUrls: string[] = [];
 
-      // Upload files if selected
-      if (filesWithPreviews.length > 0) {
+      // Handle different proof types based on active tab
+      if (activeTab === 'files' && filesWithPreviews.length > 0) {
+        // Upload files if selected
         for (const { file, previewUrl } of filesWithPreviews) {
           const formData = new FormData();
           formData.append("file", file);
@@ -96,10 +120,22 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
           if (response && response.url) {
             proofUrls.push(response.url);
-            previewUrls.push(previewUrl); // Store preview URLs for immediate display
+            previewUrls.push(previewUrl);
           } else {
             throw new Error(`Invalid response from server for file ${file.name} - no URL returned`);
           }
+        }
+      } else if (activeTab === 'text' && textProof.trim()) {
+        // For text proof, we'll store it as a text file or in the database
+        // This is a placeholder implementation
+        proofUrls.push(`text-proof:${btoa(textProof)}`);
+        previewUrls.push('');
+      } else if (activeTab === 'links') {
+        // For links, filter out empty ones
+        const validLinks = links.filter(link => link.trim());
+        if (validLinks.length > 0) {
+          proofUrls.push(...validLinks);
+          previewUrls.push(...Array(validLinks.length).fill(''));
         }
       }
 
@@ -110,7 +146,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
       toast({
         title: "Task completed!",
         description: proofUrls.length > 0 
-          ? `Your task has been marked as completed with ${proofUrls.length} proof file(s).` 
+          ? `Your task has been marked as completed with ${proofUrls.length} proof item(s).` 
           : "Your task has been marked as completed.",
       });
     } catch (error: any) {
@@ -138,7 +174,6 @@ const CompletionModal: FC<CompletionModalProps> = ({
     });
 
     setFilesWithPreviews([]);
-    setCurrentPreviewIndex(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -153,29 +188,12 @@ const CompletionModal: FC<CompletionModalProps> = ({
     }
 
     setFilesWithPreviews(prev => prev.filter((_, i) => i !== index));
-
-    // Adjust current preview index if needed
-    if (currentPreviewIndex >= index && currentPreviewIndex > 0) {
-      setCurrentPreviewIndex(prev => prev - 1);
-    }
-  };
-
-  const handleNextPreview = () => {
-    if (currentPreviewIndex < filesWithPreviews.length - 1) {
-      setCurrentPreviewIndex(currentPreviewIndex + 1);
-    }
-  };
-
-  const handlePrevPreview = () => {
-    if (currentPreviewIndex > 0) {
-      setCurrentPreviewIndex(currentPreviewIndex - 1);
-    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border-0 rounded-xl shadow-lg sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="bg-white border-0 rounded-xl shadow-lg sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-600" />
             Complete Task
@@ -185,7 +203,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 flex-shrink-0">
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <h4 className="font-medium text-blue-900">{task.title}</h4>
             {task.description && (
@@ -196,133 +214,160 @@ const CompletionModal: FC<CompletionModalProps> = ({
           <div>
             <p className="text-sm font-medium mb-2">Upload proof of completion (optional):</p>
 
-            <div 
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
-              onClick={triggerFileInput}
-            >
-              <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-              <p className="text-xs text-gray-500 mt-1">PNG, JPG, PDF up to 10MB (multiple files allowed)</p>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*,application/pdf"
-                multiple
-              />
-            </div>
-
-            {filesWithPreviews.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-700">
-                    Selected files ({filesWithPreviews.length}):
-                  </p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearSelection}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-
-                {/* Large Preview Area */}
-                <div className="bg-gray-100 rounded-lg p-4 relative">
-                  {filesWithPreviews.length > 1 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80"
-                        onClick={handlePrevPreview}
-                        disabled={currentPreviewIndex === 0}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 bg-white/80"
-                        onClick={handleNextPreview}
-                        disabled={currentPreviewIndex === filesWithPreviews.length - 1}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-
-                  {filesWithPreviews[currentPreviewIndex].previewUrl ? (
-                    <div className="flex flex-col items-center">
-                      <img 
-                        src={filesWithPreviews[currentPreviewIndex].previewUrl} 
-                        alt={`Preview ${currentPreviewIndex + 1}`} 
-                        className="h-40 w-auto object-contain mb-2 rounded" 
-                      />
-                      <span className="text-sm text-gray-700 font-medium">
-                        {filesWithPreviews[currentPreviewIndex].file.name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({currentPreviewIndex + 1} of {filesWithPreviews.length})
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <FileText className="h-24 w-24 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-700 font-medium">
-                        {filesWithPreviews[currentPreviewIndex].file.name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({currentPreviewIndex + 1} of {filesWithPreviews.length})
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Thumbnail Grid */}
-                <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
-                  {filesWithPreviews.map(({ file, previewUrl }, index) => (
-                    <div 
-                      key={index} 
-                      className={`relative bg-gray-50 p-1 rounded border cursor-pointer ${index === currentPreviewIndex ? 'ring-2 ring-blue-500' : ''}`}
-                      onClick={() => setCurrentPreviewIndex(index)}
+            {/* Second Navigation - Horizontal Scroll */}
+            <div className="overflow-x-auto whitespace-nowrap scrollbar-hide mb-4">
+              <div className="inline-flex space-x-1 p-1 bg-gray-100 rounded-lg">
+                {TABS.map((tab) => {
+                  const IconComponent = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md flex items-center gap-1 transition-colors ${
+                        activeTab === tab.id
+                          ? 'bg-white text-emerald-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
                     >
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFile(index);
-                        }}
-                        className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm hover:bg-gray-100 z-10"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-
-                      {previewUrl ? (
-                        <img 
-                          src={previewUrl} 
-                          alt={`Thumbnail ${index + 1}`} 
-                          className="h-12 w-full object-cover rounded" 
-                        />
-                      ) : (
-                        <div className="h-12 w-full flex items-center justify-center bg-gray-100 rounded">
-                          <FileText className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-500 truncate text-center mt-1">
-                        {file.name.length > 12 ? file.name.substring(0, 9) + '...' : file.name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      <IconComponent className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 mt-2">
+        {/* Scrollable Proof Section */}
+        <div 
+          ref={proofSectionRef}
+          className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+        >
+          {/* Files Tab Content */}
+          {activeTab === 'files' && (
+            <>
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors mb-4"
+                onClick={triggerFileInput}
+              >
+                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, PDF up to 10MB (multiple files allowed)</p>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*,application/pdf"
+                  multiple
+                />
+              </div>
+
+              {filesWithPreviews.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700">
+                      Selected files ({filesWithPreviews.length}):
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSelection}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {filesWithPreviews.map(({ file, previewUrl }, index) => (
+                      <div key={index} className="relative bg-gray-50 p-2 rounded border">
+                        <button 
+                          onClick={() => removeFile(index)}
+                          className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100 z-10"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+
+                        {previewUrl ? (
+                          <div className="flex flex-col items-center">
+                            <img 
+                              src={previewUrl} 
+                              alt={`Preview ${index + 1}`} 
+                              className="h-16 w-auto object-contain mb-1 rounded" 
+                            />
+                            <span className="text-xs text-gray-500 truncate w-full text-center">
+                              {file.name}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <FileText className="h-16 w-16 text-gray-400 mb-1" />
+                            <span className="text-xs text-gray-500 truncate w-full text-center">
+                              {file.name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Text Tab Content */}
+          {activeTab === 'text' && (
+            <div className="border border-gray-300 rounded-lg p-4 mb-4">
+              <textarea
+                value={textProof}
+                onChange={(e) => setTextProof(e.target.value)}
+                placeholder="Enter your proof text here..."
+                className="w-full h-40 p-2 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Describe your work or paste any text-based proof of completion.
+              </p>
+            </div>
+          )}
+
+          {/* Links Tab Content */}
+          {activeTab === 'links' && (
+            <div className="space-y-3 mb-4">
+              {links.map((link, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={link}
+                    onChange={(e) => handleLinkChange(index, e.target.value)}
+                    placeholder="Paste a link to your work"
+                    className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  {links.length > 1 && (
+                    <button
+                      onClick={() => removeLinkField(index)}
+                      className="p-2 text-red-500 hover:text-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addLinkField}
+                className="mt-2"
+              >
+                + Add Another Link
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 mt-2 flex-shrink-0">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}

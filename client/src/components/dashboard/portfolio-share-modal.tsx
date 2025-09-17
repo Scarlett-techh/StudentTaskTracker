@@ -55,28 +55,40 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
           description: task.description || "",
           subject: task.subject || "General",
           type: "task",
-          sourceId: task.id
+          sourceId: task.id,
+          featured: false
         });
+
+        if (!response) {
+          throw new Error("No response from server");
+        }
+
         return [response];
       }
     },
     onSuccess: (data) => {
+      // Invalidate both portfolio queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-      
+      queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
+
+      const itemCount = Array.isArray(data) ? data.length : 1;
       toast({
         title: "Added to Portfolio",
-        description: `${data.length} item(s) have been added to your portfolio.`,
+        description: itemCount === 1 
+          ? "Task has been added to your portfolio successfully."
+          : `Task has been added to your portfolio as ${itemCount} items successfully.`,
       });
       onOpenChange(false);
-      setIsSharing(false);
     },
-    onError: (error) => {
-      console.error('Portfolio share error:', error);
+    onError: (error: any) => {
+      console.error("Portfolio sharing error:", error);
       toast({
-        title: "Error",
-        description: "Failed to add to portfolio. Please try again.",
+        title: "Error adding to portfolio",
+        description: error.message || "Failed to add task to portfolio. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
       setIsSharing(false);
     }
   });
@@ -86,54 +98,30 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
     shareToPortfolioMutation.mutate();
   };
 
-  // Get proof files for preview
-  const proofFiles = task.proofFiles && task.proofFiles.length > 0 
-    ? task.proofFiles 
-    : task.proofUrl 
-      ? [task.proofUrl] 
-      : [];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add to Portfolio</DialogTitle>
           <DialogDescription>
-            Showcase your completed work "{task.title}" in your portfolio.
+            Add this completed task to your portfolio to showcase your achievements.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Show preview if we have proof files */}
-          {proofFiles.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Preview:</p>
-              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-hidden">
-                {proofFiles.slice(0, 4).map((file, index) => (
-                  <div key={index} className="bg-gray-100 rounded p-2 flex items-center justify-center">
-                    {file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                      <img 
-                        src={file} 
-                        alt={`Proof ${index + 1}`}
-                        className="max-w-full max-h-16 object-contain rounded"
-                      />
-                    ) : (
-                      <div className="text-xs text-gray-500 text-center">
-                        File {index + 1}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {proofFiles.length > 4 && (
-                <p className="text-xs text-gray-500">
-                  +{proofFiles.length - 4} more files
-                </p>
-              )}
-            </div>
-          )}
+        <div className="space-y-4 py-4">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 className="font-semibold text-blue-900 mb-2">{task.title}</h4>
+            {task.description && (
+              <p className="text-sm text-blue-800 mb-2">{task.description}</p>
+            )}
+            {task.subject && (
+              <span className="inline-block px-2 py-1 bg-blue-200 text-blue-800 rounded-full text-xs font-medium">
+                {task.subject}
+              </span>
+            )}
+          </div>
 
-          <div className="text-sm text-gray-600">
+          <div className="pt-2 text-sm text-gray-500">
             <p>Adding this to your portfolio will allow you to showcase your work to coaches and peers.</p>
             {(task.proofFiles && task.proofFiles.length > 1) || (task.proofUrl && task.proofFiles && task.proofFiles.length > 0) ? (
               <p className="mt-1 text-xs text-blue-600">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,35 +74,35 @@ export default function Analytics() {
     queryKey: ["/api/subjects"],
   });
 
-  // Safe data processing (memoized to prevent infinite loops)
-  const safeTasks = useMemo(() => Array.isArray(tasks) ? tasks : [], [tasks]);
-  const safeSubjects = useMemo(() => Array.isArray(subjects) ? subjects : [], [subjects]);
-  const completedTasks = useMemo(() => safeTasks.filter((task: any) => task.status === 'completed'), [safeTasks]);
+  // Safe data processing
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeSubjects = Array.isArray(subjects) ? subjects : [];
+  const completedTasks = safeTasks.filter((task: any) => task.status === 'completed');
 
   // Chart data - ensure we have valid data
-  const chartData = useMemo(() => safeSubjects
+  const chartData = safeSubjects
     .map((subject: any) => ({
       name: subject.name || 'Unnamed',
       completed: completedTasks.filter((task: any) => task.subject === subject.name).length,
       total: safeTasks.filter((task: any) => task.subject === subject.name).length
     }))
-    .filter(item => item.total > 0), [safeSubjects, completedTasks, safeTasks]);
+    .filter(item => item.total > 0);
 
-  const statusData = useMemo(() => [
+  const statusData = [
     { name: 'Completed', value: completedTasks.length, color: '#22c55e' },
     { name: 'In Progress', value: safeTasks.filter((t: any) => t.status === 'in-progress').length, color: '#f59e0b' },
     { name: 'Pending', value: safeTasks.filter((t: any) => t.status === 'pending').length, color: '#ef4444' }
-  ], [completedTasks.length, safeTasks]);
+  ];
 
   // Skill development data
-  const skillData = useMemo(() => [
+  const skillData = [
     { subject: 'Critical Thinking', A: completedTasks.length > 0 ? Math.min(100, completedTasks.length * 8) : 5, fullMark: 100 },
     { subject: 'Creativity', A: completedTasks.length > 0 ? Math.min(100, completedTasks.length * 6) : 10, fullMark: 100 },
     { subject: 'Collaboration', A: completedTasks.length > 0 ? Math.min(100, completedTasks.length * 4) : 15, fullMark: 100 },
     { subject: 'Communication', A: completedTasks.length > 0 ? Math.min(100, completedTasks.length * 7) : 20, fullMark: 100 },
     { subject: 'Self Direction', A: completedTasks.length > 0 ? Math.min(100, completedTasks.length * 9) : 25, fullMark: 100 },
     { subject: 'Social Emotional', A: completedTasks.length > 0 ? Math.min(100, completedTasks.length * 5) : 30, fullMark: 100 },
-  ], [completedTasks.length]);
+  ];
 
   // Simple Export Function
   const handleExportPDF = () => {
