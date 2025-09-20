@@ -33,21 +33,34 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
           : [];
 
       if (proofFiles.length > 0) {
-        // Create separate portfolio items for each proof file to better showcase images
-        const uploadPromises = proofFiles.map(async (proofFile, index) => {
-          return apiRequest("POST", "/api/portfolio", {
-            title: index === 0 ? task.title : `${task.title} (${index + 1})`,
-            description: task.description || "",
-            subject: task.subject || "General",
-            type: proofFile.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? "photo" : "file",
-            sourceId: task.id,
-            filePath: proofFile,
-            featured: index === 0 // Only feature the first one
-          });
+        // Create attachments in the format expected by PortfolioPreview component
+        const attachments = proofFiles.map((proofFile, index) => {
+          const isImage = proofFile.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+          return {
+            type: isImage ? 'photo' : 'file',
+            name: `Proof file ${index + 1}`,
+            url: proofFile,
+            title: `Task proof ${index + 1}`,
+            mimeType: isImage ? 'image/jpeg' : 'application/octet-stream'
+          };
         });
-        
-        const responses = await Promise.all(uploadPromises);
-        return responses;
+
+        // Create single portfolio item with all attachments
+        const response = await apiRequest("POST", "/api/portfolio", {
+          title: task.title,
+          description: task.description || "",
+          subject: task.subject || "General",
+          type: "task",
+          sourceId: task.id,
+          attachments: attachments, // Include all attachments in proper format
+          featured: false
+        });
+
+        if (!response) {
+          throw new Error("No response from server");
+        }
+
+        return [response];
       } else {
         // Create single portfolio item without proof
         const response = await apiRequest("POST", "/api/portfolio", {
@@ -56,6 +69,7 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
           subject: task.subject || "General",
           type: "task",
           sourceId: task.id,
+          attachments: [], // Empty attachments array
           featured: false
         });
 
