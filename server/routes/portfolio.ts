@@ -1,9 +1,11 @@
+// server/routes/portfolio.ts (updated)
 import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import { storage } from "../storage.js";
 import { isAuthenticated } from "../replitAuth.js";
+import { db } from "../db.js"; // Import the database connection
 
 const router = express.Router();
 
@@ -65,6 +67,52 @@ router.post("/", isAuthenticated, async (req: any, res) => {
   } catch (error: any) {
     console.error("Error creating portfolio item:", error);
     res.status(500).json({ message: error.message || "Failed to create portfolio item" });
+  }
+});
+
+// NEW: Share task to portfolio with attachments
+router.post("/share-task", isAuthenticated, async (req: any, res) => {
+  try {
+    const userId = req.user.claims.sub;
+    const user = await storage.getUserByReplitId(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { taskId, portfolioIds, includeProof, attachments } = req.body;
+
+    // Get task details
+    const task = await db.query.tasks.findFirst({
+      where: (tasks: any, { eq }: any) => eq(tasks.id, taskId),
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    // Create portfolio items for each selected portfolio
+    const results = [];
+    for (const portfolioId of portfolioIds) {
+      const portfolioData = {
+        userId: user.id,
+        title: task.title,
+        description: task.description,
+        type: 'task',
+        subject: task.subject,
+        sourceId: taskId,
+        attachments: includeProof ? attachments : [],
+      };
+
+      // Create the portfolio item
+      const newItem = await storage.createPortfolioItem(portfolioData);
+      results.push(newItem);
+    }
+
+    res.status(201).json({ success: true, items: results });
+  } catch (error: any) {
+    console.error("Error sharing task to portfolio:", error);
+    res.status(500).json({ message: error.message || "Failed to share task to portfolio" });
   }
 });
 

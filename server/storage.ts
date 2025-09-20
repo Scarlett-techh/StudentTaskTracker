@@ -1,3 +1,4 @@
+// server/storage.ts (updated)
 import {
   users, tasks, notes, photos, taskAttachments, subjects, 
   achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications, moodEntries, portfolioItems,
@@ -777,7 +778,7 @@ export class MemStorage implements IStorage {
     return todaysMoods;
   }
 
-  // Portfolio methods
+  // Portfolio methods - UPDATED to handle attachments
   async getPortfolioItems(userId: number): Promise<PortfolioItem[]> {
     return Array.from(this.portfolioItems.values()).filter(item => item.userId === userId);
   }
@@ -795,6 +796,8 @@ export class MemStorage implements IStorage {
       featured: insertPortfolioItem.featured || false,
       filePath: insertPortfolioItem.filePath || null,
       link: insertPortfolioItem.link || null,
+      // NEW: Handle attachments field
+      attachments: insertPortfolioItem.attachments || [],
       userId: insertPortfolioItem.userId,
       createdAt: new Date()
     };
@@ -808,7 +811,11 @@ export class MemStorage implements IStorage {
 
     const updatedItem: PortfolioItem = {
       ...existingItem,
-      ...portfolioItemUpdate
+      ...portfolioItemUpdate,
+      // NEW: Handle attachments field in updates
+      attachments: portfolioItemUpdate.attachments !== undefined 
+        ? portfolioItemUpdate.attachments 
+        : existingItem.attachments
     };
     this.portfolioItems.set(id, updatedItem);
     return updatedItem;

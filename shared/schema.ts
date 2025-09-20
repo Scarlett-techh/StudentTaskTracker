@@ -1,3 +1,4 @@
+// shared/schema.ts (updated)
 import { sql } from 'drizzle-orm';
 import { pgTable, text, serial, integer, boolean, timestamp, json, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -219,49 +220,21 @@ export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick(
   taskId: true,
 });
 
-// Types - Updated for mixed compatibility
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type Task = typeof tasks.$inferSelect;
-export type InsertTask = z.infer<typeof insertTaskSchema>;
-
-export type Note = typeof notes.$inferSelect;
-export type InsertNote = z.infer<typeof insertNoteSchema>;
-
-export type Photo = typeof photos.$inferSelect;
-export type InsertPhoto = z.infer<typeof insertPhotoSchema>;
-
-export type TaskAttachment = typeof taskAttachments.$inferSelect;
-export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
-
-export type Subject = typeof subjects.$inferSelect;
-export type InsertSubject = z.infer<typeof insertSubjectSchema>;
-
-export type Achievement = typeof achievements.$inferSelect;
-export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
-
-export type UserAchievement = typeof userAchievements.$inferSelect;
-export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
-
-export type PointsHistory = typeof pointsHistory.$inferSelect;
-export type InsertPointsHistory = z.infer<typeof insertPointsHistorySchema>;
-
-export type PortfolioItem = typeof portfolioItems.$inferSelect;
-export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
-
-// Portfolio items table
+// Portfolio items table - UPDATED to include attachments
 export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
-  type: text("type").notNull(), // 'file', 'link', 'photo'
+  type: text("type").notNull(), // 'file', 'link', 'photo', 'task'
   subject: text("subject"),
   score: text("score"), // For test scores or grades
   sourceId: integer("source_id"), // Reference to original task/note if applicable
   featured: boolean("featured").notNull().default(false),
   filePath: text("file_path"), // Path to uploaded file
   link: text("link"), // URL for link type items
+  // NEW: Attachments field to store proof of work from tasks
+  attachments: jsonb("attachments").default('[]').notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -276,6 +249,7 @@ export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).pick
   featured: true,
   filePath: true,
   link: true,
+  attachments: true, // Added attachments field
 });
 
 // Daily notification tracking
@@ -329,3 +303,33 @@ export type InsertDailyNotification = z.infer<typeof insertDailyNotificationSche
 
 export type MoodEntry = typeof moodEntries.$inferSelect;
 export type InsertMoodEntry = z.infer<typeof insertMoodEntrySchema>;
+
+// Types - Updated for mixed compatibility
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+export type Note = typeof notes.$inferSelect;
+export type InsertNote = z.infer<typeof insertNoteSchema>;
+
+export type Photo = typeof photos.$inferSelect;
+export type InsertPhoto = z.infer<typeof insertPhotoSchema>;
+
+export type TaskAttachment = typeof taskAttachments.$inferSelect;
+export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
+
+export type Subject = typeof subjects.$inferSelect;
+export type InsertSubject = z.infer<typeof insertSubjectSchema>;
+
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+
+export type PointsHistory = typeof pointsHistory.$inferSelect;
+export type InsertPointsHistory = z.infer<typeof insertPointsHistorySchema>;
+
+export type PortfolioItem = typeof portfolioItems.$inferSelect;
+export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;

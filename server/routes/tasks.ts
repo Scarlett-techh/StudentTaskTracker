@@ -65,16 +65,27 @@ router.put("/:taskId/complete", isAuthenticated, upload.array("proofFiles"), asy
 
       savedFiles.push(savedFile);
 
-      // If file should be shared to portfolio, create portfolio item
+      // If file should be shared to portfolio, create portfolio item with proper attachment format
       if (shareToPortfolio) {
+        // Create attachment object in the format expected by PortfolioPreview component
+        const attachment = {
+          type: file.mimetype.startsWith('image/') ? 'photo' : 'file',
+          name: file.originalname,
+          url: dataUri, // Use the base64 data URI for direct access
+          size: file.size,
+          title: file.originalname,
+          mimeType: file.mimetype
+        };
+
         await storage.createPortfolioItem({
           userId: user.id,
           title: `Proof: ${file.originalname}`,
           description: `Completed task: ${updatedTask.title}`,
-          type: "file",
+          type: "task", // Mark as task-based item
           subject: updatedTask.subject,
-          sourceId: savedFile.id,
+          sourceId: parseInt(taskId), // Reference the task, not the file
           filePath: savedFile.fileName,
+          attachments: [attachment], // Store attachment in the format expected by preview component
         });
       }
     }
