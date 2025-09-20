@@ -56,7 +56,7 @@ const StudentLogin = () => {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
       const response = await apiRequest('POST', '/api/student/login', data);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       toast({
@@ -77,7 +77,7 @@ const StudentLogin = () => {
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterForm) => {
       const response = await apiRequest('POST', '/api/student/register', data);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       toast({
