@@ -1,6 +1,6 @@
 // shared/schema.ts (updated)
 import { sql } from 'drizzle-orm';
-import { pgTable, text, serial, integer, boolean, timestamp, json, varchar, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, varchar, index, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -62,7 +62,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
 });
 
-// Task schema
+// Task schema - Updated to include proof fields
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -77,6 +77,11 @@ export const tasks = pgTable("tasks", {
   assignedByCoachId: integer("assigned_by_coach_id"), // null for self-created tasks
   isCoachTask: boolean("is_coach_task").notNull().default(false),
   order: integer("order").notNull().default(0),
+  // Proof fields
+  proofUrl: text("proof_url"), // Legacy field for single proof URL
+  proofFiles: text("proof_files").array(), // Array of proof file URLs
+  proofText: text("proof_text"), // Text proof
+  proofLink: text("proof_link"), // Link proof
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -93,6 +98,10 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   assignedByCoachId: true,
   isCoachTask: true,
   order: true,
+  proofUrl: true,
+  proofFiles: true,
+  proofText: true,
+  proofLink: true,
 });
 
 // Note schema
@@ -220,7 +229,7 @@ export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick(
   taskId: true,
 });
 
-// Portfolio items table - UPDATED to include attachments
+// Portfolio items table - UPDATED to include task proof fields
 export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -233,7 +242,11 @@ export const portfolioItems = pgTable("portfolio_items", {
   featured: boolean("featured").notNull().default(false),
   filePath: text("file_path"), // Path to uploaded file
   link: text("link"), // URL for link type items
-  // NEW: Attachments field to store proof of work from tasks
+  // NEW: Task proof fields
+  proofFiles: text("proof_files").array(), // Array of proof file URLs
+  proofText: text("proof_text"), // Text proof
+  proofLink: text("proof_link"), // Link proof
+  // Keep attachments for backward compatibility
   attachments: jsonb("attachments").default('[]').notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -249,7 +262,10 @@ export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).pick
   featured: true,
   filePath: true,
   link: true,
-  attachments: true, // Added attachments field
+  proofFiles: true, // Added proof fields
+  proofText: true,
+  proofLink: true,
+  attachments: true,
 });
 
 // Daily notification tracking

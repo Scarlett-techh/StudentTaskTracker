@@ -70,7 +70,7 @@ router.post("/", isAuthenticated, async (req: any, res) => {
   }
 });
 
-// NEW: Share task to portfolio with attachments
+// Share task to portfolio with all proof types
 router.post("/share-task", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.user.claims.sub;
@@ -80,7 +80,7 @@ router.post("/share-task", isAuthenticated, async (req: any, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const { taskId, portfolioIds, includeProof, attachments } = req.body;
+    const { taskId, portfolioIds, includeProof, proofFiles, proofText, proofLink } = req.body;
 
     // Get task details
     const task = await db.query.tasks.findFirst({
@@ -100,8 +100,14 @@ router.post("/share-task", isAuthenticated, async (req: any, res) => {
         description: task.description,
         type: 'task',
         subject: task.subject,
+        category: task.category,
         sourceId: taskId,
-        attachments: includeProof ? attachments : [],
+        // Include all proof types if requested
+        proofFiles: includeProof ? proofFiles || [] : [],
+        proofText: includeProof ? proofText || '' : '',
+        proofLink: includeProof ? proofLink || '' : '',
+        // For backward compatibility, also populate attachments with files
+        attachments: includeProof ? proofFiles || [] : [],
       };
 
       // Create the portfolio item

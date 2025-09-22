@@ -29,19 +29,38 @@ router.put("/:taskId/complete", isAuthenticated, upload.array("proofFiles"), asy
     }
 
     const uploadedFiles = req.files as Express.Multer.File[];
-    const shareFlags = req.body.shareFlags || {}; // Object with fileIndex: boolean
+    const { proofText, proofLink, shareFlags = {} } = req.body;
 
-    // Update task status to completed
-    const updatedTask = await storage.updateTask(parseInt(taskId), {
+    // Update task status to completed and include all proof types
+    const updateData: any = {
       status: "completed",
       updatedAt: new Date(),
-    });
+    };
+
+    // Add proof files if any were uploaded
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      updateData.proofFiles = uploadedFiles.map(file => 
+        `data:${file.mimetype};base64,${file.buffer.toString("base64")}`
+      );
+    }
+
+    // Add text proof if provided
+    if (proofText) {
+      updateData.proofText = proofText;
+    }
+
+    // Add link proof if provided
+    if (proofLink) {
+      updateData.proofLink = proofLink;
+    }
+
+    const updatedTask = await storage.updateTask(parseInt(taskId), updateData);
 
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Process each uploaded file
+    // Process each uploaded file for individual file storage (if needed)
     const savedFiles = [];
     for (let i = 0; i < uploadedFiles.length; i++) {
       const file = uploadedFiles[i];
@@ -126,8 +145,14 @@ router.get("/:taskId/files", isAuthenticated, async (req: any, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    const taskFiles = await storage.getFilesByTaskId(parseInt(taskId));
-    res.json(taskFiles);
+    // Get all proof data (files, text, links)
+    const proofData = {
+      proofFiles: task.proofFiles || [],
+      proofText: task.proofText || '',
+      proofLink: task.proofLink || ''
+    };
+
+    res.json(proofData);
   } catch (error: any) {
     console.error("Error fetching task files:", error);
     res.status(500).json({ message: error.message || "Failed to fetch task files" });

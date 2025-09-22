@@ -14,7 +14,9 @@ import {
   ExternalLink,
   CheckSquare,
   Image as ImageIcon,
-  FileText
+  FileText,
+  Download,
+  Eye
 } from "lucide-react";
 
 import TaskAttachmentSimple from "./task-attachment-simple";
@@ -44,6 +46,8 @@ interface TaskCardProps {
     assignedByCoachId?: number;
     proofUrl?: string;
     proofFiles?: string[]; // Add support for multiple proof files
+    proofText?: string; // Add support for text proofs
+    proofLink?: string; // Add support for link proofs
   };
   onTaskUpdate?: () => void;
   isDraggable?: boolean;
@@ -189,12 +193,18 @@ const TaskCard: FC<TaskCardProps> = ({
     }
   };
 
-  const handleCompleteWithProof = async (proofUrls: string[]) => {
+  const handleCompleteWithProof = async (proofData: {
+    proofUrls?: string[];
+    proofText?: string;
+    proofLink?: string;
+  }) => {
     try {
       // Update task with proof and mark as completed
       await apiRequest("PATCH", `/api/tasks/${task.id}`, { 
         status: 'completed',
-        proofFiles: proofUrls // Store as array for multiple files
+        proofFiles: proofData.proofUrls, // Store as array for multiple files
+        proofText: proofData.proofText,
+        proofLink: proofData.proofLink
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -202,9 +212,7 @@ const TaskCard: FC<TaskCardProps> = ({
 
       toast({
         title: "Task completed! 🎉",
-        description: proofUrls.length > 0 
-          ? `Your task has been marked as completed with ${proofUrls.length} proof file(s).` 
-          : "Your task has been marked as completed.",
+        description: "Your task has been marked as completed with proof.",
       });
     } catch (error: any) {
       toast({
@@ -258,6 +266,16 @@ const TaskCard: FC<TaskCardProps> = ({
 
   const handlePrevProof = () => {
     setCurrentProofIndex((prev) => (prev - 1 + proofFiles.length) % proofFiles.length);
+  };
+
+  // Function to download proof file
+  const downloadProofFile = (fileUrl: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = getProofUrl(fileUrl) || '';
+    link.download = fileName || 'proof';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -401,7 +419,7 @@ const TaskCard: FC<TaskCardProps> = ({
                 )}
 
                 {/* Show proof if task is completed and has proof */}
-                {task.status === 'completed' && proofFiles.length > 0 && (
+                {(task.status === 'completed' && (proofFiles.length > 0 || task.proofText || task.proofLink)) && (
                   <div className="mt-2 pl-8">
                     <div className={cn(
                       "flex items-center text-sm rounded-lg p-2 border",
@@ -410,7 +428,17 @@ const TaskCard: FC<TaskCardProps> = ({
                         : "text-emerald-700 bg-emerald-50 border-emerald-200"
                     )}>
                       <Paperclip className="h-4 w-4 mr-2" />
-                      <span>{proofFiles.length} proof file{proofFiles.length !== 1 ? 's' : ''} attached</span>
+
+                      {proofFiles.length > 0 && (
+                        <span>{proofFiles.length} proof file{proofFiles.length !== 1 ? 's' : ''} attached</span>
+                      )}
+                      {task.proofText && (
+                        <span>Text proof attached</span>
+                      )}
+                      {task.proofLink && (
+                        <span>Link proof attached</span>
+                      )}
+
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -584,74 +612,118 @@ const TaskCard: FC<TaskCardProps> = ({
         onComplete={handleCompleteWithProof}
       />
 
-      {/* Proof Preview Dialog - Updated to support multiple files */}
+      {/* Proof Preview Dialog - Updated to support multiple proof types */}
       <Dialog open={proofPreviewOpen} onOpenChange={setProofPreviewOpen}>
         <DialogContent className="bg-white border-0 rounded-xl shadow-lg max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold gradient-heading">
-              Proof Preview ({currentProofIndex + 1} of {proofFiles.length})
+              Proof Preview
+              {proofFiles.length > 0 && ` (${currentProofIndex + 1} of ${proofFiles.length})`}
             </DialogTitle>
           </DialogHeader>
 
-          {proofFiles.length > 0 && (
-            <>
-              <div className="flex justify-center relative">
-                {proofFiles.length > 1 && (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10"
-                      onClick={handlePrevProof}
-                    >
-                      ←
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10"
-                      onClick={handleNextProof}
-                    >
-                      →
-                    </Button>
-                  </>
-                )}
+          <div className="max-h-96 overflow-y-auto">
+            {/* Text Proof */}
+            {task.proofText && (
+              <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+                <h4 className="font-semibold mb-2">Text Proof:</h4>
+                <p className="whitespace-pre-wrap">{task.proofText}</p>
+              </div>
+            )}
 
-                {/\.(jpg|jpeg|png|gif|webp)$/i.test(proofFiles[currentProofIndex]) ? (
-                  <img 
-                    src={getProofUrl(proofFiles[currentProofIndex]) || ''} 
-                    alt={`Proof ${currentProofIndex + 1}`} 
-                    className="max-h-96 w-auto object-contain rounded"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 bg-gray-100 rounded-lg">
-                    <FileText className="h-24 w-24 text-gray-400 mb-4" />
-                    <p className="text-gray-600">Document preview not available</p>
-                    <Button 
-                      variant="default" 
-                      className="mt-4"
-                      onClick={() => window.open(getProofUrl(proofFiles[currentProofIndex]), '_blank')}
-                    >
-                      Open Document
-                    </Button>
+            {/* Link Proof */}
+            {task.proofLink && (
+              <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+                <h4 className="font-semibold mb-2">Link Proof:</h4>
+                <a 
+                  href={task.proofLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline break-all"
+                >
+                  {task.proofLink}
+                </a>
+              </div>
+            )}
+
+            {/* File Proofs */}
+            {proofFiles.length > 0 && (
+              <>
+                <div className="flex justify-center relative">
+                  {proofFiles.length > 1 && (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10"
+                        onClick={handlePrevProof}
+                      >
+                        ←
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10"
+                        onClick={handleNextProof}
+                      >
+                        →
+                      </Button>
+                    </>
+                  )}
+
+                  {/\.(jpg|jpeg|png|gif|webp)$/i.test(proofFiles[currentProofIndex]) ? (
+                    <img 
+                      src={getProofUrl(proofFiles[currentProofIndex]) || ''} 
+                      alt={`Proof ${currentProofIndex + 1}`} 
+                      className="max-h-64 w-auto object-contain rounded"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 bg-gray-100 rounded-lg w-full">
+                      <FileText className="h-24 w-24 text-gray-400 mb-4" />
+                      <p className="text-gray-600 mb-2">Document preview not available</p>
+                      <p className="text-sm text-gray-500 mb-4 break-all max-w-full">
+                        {proofFiles[currentProofIndex]}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="default" 
+                          onClick={() => window.open(getProofUrl(proofFiles[currentProofIndex]), '_blank')}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => downloadProofFile(
+                            proofFiles[currentProofIndex], 
+                            `proof-${task.id}-${currentProofIndex + 1}`
+                          )}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {proofFiles.length > 1 && (
+                  <div className="flex justify-center mt-4">
+                    {proofFiles.map((_, index) => (
+                      <button
+                        key={index}
+                        className={`h-2 w-2 rounded-full mx-1 ${
+                          index === currentProofIndex ? 'bg-primary' : 'bg-gray-300'
+                        }`}
+                        onClick={() => setCurrentProofIndex(index)}
+                        aria-label={`Go to proof ${index + 1}`}
+                      />
+                    ))}
                   </div>
                 )}
-              </div>
-
-              <div className="flex justify-center mt-4">
-                {proofFiles.map((_, index) => (
-                  <button
-                    key={index}
-                    className={`h-2 w-2 rounded-full mx-1 ${
-                      index === currentProofIndex ? 'bg-primary' : 'bg-gray-300'
-                    }`}
-                    onClick={() => setCurrentProofIndex(index)}
-                    aria-label={`Go to proof ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
 
           <DialogFooter className="gap-2 mt-4">
             <Button 
@@ -661,12 +733,18 @@ const TaskCard: FC<TaskCardProps> = ({
             >
               Close
             </Button>
-            <Button 
-              onClick={() => window.open(getProofUrl(proofFiles[currentProofIndex]), '_blank')}
-              className="btn-bounce bg-primary hover:bg-primary/90"
-            >
-              Open in New Tab
-            </Button>
+            {proofFiles.length > 0 && (
+              <Button 
+                onClick={() => downloadProofFile(
+                  proofFiles[currentProofIndex], 
+                  `proof-${task.id}-${currentProofIndex + 1}`
+                )}
+                className="btn-bounce bg-primary hover:bg-primary/90"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

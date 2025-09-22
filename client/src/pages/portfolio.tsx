@@ -47,6 +47,8 @@ import {
   FileCode,
   ChevronLeft,
   ChevronRight,
+  CheckCircle,
+  Text,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -74,63 +76,6 @@ const SAMPLE_SUBJECTS = [
   { id: "18", name: "Coding", color: "#059669" },
 ];
 
-// For demo purposes, create some sample portfolio items with file extensions
-const demoPortfolioItems = [
-  {
-    id: 1,
-    title: "Math Project",
-    description: "A comprehensive analysis of quadratic equations",
-    type: "file",
-    fileType: "pdf",
-    fileName: "math_project.pdf",
-    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    subject: "Mathematics",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 2,
-    title: "Science Experiment",
-    description: "Photos from our chemistry lab experiment",
-    type: "photo",
-    fileType: "image",
-    fileName: "science_experiment.jpg",
-    fileUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-    subject: "Science",
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-  },
-  {
-    id: 3,
-    title: "History Essay",
-    description: "An essay on the causes of World War II",
-    type: "link",
-    link: "https://example.com/history-essay",
-    subject: "History",
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-  },
-  {
-    id: 4,
-    title: "Art Portfolio",
-    description: "My collection of drawings and paintings",
-    type: "photo",
-    fileType: "image",
-    fileName: "art_portfolio.png",
-    fileUrl: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-    subject: "Art/Music",
-    createdAt: new Date(Date.now() - 345600000).toISOString(),
-  },
-  {
-    id: 5,
-    title: "Programming Project",
-    description: "A web application built with React and TypeScript",
-    type: "file",
-    fileType: "code",
-    fileName: "project_source.zip",
-    fileUrl: "#",
-    subject: "Computer Science/Technology",
-    createdAt: new Date(Date.now() - 432000000).toISOString(),
-  },
-];
-
 // Preview Modal Component
 function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
@@ -140,7 +85,96 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
   const files = item.files || [item];
   const currentFile = files[currentFileIndex];
 
+  // Function to get proof URL for task items
+  const getProofUrl = (fileUrl: string) => {
+    if (!fileUrl) return null;
+
+    // If it's already a full URL or data URL, use it directly
+    if (fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/')) {
+      return fileUrl;
+    }
+
+    // Otherwise, assume it's a relative path from the server
+    return `/${fileUrl}`;
+  };
+
   const renderPreview = () => {
+    // Handle task items with different proof types
+    if (currentFile.type === "task") {
+      // Text proof
+      if (currentFile.proofText) {
+        return (
+          <div className="bg-gray-50 p-4 rounded-md max-h-96 overflow-y-auto">
+            <h4 className="font-semibold mb-2">Text Proof:</h4>
+            <p className="whitespace-pre-wrap">{currentFile.proofText}</p>
+          </div>
+        );
+      }
+
+      // Link proof
+      if (currentFile.proofLink) {
+        return (
+          <div className="bg-gray-50 p-4 rounded-md">
+            <h4 className="font-semibold mb-2">Link Proof:</h4>
+            <a 
+              href={currentFile.proofLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline break-all"
+            >
+              {currentFile.proofLink}
+            </a>
+          </div>
+        );
+      }
+
+      // File proof
+      if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
+        const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
+
+        if (proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(proofUrl)) {
+          return (
+            <div className="flex justify-center">
+              <img 
+                src={proofUrl} 
+                alt={`Proof ${currentFileIndex + 1}`} 
+                className="max-h-96 max-w-full object-contain rounded-md border"
+              />
+            </div>
+          );
+        } else if (proofUrl && /\.(pdf)$/i.test(proofUrl)) {
+          return (
+            <div className="h-96">
+              <iframe 
+                src={proofUrl} 
+                className="w-full h-full border rounded-md"
+                title={currentFile.title}
+              />
+              <div className="mt-2 text-sm text-gray-500">
+                PDF preview powered by browser's built-in PDF viewer
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
+              <File className="h-16 w-16 text-gray-400 mb-4" />
+              <p className="text-gray-500 mb-2">No preview available for this file type</p>
+              <p className="text-sm text-gray-400">Click download to access the file</p>
+            </div>
+          );
+        }
+      }
+
+      // Default for task items with no proof
+      return (
+        <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
+          <CheckCircle className="h-16 w-16 text-green-400 mb-4" />
+          <p className="text-gray-500">Task completed with no proof attached</p>
+        </div>
+      );
+    }
+
     if (currentFile.type === "link") {
       return (
         <div className="h-96">
@@ -157,7 +191,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
       );
     }
 
-    if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
+    if (currentFile.type === "file" || currentFile.type === "photo") {
       // Determine file type for preview
       if (currentFile.fileType === "pdf" || currentFile.proofUrl?.endsWith('.pdf')) {
         return (
@@ -205,7 +239,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
   const handleDownload = () => {
     if (currentFile.type === "link") {
       window.open(currentFile.link, "_blank");
-    } else if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
+    } else if (currentFile.type === "file" || currentFile.type === "photo") {
       // Create a temporary anchor element to trigger download
       const url = currentFile.fileUrl || currentFile.proofUrl;
       if (url) {
@@ -221,15 +255,57 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
           description: `Downloading ${currentFile.fileName || currentFile.title}`,
         });
       }
+    } else if (currentFile.type === "task") {
+      // Handle download for task proofs
+      if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
+        const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
+        if (proofUrl) {
+          const a = document.createElement('a');
+          a.href = proofUrl;
+          a.download = `proof-${currentFileIndex + 1}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          toast({
+            title: "Download Started",
+            description: "Downloading proof file",
+          });
+        }
+      } else if (currentFile.proofText) {
+        // Download text proof as a text file
+        const blob = new Blob([currentFile.proofText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentFile.title}-proof.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Download Started",
+          description: "Downloading text proof",
+        });
+      }
     }
   };
 
   const handleOpenExternal = () => {
     if (currentFile.type === "link") {
       window.open(currentFile.link, "_blank");
-    } else if (currentFile.type === "file" || currentFile.type === "photo" || currentFile.type === "task") {
+    } else if (currentFile.type === "file" || currentFile.type === "photo") {
       const url = currentFile.fileUrl || currentFile.proofUrl;
       if (url) window.open(url, "_blank");
+    } else if (currentFile.type === "task") {
+      // Handle external opening for task proofs
+      if (currentFile.proofLink) {
+        window.open(currentFile.proofLink, "_blank");
+      } else if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
+        const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
+        if (proofUrl) window.open(proofUrl, "_blank");
+      }
     }
   };
 
@@ -301,12 +377,17 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
             </div>
           </div>
           <div>
-            <h4 className="font-medium mb-1">File Info</h4>
+            <h4 className="font-medium mb-1">Proof Info</h4>
             <div className="space-y-1">
               {currentFile.fileName && <p><span className="text-gray-500">Filename:</span> {currentFile.fileName}</p>}
               {currentFile.fileType && <p><span className="text-gray-500">Filetype:</span> {currentFile.fileType}</p>}
               {currentFile.link && <p><span className="text-gray-500">URL:</span> <span className="truncate">{currentFile.link}</span></p>}
               {currentFile.proofUrl && <p><span className="text-gray-500">Proof URL:</span> <span className="truncate">{currentFile.proofUrl}</span></p>}
+              {currentFile.proofText && <p><span className="text-gray-500">Text Proof:</span> <span className="truncate">{currentFile.proofText.substring(0, 50)}...</span></p>}
+              {currentFile.proofLink && <p><span className="text-gray-500">Link Proof:</span> <span className="truncate">{currentFile.proofLink}</span></p>}
+              {currentFile.proofFiles && currentFile.proofFiles.length > 0 && (
+                <p><span className="text-gray-500">Files:</span> {currentFile.proofFiles.length} file(s)</p>
+              )}
             </div>
           </div>
         </div>
@@ -547,7 +628,7 @@ export default function Portfolio() {
   const getFileIcon = (item: any) => {
     if (item.type === "link") return <LinkIcon className="h-5 w-5 text-blue-500" />;
     if (item.type === "photo") return <Image className="h-5 w-5 text-green-500" />;
-    if (item.type === "task") return <FileText className="h-5 w-5 text-purple-500" />;
+    if (item.type === "task") return <CheckCircle className="h-5 w-5 text-purple-500" />;
 
     // For file types
     if (item.fileType === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
@@ -566,6 +647,19 @@ export default function Portfolio() {
       if (/\.(mp4|mov|avi|wmv)$/i.test(item.proofUrl)) return "video";
     }
     return "task";
+  };
+
+  // Function to get proof URL for task items
+  const getProofUrl = (fileUrl: string) => {
+    if (!fileUrl) return null;
+
+    // If it's already a full URL or data URL, use it directly
+    if (fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/')) {
+      return fileUrl;
+    }
+
+    // Otherwise, assume it's a relative path from the server
+    return `/${fileUrl}`;
   };
 
   if (isLoading) {
@@ -771,10 +865,41 @@ export default function Portfolio() {
               onClick={() => handleItemClick(item)}
             >
               <div className="relative h-32 rounded-t-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                {(item.type === "photo" || (item.type === "file" && item.fileType === "image") || 
-                  (item.type === "task" && item.proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl))) && (
+                {/* For task items, show appropriate preview based on proof type */}
+                {item.type === "task" && (
+                  <>
+                    {item.proofFiles && item.proofFiles.length > 0 && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofFiles[0]) && (
+                      <img
+                        src={getProofUrl(item.proofFiles[0])}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    )}
+                    {item.proofText && (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
+                        <Text className="h-12 w-12 text-purple-500" />
+                      </div>
+                    )}
+                    {item.proofLink && (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
+                        <LinkIcon className="h-12 w-12 text-blue-500" />
+                      </div>
+                    )}
+                    {(!item.proofFiles || item.proofFiles.length === 0) && !item.proofText && !item.proofLink && (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
+                        <CheckCircle className="h-12 w-12 text-green-500" />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {(item.type === "photo" || (item.type === "file" && item.fileType === "image")) && (
                   <img
-                    src={item.fileUrl || item.proofUrl}
+                    src={item.fileUrl}
                     alt={item.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -788,8 +913,7 @@ export default function Portfolio() {
                     <LinkIcon className="h-12 w-12 text-blue-500" />
                   </div>
                 )}
-                {(item.type === "file" && item.fileType !== "image") || 
-                 (item.type === "task" && (!item.proofUrl || !/\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl))) && (
+                {(item.type === "file" && item.fileType !== "image") && (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
                     {getFileIcon(item)}
                   </div>
@@ -819,6 +943,9 @@ export default function Portfolio() {
                 <CardTitle className="text-lg font-semibold line-clamp-1">{item.title}</CardTitle>
                 {item.source === "manual" && (
                   <div className="text-xs text-gray-500">Manually added</div>
+                )}
+                {item.type === "task" && (
+                  <div className="text-xs text-blue-500">From completed task</div>
                 )}
               </CardHeader>
               <CardContent className="pt-2">

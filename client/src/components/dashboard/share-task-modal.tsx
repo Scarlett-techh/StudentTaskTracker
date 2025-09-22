@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Check, Copy, Facebook, Twitter, Linkedin, Mail, Link, FolderOpen } from "lucide-react";
+import { Check, Copy, Facebook, Twitter, Linkedin, Mail, Link, FolderOpen, FileText, ExternalLink, File } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface ShareTaskModalProps {
   open: boolean;
@@ -16,17 +17,24 @@ interface ShareTaskModalProps {
     title: string;
     description?: string;
     category: string;
+    proofFiles?: string[];
+    proofText?: string;
+    proofLink?: string;
   };
-  attachments: any[]; // Add attachments prop
 }
 
-const ShareTaskModal = ({ open, onOpenChange, task, attachments }: ShareTaskModalProps) => {
+const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [includeProof, setIncludeProof] = useState(true);
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [selectedPortfolios, setSelectedPortfolios] = useState<string[]>([]);
   const [isSharingToPortfolio, setIsSharingToPortfolio] = useState(false);
+
+  // Get all proof files (support both single proofUrl and multiple proofFiles)
+  const proofFiles = task.proofFiles && task.proofFiles.length > 0 
+    ? task.proofFiles 
+    : [];
 
   // Fetch user portfolios when modal opens
   useEffect(() => {
@@ -132,7 +140,9 @@ const ShareTaskModal = ({ open, onOpenChange, task, attachments }: ShareTaskModa
           taskId: task.id,
           portfolioIds: selectedPortfolios,
           includeProof: includeProof,
-          attachments: includeProof ? attachments : []
+          proofFiles: includeProof ? proofFiles : [],
+          proofText: includeProof ? task.proofText : '',
+          proofLink: includeProof ? task.proofLink : ''
         }),
       });
 
@@ -182,6 +192,67 @@ const ShareTaskModal = ({ open, onOpenChange, task, attachments }: ShareTaskModa
                 Include proof of work (files, links, notes)
               </Label>
             </div>
+
+            {/* Proof Preview */}
+            {includeProof && (proofFiles.length > 0 || task.proofText || task.proofLink) && (
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <h4 className="text-sm font-medium mb-2">Proof to be included:</h4>
+
+                {/* File Proofs */}
+                {proofFiles.length > 0 && (
+                  <div className="mb-3">
+                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                      <File className="h-4 w-4 mr-1" />
+                      <span>{proofFiles.length} file{proofFiles.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {proofFiles.slice(0, 3).map((file, index) => {
+                        const fileName = file.split('/').pop() || `file-${index + 1}`;
+                        return (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {fileName.length > 15 ? `${fileName.substring(0, 12)}...` : fileName}
+                          </Badge>
+                        );
+                      })}
+                      {proofFiles.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{proofFiles.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Text Proof */}
+                {task.proofText && (
+                  <div className="mb-3">
+                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                      <FileText className="h-4 w-4 mr-1" />
+                      <span>Text note</span>
+                    </div>
+                    <div className="text-xs text-gray-500 bg-white p-2 rounded border overflow-hidden">
+                      {task.proofText.length > 100 
+                        ? `${task.proofText.substring(0, 100)}...` 
+                        : task.proofText
+                      }
+                    </div>
+                  </div>
+                )}
+
+                {/* Link Proof */}
+                {task.proofLink && (
+                  <div>
+                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      <span>Link</span>
+                    </div>
+                    <div className="text-xs text-blue-600 bg-white p-2 rounded border overflow-hidden truncate">
+                      {task.proofLink}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {portfolios.length > 0 ? (
               <div className="space-y-2">
