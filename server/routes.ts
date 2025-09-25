@@ -11,7 +11,7 @@ import path from "path";
 import fs from "fs";
 
 // ✅ Import portfolio routes
-import portfolioRoutes from "./routes/portfolio.js";
+import portfolioRoutes from "./routes/portfolio.ts";
 
 // Configure multer for file uploads
 const upload = multer({

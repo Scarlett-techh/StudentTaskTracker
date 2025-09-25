@@ -1,8 +1,8 @@
 // server/routes/files.ts
 import express from "express";
 import multer from "multer";
-import { storage } from "../storage.js";
-import { isAuthenticated } from "../replitAuth.js";
+import { storage } from "../storage.ts";
+import { isAuthenticated } from "../replitAuth.ts";
 import { db } from "../db";
 import { files } from "@shared/schema";
 import { eq } from "drizzle-orm";

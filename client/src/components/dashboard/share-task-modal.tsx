@@ -1,13 +1,34 @@
 // client/src/components/dashboard/share-task-modal.tsx (updated)
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Check, Copy, Facebook, Twitter, Linkedin, Mail, Link, FolderOpen, FileText, ExternalLink, File } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Check,
+  Copy,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Mail,
+  Link,
+  FolderOpen,
+  FileText,
+  ExternalLink,
+  File,
+  Send,
+  AlertCircle,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ShareTaskModalProps {
   open: boolean;
@@ -31,27 +52,36 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   const [selectedPortfolios, setSelectedPortfolios] = useState<string[]>([]);
   const [isSharingToPortfolio, setIsSharingToPortfolio] = useState(false);
 
+  // Email sharing states
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
   // Get all proof files (support both single proofUrl and multiple proofFiles)
-  const proofFiles = task.proofFiles && task.proofFiles.length > 0 
-    ? task.proofFiles 
-    : [];
+  const proofFiles =
+    task.proofFiles && task.proofFiles.length > 0 ? task.proofFiles : [];
 
   // Fetch user portfolios when modal opens
   useEffect(() => {
     if (open) {
       fetchPortfolios();
+      // Reset form when modal opens
+      setRecipientEmail("");
+      setCustomMessage("");
+      setEmailError("");
     }
   }, [open]);
 
   const fetchPortfolios = async () => {
     try {
-      const response = await fetch('/api/portfolio');
+      const response = await fetch("/api/portfolio");
       if (response.ok) {
         const data = await response.json();
         setPortfolios(data);
       }
     } catch (error) {
-      console.error('Error fetching portfolios:', error);
+      console.error("Error fetching portfolios:", error);
     }
   };
 
@@ -95,7 +125,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Task Completed',
+          title: "Task Completed",
           text: shareMessage,
         });
         toast({
@@ -103,7 +133,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
           description: "Content shared successfully",
         });
       } catch (error) {
-        console.error('Error sharing:', error);
+        console.error("Error sharing:", error);
         // Fallback if Web Share API fails
         handleCopy();
         toast({
@@ -123,7 +153,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
       toast({
         title: "No portfolio selected",
         description: "Please select at least one portfolio to share to",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -131,18 +161,18 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
     setIsSharingToPortfolio(true);
 
     try {
-      const response = await fetch('/api/portfolio/share-task', {
-        method: 'POST',
+      const response = await fetch("/api/portfolio/share-task", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           taskId: task.id,
           portfolioIds: selectedPortfolios,
           includeProof: includeProof,
           proofFiles: includeProof ? proofFiles : [],
-          proofText: includeProof ? task.proofText : '',
-          proofLink: includeProof ? task.proofLink : ''
+          proofText: includeProof ? task.proofText : "",
+          proofLink: includeProof ? task.proofLink : "",
         }),
       });
 
@@ -153,126 +183,300 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
         });
         onOpenChange(false);
       } else {
-        throw new Error('Failed to share to portfolio');
+        throw new Error("Failed to share to portfolio");
       }
     } catch (error) {
-      console.error('Error sharing to portfolio:', error);
+      console.error("Error sharing to portfolio:", error);
       toast({
         title: "Error",
         description: "Failed to share task to portfolio",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsSharingToPortfolio(false);
     }
   };
 
+  // Handle email sharing via MailerSend
+  const handleEmailShare = async () => {
+    if (!recipientEmail) {
+      toast({
+        title: "Email required",
+        description: "Please enter a recipient email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    setEmailError("");
+
+    try {
+      console.log("Sending email share request for task:", task.id);
+      console.log("Recipient:", recipientEmail);
+
+      const response = await fetch(`/api/tasks/${task.id}/share`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipientEmail,
+          message:
+            customMessage || `Check out this task I completed: ${task.title}`,
+          taskTitle: task.title,
+          taskCategory: task.category,
+          taskDescription: task.description,
+          proofFiles: includeProof ? proofFiles : [],
+          proofText: includeProof ? task.proofText : "",
+          proofLink: includeProof ? task.proofLink : "",
+        }),
+      });
+
+      console.log("Response status:", response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Email sent successfully:", result);
+
+        toast({
+          title: "Email sent!",
+          description: `Task shared successfully to ${recipientEmail}`,
+        });
+        setRecipientEmail("");
+        setCustomMessage("");
+        onOpenChange(false);
+      } else {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Unknown error" }));
+        console.error("Server error:", errorData);
+        throw new Error(
+          errorData.message || `Server returned ${response.status} status`,
+        );
+      }
+    } catch (error: any) {
+      console.error("Error sending email:", error);
+      setEmailError(
+        error.message ||
+          "Failed to send email. Please check backend configuration.",
+      );
+
+      toast({
+        title: "Email Error",
+        description: error.message || "Failed to send email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Share Your Accomplishment</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Share your completed task to your portfolio or social media.
+            Share your completed task via email, to your portfolio, or on social
+            media.
           </p>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Email Sharing Section */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Share via Email</h3>
+
+            {emailError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{emailError}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="recipient-email" className="text-sm">
+                  Recipient Email
+                </Label>
+                <Input
+                  id="recipient-email"
+                  type="email"
+                  placeholder="Enter email address"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="custom-message" className="text-sm">
+                  Custom Message (Optional)
+                </Label>
+                <Textarea
+                  id="custom-message"
+                  placeholder="Add a personal message..."
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="include-proof-email"
+                  checked={includeProof}
+                  onCheckedChange={(checked) =>
+                    setIncludeProof(checked === true)
+                  }
+                />
+                <Label htmlFor="include-proof-email" className="text-sm">
+                  Include proof of work in email
+                </Label>
+              </div>
+
+              <Button
+                onClick={handleEmailShare}
+                disabled={isSendingEmail || !recipientEmail}
+                className="w-full"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isSendingEmail ? "Sending..." : "Send Email"}
+              </Button>
+            </div>
+          </div>
+
           {/* Portfolio Sharing Section */}
           <div className="space-y-4">
             <h3 className="font-medium">Share to Portfolio</h3>
 
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="include-proof" 
-                checked={includeProof} 
+              <Checkbox
+                id="include-proof-portfolio"
+                checked={includeProof}
                 onCheckedChange={(checked) => setIncludeProof(checked === true)}
               />
-              <Label htmlFor="include-proof" className="text-sm">
+              <Label htmlFor="include-proof-portfolio" className="text-sm">
                 Include proof of work (files, links, notes)
               </Label>
             </div>
 
             {/* Proof Preview */}
-            {includeProof && (proofFiles.length > 0 || task.proofText || task.proofLink) && (
-              <div className="bg-gray-50 p-3 rounded-md border">
-                <h4 className="text-sm font-medium mb-2">Proof to be included:</h4>
+            {includeProof &&
+              (proofFiles.length > 0 || task.proofText || task.proofLink) && (
+                <div className="bg-gray-50 p-3 rounded-md border">
+                  <h4 className="text-sm font-medium mb-2">
+                    Proof to be included:
+                  </h4>
 
-                {/* File Proofs */}
-                {proofFiles.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <File className="h-4 w-4 mr-1" />
-                      <span>{proofFiles.length} file{proofFiles.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {proofFiles.slice(0, 3).map((file, index) => {
-                        const fileName = file.split('/').pop() || `file-${index + 1}`;
-                        return (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {fileName.length > 15 ? `${fileName.substring(0, 12)}...` : fileName}
+                  {/* File Proofs */}
+                  {proofFiles.length > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center text-sm text-gray-600 mb-2">
+                        <File className="h-4 w-4 mr-1" />
+                        <span>
+                          {proofFiles.length} file
+                          {proofFiles.length !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {proofFiles.slice(0, 3).map((file, index) => {
+                          const fileName =
+                            file.split("/").pop() || `file-${index + 1}`;
+                          return (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {fileName.length > 15
+                                ? `${fileName.substring(0, 12)}...`
+                                : fileName}
+                            </Badge>
+                          );
+                        })}
+                        {proofFiles.length > 3 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{proofFiles.length - 3} more
                           </Badge>
-                        );
-                      })}
-                      {proofFiles.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{proofFiles.length - 3} more
-                        </Badge>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Text Proof */}
-                {task.proofText && (
-                  <div className="mb-3">
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <FileText className="h-4 w-4 mr-1" />
-                      <span>Text note</span>
+                  {/* Text Proof */}
+                  {task.proofText && (
+                    <div className="mb-3">
+                      <div className="flex items-center text-sm text-gray-600 mb-2">
+                        <FileText className="h-4 w-4 mr-1" />
+                        <span>Text note</span>
+                      </div>
+                      <div className="text-xs text-gray-500 bg-white p-2 rounded border overflow-hidden">
+                        {task.proofText.length > 100
+                          ? `${task.proofText.substring(0, 100)}...`
+                          : task.proofText}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 bg-white p-2 rounded border overflow-hidden">
-                      {task.proofText.length > 100 
-                        ? `${task.proofText.substring(0, 100)}...` 
-                        : task.proofText
-                      }
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Link Proof */}
-                {task.proofLink && (
-                  <div>
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      <span>Link</span>
+                  {/* Link Proof */}
+                  {task.proofLink && (
+                    <div>
+                      <div className="flex items-center text-sm text-gray-600 mb-2">
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        <span>Link</span>
+                      </div>
+                      <div className="text-xs text-blue-600 bg-white p-2 rounded border overflow-hidden truncate">
+                        {task.proofLink}
+                      </div>
                     </div>
-                    <div className="text-xs text-blue-600 bg-white p-2 rounded border overflow-hidden truncate">
-                      {task.proofLink}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
             {portfolios.length > 0 ? (
               <div className="space-y-2">
                 <Label className="text-sm">Select portfolios:</Label>
                 {portfolios.map((portfolio) => (
-                  <div key={portfolio.id} className="flex items-center space-x-2">
+                  <div
+                    key={portfolio.id}
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       id={`portfolio-${portfolio.id}`}
                       checked={selectedPortfolios.includes(portfolio.id)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setSelectedPortfolios([...selectedPortfolios, portfolio.id]);
+                          setSelectedPortfolios([
+                            ...selectedPortfolios,
+                            portfolio.id,
+                          ]);
                         } else {
                           setSelectedPortfolios(
-                            selectedPortfolios.filter((id) => id !== portfolio.id)
+                            selectedPortfolios.filter(
+                              (id) => id !== portfolio.id,
+                            ),
                           );
                         }
                       }}
                     />
-                    <Label htmlFor={`portfolio-${portfolio.id}`} className="text-sm font-normal">
+                    <Label
+                      htmlFor={`portfolio-${portfolio.id}`}
+                      className="text-sm font-normal"
+                    >
                       {portfolio.name}
                     </Label>
                   </div>
@@ -280,12 +484,13 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                You don't have any portfolios yet. Create one in the Portfolio section.
+                You don't have any portfolios yet. Create one in the Portfolio
+                section.
               </p>
             )}
 
-            <Button 
-              onClick={handleShareToPortfolio} 
+            <Button
+              onClick={handleShareToPortfolio}
               disabled={isSharingToPortfolio || portfolios.length === 0}
               className="w-full"
             >
@@ -294,6 +499,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
             </Button>
           </div>
 
+          {/* Social Media Sharing Section */}
           <div className="border-t pt-4">
             <h3 className="font-medium mb-3">Share on Social Media</h3>
 
@@ -304,31 +510,51 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                 rows={3}
                 className="pr-10"
               />
-              <button 
-                onClick={handleCopy} 
+              <button
+                onClick={handleCopy}
                 className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-100"
                 aria-label="Copy to clipboard"
               >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-gray-500" />}
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4 text-gray-500" />
+                )}
               </button>
             </div>
 
             <div className="pt-2">
               <p className="text-sm text-gray-500 mb-2">Share via:</p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => window.open(getTwitterShareUrl(), '_blank')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(getTwitterShareUrl(), "_blank")}
+                >
                   <Twitter className="h-4 w-4 mr-2" />
                   Twitter
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => window.open(getFacebookShareUrl(), '_blank')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(getFacebookShareUrl(), "_blank")}
+                >
                   <Facebook className="h-4 w-4 mr-2" />
                   Facebook
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => window.open(getLinkedInShareUrl(), '_blank')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(getLinkedInShareUrl(), "_blank")}
+                >
                   <Linkedin className="h-4 w-4 mr-2" />
                   LinkedIn
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => window.open(getEmailShareUrl(), '_blank')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(getEmailShareUrl(), "_blank")}
+                >
                   <Mail className="h-4 w-4 mr-2" />
                   Email
                 </Button>
@@ -341,7 +567,10 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
           </div>
 
           <div className="pt-2 text-sm text-muted-foreground">
-            <p>Sharing your completed tasks can help motivate others and track your own progress!</p>
+            <p>
+              Sharing your completed tasks can help motivate others and track
+              your own progress!
+            </p>
           </div>
         </div>
       </DialogContent>
