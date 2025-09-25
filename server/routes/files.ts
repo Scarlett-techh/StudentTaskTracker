@@ -4,7 +4,7 @@ import multer from "multer";
 import { storage } from "../storage.ts";
 import { isAuthenticated } from "../replitAuth.ts";
 import { db } from "../db";
-import { photos } from "@shared/schema";
+import { files } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
@@ -109,7 +109,7 @@ router.delete("/:id", isAuthenticated, async (req: any, res) => {
     }
 
     // Delete the file
-    await db.delete(photos).where(eq(photos.id, fileId));
+    await db.delete(files).where(eq(files.id, fileId));
 
     res.json({ success: true, message: "File deleted successfully" });
   } catch (error: any) {
