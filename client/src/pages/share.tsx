@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, queryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   CheckCircle, 
@@ -144,6 +145,35 @@ const SharePage = () => {
     setShareDialogOpen(true);
   };
 
+  // Create mutation for sharing work via email
+  const shareWorkMutation = useMutation({
+    mutationFn: async (data: { recipientEmail: string; message: string; workItemIds: number[] }) => {
+      return apiRequest('/api/share/work', {
+        method: 'POST',
+        body: data
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Work shared successfully!",
+        description: `${data.itemsShared} items sent to ${coachEmail}`,
+      });
+      
+      // Close dialog and reset selection
+      setShareDialogOpen(false);
+      setSelectedItems([]);
+      setCoachEmail('');
+      setShareMessage('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to share work",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Send to learning coach
   const handleSendToCoach = () => {
     if (!coachEmail) {
@@ -155,21 +185,21 @@ const SharePage = () => {
       return;
     }
 
-    // Get the selected work items
-    const itemsToShare = allItems.filter(item => selectedItems.includes(item.id));
-    
-    // Here you would implement actual sending logic
-    // For now, we'll just show a success toast
-    toast({
-      title: "Work shared successfully",
-      description: `${selectedItems.length} items sent to ${coachEmail}`,
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to share.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Share the work via email API
+    shareWorkMutation.mutate({
+      recipientEmail: coachEmail,
+      message: shareMessage,
+      workItemIds: selectedItems
     });
-    
-    // Close dialog and reset selection
-    setShareDialogOpen(false);
-    setSelectedItems([]);
-    setCoachEmail('');
-    setShareMessage('');
   };
 
   // Render the appropriate icon for the item type
@@ -367,9 +397,13 @@ const SharePage = () => {
             <Button variant="outline" onClick={() => setShareDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSendToCoach}>
+            <Button 
+              onClick={handleSendToCoach}
+              disabled={shareWorkMutation.isPending}
+              data-testid="button-send-to-coach"
+            >
               <Send className="mr-2 h-4 w-4" />
-              Send to Coach
+              {shareWorkMutation.isPending ? 'Sending...' : 'Send to Coach'}
             </Button>
           </DialogFooter>
         </DialogContent>
