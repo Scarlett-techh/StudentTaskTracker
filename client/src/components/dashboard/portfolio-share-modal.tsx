@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -23,7 +29,11 @@ interface PortfolioShareModalProps {
   };
 }
 
-const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalProps) => {
+const PortfolioShareModal = ({
+  open,
+  onOpenChange,
+  task,
+}: PortfolioShareModalProps) => {
   const { toast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
   const [portfolios, setPortfolios] = useState<any[]>([]);
@@ -39,38 +49,47 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
 
   const fetchPortfolios = async () => {
     try {
-      const response = await fetch('/api/portfolio');
+      // Fixed: Added /api prefix to match your API structure
+      const response = await fetch("/api/portfolio");
       if (response.ok) {
         const data = await response.json();
         setPortfolios(data);
       }
     } catch (error) {
-      console.error('Error fetching portfolios:', error);
+      console.error("Error fetching portfolios:", error);
     }
   };
 
   // Get all proof files (support both single proofUrl and multiple proofFiles)
-  const proofFiles = task.proofFiles && task.proofFiles.length > 0 
-    ? task.proofFiles 
-    : task.proofUrl 
-      ? [task.proofUrl] 
-      : [];
+  const proofFiles =
+    task.proofFiles && task.proofFiles.length > 0
+      ? task.proofFiles
+      : task.proofUrl
+        ? [task.proofUrl]
+        : [];
 
-  // Share to portfolio mutation - updated to use the new endpoint
+  // Share to portfolio mutation - using the correct endpoint that exists in your backend
   const shareToPortfolioMutation = useMutation({
     mutationFn: async (portfolioIds: string[]) => {
-      // Use the new share-task endpoint that handles all proof types
+      // Use the existing /api/portfolio/share-task endpoint
       const response = await apiRequest("POST", "/api/portfolio/share-task", {
         taskId: task.id,
         portfolioIds: portfolioIds,
         includeProof: includeProof,
         proofFiles: includeProof ? proofFiles : [],
-        proofText: includeProof ? task.proofText || '' : '',
-        proofLink: includeProof ? task.proofLink || '' : ''
+        proofText: includeProof ? task.proofText || "" : "",
+        proofLink: includeProof ? task.proofLink || "" : "",
       });
 
       if (!response) {
         throw new Error("No response from server");
+      }
+
+      // Check if the response indicates success
+      if (!response.success) {
+        throw new Error(
+          response.message || "Failed to share task to portfolio",
+        );
       }
 
       return response;
@@ -82,7 +101,7 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
 
       toast({
         title: "Added to Portfolio",
-        description: "Task has been added to your portfolio successfully.",
+        description: `Task has been added to ${data.items?.length || 1} portfolio(s) successfully.`,
       });
       onOpenChange(false);
     },
@@ -90,13 +109,14 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
       console.error("Portfolio sharing error:", error);
       toast({
         title: "Error adding to portfolio",
-        description: error.message || "Failed to add task to portfolio. Please try again.",
+        description:
+          error.message || "Failed to add task to portfolio. Please try again.",
         variant: "destructive",
       });
     },
     onSettled: () => {
       setIsSharing(false);
-    }
+    },
   });
 
   const handleShareToPortfolio = async () => {
@@ -110,7 +130,7 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
           title: "My Portfolio",
           description: "Default portfolio for my completed tasks",
           type: "general",
-          subject: "General"
+          subject: "General",
         });
 
         if (response) {
@@ -123,8 +143,9 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
         console.error("Error creating default portfolio:", error);
         toast({
           title: "Error",
-          description: "Failed to create a portfolio for your task. Please try again.",
-          variant: "destructive"
+          description:
+            "Failed to create a portfolio for your task. Please try again.",
+          variant: "destructive",
         });
         setIsSharing(false);
       }
@@ -143,7 +164,8 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
         <DialogHeader>
           <DialogTitle>Add to Portfolio</DialogTitle>
           <DialogDescription>
-            Add this completed task to your portfolio to showcase your achievements.
+            Add this completed task to your portfolio to showcase your
+            achievements.
           </DialogDescription>
         </DialogHeader>
 
@@ -162,9 +184,9 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
 
           {/* Include Proof Checkbox */}
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="include-proof" 
-              checked={includeProof} 
+            <Checkbox
+              id="include-proof"
+              checked={includeProof}
               onCheckedChange={(checked) => setIncludeProof(checked === true)}
             />
             <Label htmlFor="include-proof" className="text-sm">
@@ -173,41 +195,47 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
           </div>
 
           {/* Proof Preview */}
-          {includeProof && (proofFiles.length > 0 || task.proofText || task.proofLink) && (
-            <div className="bg-gray-50 p-3 rounded-md border">
-              <h4 className="text-sm font-medium mb-2">Proof to be included:</h4>
+          {includeProof &&
+            (proofFiles.length > 0 || task.proofText || task.proofLink) && (
+              <div className="bg-gray-50 p-3 rounded-md border">
+                <h4 className="text-sm font-medium mb-2">
+                  Proof to be included:
+                </h4>
 
-              {/* File Proofs */}
-              {proofFiles.length > 0 && (
-                <div className="mb-2">
-                  <div className="flex items-center text-sm text-gray-600 mb-1">
-                    <File className="h-4 w-4 mr-1" />
-                    <span>{proofFiles.length} file{proofFiles.length !== 1 ? 's' : ''}</span>
+                {/* File Proofs */}
+                {proofFiles.length > 0 && (
+                  <div className="mb-2">
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <File className="h-4 w-4 mr-1" />
+                      <span>
+                        {proofFiles.length} file
+                        {proofFiles.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Text Proof */}
-              {task.proofText && (
-                <div className="mb-2">
-                  <div className="flex items-center text-sm text-gray-600 mb-1">
-                    <FileText className="h-4 w-4 mr-1" />
-                    <span>Text note</span>
+                {/* Text Proof */}
+                {task.proofText && (
+                  <div className="mb-2">
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <FileText className="h-4 w-4 mr-1" />
+                      <span>Text note</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Link Proof */}
-              {task.proofLink && (
-                <div>
-                  <div className="flex items-center text-sm text-gray-600 mb-1">
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    <span>Link</span>
+                {/* Link Proof */}
+                {task.proofLink && (
+                  <div>
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      <span>Link</span>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
           {/* Portfolio Selection - Only show if portfolios exist */}
           {portfolios.length > 0 && (
@@ -220,16 +248,25 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
                     checked={selectedPortfolios.includes(portfolio.id)}
                     onCheckedChange={(checked) => {
                       if (checked) {
-                        setSelectedPortfolios([...selectedPortfolios, portfolio.id]);
+                        setSelectedPortfolios([
+                          ...selectedPortfolios,
+                          portfolio.id,
+                        ]);
                       } else {
                         setSelectedPortfolios(
-                          selectedPortfolios.filter((id) => id !== portfolio.id)
+                          selectedPortfolios.filter(
+                            (id) => id !== portfolio.id,
+                          ),
                         );
                       }
                     }}
                   />
-                  <Label htmlFor={`portfolio-${portfolio.id}`} className="text-sm font-normal">
-                    {portfolio.name}
+                  {/* Fixed: Using portfolio.title instead of portfolio.name */}
+                  <Label
+                    htmlFor={`portfolio-${portfolio.id}`}
+                    className="text-sm font-normal"
+                  >
+                    {portfolio.title || portfolio.name}
                   </Label>
                 </div>
               ))}
@@ -238,14 +275,14 @@ const PortfolioShareModal = ({ open, onOpenChange, task }: PortfolioShareModalPr
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSharing}
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleShareToPortfolio}
             disabled={isSharing}
             className="bg-primary hover:bg-primary/90"
