@@ -17,45 +17,19 @@ export function PortfolioItem({ item, onPreview }: PortfolioItemProps) {
     onPreview();
   };
 
-  // Count different types of proof and attachments
-  const countProofItems = () => {
-    let files = 0;
-    let links = 0;
-    let notes = 0;
-    let photos = 0;
+  // Count different types of attachments
+  const countAttachments = () => {
+    if (!item.attachments || item.attachments.length === 0) return 0;
 
-    // Count task proof items (for task-based portfolio items)
-    if (item.type === 'task') {
-      if (item.proofFiles && item.proofFiles.length > 0) {
-        item.proofFiles.forEach((file: string) => {
-          if (file.startsWith('data:image/')) {
-            photos++;
-          } else {
-            files++;
-          }
-        });
-      }
-      if (item.proofText && item.proofText.trim()) {
-        notes++;
-      }
-      if (item.proofLink && item.proofLink.trim()) {
-        // Count multiple links separated by comma
-        links += item.proofLink.split(',').filter((link: string) => link.trim()).length;
-      }
-    }
+    const files = item.attachments.filter((a: any) => a.type === 'file').length;
+    const links = item.attachments.filter((a: any) => a.type === 'link').length;
+    const notes = item.attachments.filter((a: any) => a.type === 'note').length;
+    const photos = item.attachments.filter((a: any) => a.type === 'photo').length;
 
-    // Count regular attachments (for other portfolio items)
-    if (item.attachments && item.attachments.length > 0) {
-      files += item.attachments.filter((a: any) => a.type === 'file').length;
-      links += item.attachments.filter((a: any) => a.type === 'link').length;
-      notes += item.attachments.filter((a: any) => a.type === 'note').length;
-      photos += item.attachments.filter((a: any) => a.type === 'photo').length;
-    }
-
-    return { files, links, notes, photos, total: files + links + notes + photos };
+    return { files, links, notes, photos, total: item.attachments.length };
   };
 
-  const proofItems = countProofItems();
+  const attachments = countAttachments();
 
   return (
     <>
@@ -68,32 +42,32 @@ export function PortfolioItem({ item, onPreview }: PortfolioItemProps) {
             <p className="text-muted-foreground mb-4 line-clamp-3">{item.description}</p>
           )}
 
-          {proofItems.total > 0 && (
+          {attachments.total > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Proof of Work:</p>
               <div className="flex flex-wrap gap-2">
-                {proofItems.files > 0 && (
+                {attachments.files > 0 && (
                   <div className="flex items-center text-sm text-blue-600">
                     <FileText className="h-4 w-4 mr-1" />
-                    <span>{proofItems.files} file{proofItems.files !== 1 ? 's' : ''}</span>
+                    <span>{attachments.files} file{attachments.files !== 1 ? 's' : ''}</span>
                   </div>
                 )}
-                {proofItems.links > 0 && (
+                {attachments.links > 0 && (
                   <div className="flex items-center text-sm text-green-600">
                     <Link className="h-4 w-4 mr-1" />
-                    <span>{proofItems.links} link{proofItems.links !== 1 ? 's' : ''}</span>
+                    <span>{attachments.links} link{attachments.links !== 1 ? 's' : ''}</span>
                   </div>
                 )}
-                {proofItems.notes > 0 && (
+                {attachments.notes > 0 && (
                   <div className="flex items-center text-sm text-amber-600">
                     <FileText className="h-4 w-4 mr-1" />
-                    <span>{proofItems.notes} note{proofItems.notes !== 1 ? 's' : ''}</span>
+                    <span>{attachments.notes} note{attachments.notes !== 1 ? 's' : ''}</span>
                   </div>
                 )}
-                {proofItems.photos > 0 && (
+                {attachments.photos > 0 && (
                   <div className="flex items-center text-sm text-purple-600">
                     <Image className="h-4 w-4 mr-1" />
-                    <span>{proofItems.photos} photo{proofItems.photos !== 1 ? 's' : ''}</span>
+                    <span>{attachments.photos} photo{attachments.photos !== 1 ? 's' : ''}</span>
                   </div>
                 )}
               </div>

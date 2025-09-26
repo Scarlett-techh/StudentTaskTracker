@@ -106,70 +106,53 @@ const CompletionModal: FC<CompletionModalProps> = ({
     setIsUploading(true);
 
     try {
-      // Prepare form data for task completion
-      const formData = new FormData();
+      const proofUrls: string[] = [];
+      const previewUrls: string[] = [];
 
-      // Add files if selected
+      // Handle different proof types based on active tab
       if (activeTab === 'files' && filesWithPreviews.length > 0) {
-        filesWithPreviews.forEach(({ file }) => {
-          formData.append("proofFiles", file);
-        });
-      }
+        // Upload files if selected
+        for (const { file, previewUrl } of filesWithPreviews) {
+          const formData = new FormData();
+          formData.append("file", file);
 
-      // Add text proof if provided
-      if (activeTab === 'text' && textProof.trim()) {
-        formData.append("proofText", textProof);
-      }
+          const response = await apiRequest("POST", "/api/upload", formData);
 
-      // Add links if provided
-      if (activeTab === 'links') {
+          if (response && response.url) {
+            proofUrls.push(response.url);
+            previewUrls.push(previewUrl);
+          } else {
+            throw new Error(`Invalid response from server for file ${file.name} - no URL returned`);
+          }
+        }
+      } else if (activeTab === 'text' && textProof.trim()) {
+        // For text proof, we'll store it as a text file or in the database
+        // This is a placeholder implementation
+        proofUrls.push(`text-proof:${btoa(textProof)}`);
+        previewUrls.push('');
+      } else if (activeTab === 'links') {
+        // For links, filter out empty ones
         const validLinks = links.filter(link => link.trim());
         if (validLinks.length > 0) {
-          formData.append("proofLink", validLinks.join(", "));
+          proofUrls.push(...validLinks);
+          previewUrls.push(...Array(validLinks.length).fill(''));
         }
       }
 
-      // Complete task directly with all proof data
-      const response = await apiRequest("PUT", `/api/tasks/${task.id}/complete`, formData);
+      // Complete task with or without proof
+      onComplete(proofUrls, previewUrls);
+      onOpenChange(false);
 
-      if (response && response.success) {
-        // Notify parent component of successful completion
-        const proofUrls: string[] = [];
-        const previewUrls: string[] = [];
-
-        // Build proof URLs for display
-        if (response.task) {
-          if (response.task.proofFiles && response.task.proofFiles.length > 0) {
-            proofUrls.push(...response.task.proofFiles);
-            previewUrls.push(...filesWithPreviews.map(f => f.previewUrl));
-          }
-          if (response.task.proofText) {
-            proofUrls.push(`text:${response.task.proofText}`);
-            previewUrls.push('');
-          }
-          if (response.task.proofLink) {
-            const links = response.task.proofLink.split(", ");
-            proofUrls.push(...links);
-            previewUrls.push(...Array(links.length).fill(''));
-          }
-        }
-
-        onComplete(proofUrls, previewUrls);
-        onOpenChange(false);
-
-        toast({
-          title: "Task completed!",
-          description: proofUrls.length > 0 
-            ? `Your task has been marked as completed with ${proofUrls.length} proof item(s).` 
-            : "Your task has been marked as completed.",
-        });
-      } else {
-        throw new Error("Failed to complete task - invalid response from server");
-      }
+      toast({
+        title: "Task completed!",
+        description: proofUrls.length > 0 
+          ? `Your task has been marked as completed with ${proofUrls.length} proof item(s).` 
+          : "Your task has been marked as completed.",
+      });
     } catch (error: any) {
       console.error("Proof upload error:", error);
       toast({
-        title: "Error completing task",
+        title: "Error uploading proof",
         description: error.message || "Please try again or contact support if the issue persists.",
         variant: "destructive",
       });
