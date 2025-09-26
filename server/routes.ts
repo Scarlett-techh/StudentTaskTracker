@@ -6,6 +6,7 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { generateAIAnalysis } from "./ai-analysis";
+import { sendSharedWorkEmail } from "./email";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -357,6 +358,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(metrics);
     } catch (err: any) {
       handleError(err, res);
+    }
+  });
+
+  // ========================
+  // Share Work via Email Endpoint
+  // ========================
+  app.post("/api/share/work", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { recipientEmail, message, workItemIds } = req.body;
+
+      // Validate required fields
+      if (!recipientEmail || !workItemIds || !Array.isArray(workItemIds) || workItemIds.length === 0) {
+        return res.status(400).json({ 
+          message: "Recipient email and work items are required" 
+        });
+      }
+
+      // Get all user's tasks, notes, and photos to find the selected items
+      const [tasks, notes, photos] = await Promise.all([
+        storage.getTasks(user.id),
+        storage.getNotes(user.id),
+        storage.getPhotos(user.id)
+      ]);
+
+      // Format items as work items for email
+      const allItems = [
+        ...tasks.map((task: any) => ({
+          id: task.id,
+          title: task.title,
+          type: 'task' as const,
+          subject: task.subject,
+          preview: task.description,
+          date: new Date(task.createdAt).toLocaleDateString(),
+          status: task.status
+        })),
+        ...notes.map((note: any) => ({
+          id: note.id,
+          title: note.title,
+          type: 'note' as const,
+          subject: note.subject,
+          preview: note.content,
+          date: new Date(note.createdAt).toLocaleDateString()
+        })),
+        ...photos.map((photo: any) => ({
+          id: photo.id,
+          title: photo.title,
+          type: 'photo' as const,
+          subject: photo.subject,
+          preview: `Photo: ${photo.title}`,
+          date: new Date(photo.createdAt).toLocaleDateString()
+        }))
+      ];
+
+      // Filter to only include selected work items
+      const selectedWorkItems = allItems.filter(item => workItemIds.includes(item.id));
+
+      if (selectedWorkItems.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid work items found for the provided IDs" 
+        });
+      }
+
+      // Send the email
+      const emailSent = await sendSharedWorkEmail(
+        recipientEmail,
+        user.name || user.firstName || 'Student',
+        message || '',
+        selectedWorkItems
+      );
+
+      if (!emailSent) {
+        return res.status(500).json({ 
+          message: "Failed to send email. Please try again." 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Successfully shared ${selectedWorkItems.length} items with ${recipientEmail}`,
+        itemsShared: selectedWorkItems.length
+      });
+
+    } catch (error: any) {
+      console.error("Error sharing work via email:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to share work via email" 
+      });
     }
   });
 
