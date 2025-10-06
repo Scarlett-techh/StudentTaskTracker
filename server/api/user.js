@@ -1,15 +1,15 @@
-import express from 'express';
-import { getUserFromRequest, updateUser } from '../lib/db.js';
+import express from "express";
+import { getUserFromRequest, updateUser } from "../lib/db.js";
 
 const router = express.Router();
 
 // GET /api/user - Get user data
-router.get('/', (req, res) => {
+router.get("/", (req, res) => {
   try {
     const user = getUserFromRequest(req);
 
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     // Return user data (without sensitive information)
@@ -18,29 +18,29 @@ router.get('/', (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
-      settings: user.settings ? JSON.parse(user.settings) : {}
+      settings: user.settings ? JSON.parse(user.settings) : {},
     });
   } catch (error) {
-    console.error('Error getting user:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting user:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // PATCH /api/user - Update user (for backward compatibility)
-router.patch('/', async (req, res) => {
+router.patch("/", async (req, res) => {
   try {
     const user = getUserFromRequest(req);
 
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     // Extract and validate the update data
     const { name, username, email, settings } = req.body;
 
     // Validate email if provided
-    if (email && !email.includes('@')) {
-      return res.status(400).json({ error: 'Invalid email format' });
+    if (email && !email.includes("@")) {
+      return res.status(400).json({ error: "Invalid email format" });
     }
 
     // Prepare update data
@@ -54,7 +54,7 @@ router.patch('/', async (req, res) => {
     const updatedUser = updateUser(user.id, updateData);
 
     if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Return updated user data (without sensitive information)
@@ -63,11 +63,110 @@ router.patch('/', async (req, res) => {
       name: updatedUser.name,
       username: updatedUser.username,
       email: updatedUser.email,
-      settings: updatedUser.settings ? JSON.parse(updatedUser.settings) : {}
+      settings: updatedUser.settings ? JSON.parse(updatedUser.settings) : {},
     });
   } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error updating user:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/user/mood - Update user mood
+router.post("/mood", async (req, res) => {
+  try {
+    const user = getUserFromRequest(req);
+
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { moodType, intensity, note } = req.body;
+
+    // Validate required fields
+    if (!moodType || intensity === undefined) {
+      return res.status(400).json({
+        error: "Mood type and intensity are required",
+      });
+    }
+
+    // Validate intensity range
+    if (intensity < 1 || intensity > 5) {
+      return res.status(400).json({
+        error: "Intensity must be between 1 and 5",
+      });
+    }
+
+    // Prepare mood update data
+    const updateData = {
+      mood: moodType,
+      moodIntensity: intensity,
+      moodNote: note || null,
+      lastMoodUpdate: new Date().toISOString(),
+    };
+
+    // Update user in database
+    const updatedUser = updateUser(user.id, updateData);
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Return success response
+    res.json({
+      success: true,
+      message: "Mood shared successfully",
+      mood: {
+        moodType,
+        intensity,
+        note,
+        date: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error updating mood:", error);
+    res.status(500).json({
+      error: "Failed to save mood. Please try again.",
+    });
+  }
+});
+
+// GET /api/user/mood/today - Get today's mood
+router.get("/mood/today", async (req, res) => {
+  try {
+    const user = getUserFromRequest(req);
+
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // For now, return null since we're storing mood in user profile
+    // In the future, you might want to implement proper mood history
+    if (user.mood && user.lastMoodUpdate) {
+      const lastUpdate = new Date(user.lastMoodUpdate);
+      const today = new Date();
+
+      // Check if mood was updated today
+      if (lastUpdate.toDateString() === today.toDateString()) {
+        res.json({
+          id: user.id,
+          userId: user.id,
+          moodType: user.mood,
+          intensity: user.moodIntensity || 3,
+          note: user.moodNote,
+          date: user.lastMoodUpdate,
+          createdAt: user.lastMoodUpdate,
+        });
+        return;
+      }
+    }
+
+    // No mood for today
+    res.json(null);
+  } catch (error) {
+    console.error("Error fetching today's mood:", error);
+    res.status(500).json({
+      error: "Failed to fetch mood data",
+    });
   }
 });
 

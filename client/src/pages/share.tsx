@@ -1,44 +1,36 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { 
-  Card, 
+import {
+  Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle 
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useQuery, useMutation, queryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  CheckCircle, 
-  Mail, 
-  FileText, 
-  Image, 
-  Send, 
-  Filter, 
-  ArrowUp 
-} from "lucide-react";
+import { CheckCircle, Mail, FileText, Image, Send, Filter } from "lucide-react";
 
 // Item type for all work items (tasks, notes, photos)
 interface WorkItem {
   id: number;
   title: string;
-  type: 'task' | 'note' | 'photo';
+  type: "task" | "note" | "photo";
   category?: string;
   subject?: string;
   preview?: string;
@@ -49,75 +41,88 @@ interface WorkItem {
 
 const SharePage = () => {
   const { toast } = useToast();
-  
+
   // State for selected work items
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  
+
   // State for sharing dialog
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [coachEmail, setCoachEmail] = useState('');
-  const [shareMessage, setShareMessage] = useState('');
-  
+  const [coachEmail, setCoachEmail] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
+
   // Filter state
-  const [filter, setFilter] = useState('all');
-  
+  const [filter, setFilter] = useState("all");
+
   // Get all tasks, notes, and photos
-  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({ 
-    queryKey: ['/api/tasks'] 
+  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
+    queryKey: ["/api/tasks"],
   });
-  
-  const { data: notes = [], isLoading: isLoadingNotes } = useQuery({ 
-    queryKey: ['/api/notes'] 
+
+  const { data: notes = [], isLoading: isLoadingNotes } = useQuery({
+    queryKey: ["/api/notes"],
   });
-  
-  const { data: photos = [], isLoading: isLoadingPhotos } = useQuery({ 
-    queryKey: ['/api/photos'] 
+
+  const { data: photos = [], isLoading: isLoadingPhotos } = useQuery({
+    queryKey: ["/api/photos"],
   });
 
   // Format tasks, notes and photos as work items
-  const taskItems: WorkItem[] = tasks.map((task: any) => ({
-    id: task.id,
-    title: task.title,
-    type: 'task',
-    category: task.category,
-    subject: task.subject,
-    preview: task.description,
-    date: new Date(task.updatedAt || task.createdAt).toLocaleDateString(),
-    status: task.status
-  }));
+  const taskItems: WorkItem[] = Array.isArray(tasks)
+    ? tasks.map((task: any) => ({
+        id: task.id,
+        title: task.title || "Untitled Task",
+        type: "task",
+        category: task.category,
+        subject: task.subject,
+        preview: task.description,
+        date: new Date(
+          task.updatedAt || task.createdAt || Date.now(),
+        ).toLocaleDateString(),
+        status: task.status,
+      }))
+    : [];
 
-  const noteItems: WorkItem[] = notes.map((note: any) => ({
-    id: note.id,
-    title: note.title,
-    type: 'note',
-    subject: note.subject,
-    preview: note.content,
-    date: new Date(note.updatedAt || note.createdAt).toLocaleDateString()
-  }));
+  const noteItems: WorkItem[] = Array.isArray(notes)
+    ? notes.map((note: any) => ({
+        id: note.id,
+        title: note.title || "Untitled Note",
+        type: "note",
+        subject: note.subject,
+        preview: note.content,
+        date: new Date(
+          note.updatedAt || note.createdAt || Date.now(),
+        ).toLocaleDateString(),
+      }))
+    : [];
 
-  const photoItems: WorkItem[] = photos.map((photo: any) => ({
-    id: photo.id,
-    title: photo.title,
-    type: 'photo',
-    subject: photo.subject,
-    date: new Date(photo.createdAt).toLocaleDateString(),
-    thumbnail: photo.fileData ? `data:${photo.mimeType};base64,${photo.fileData}` : undefined
-  }));
+  const photoItems: WorkItem[] = Array.isArray(photos)
+    ? photos.map((photo: any) => ({
+        id: photo.id,
+        title: photo.title || "Untitled Photo",
+        type: "photo",
+        subject: photo.subject,
+        date: new Date(photo.createdAt || Date.now()).toLocaleDateString(),
+        thumbnail: photo.fileData
+          ? `data:${photo.mimeType};base64,${photo.fileData}`
+          : undefined,
+      }))
+    : [];
 
   // Combine and sort all items
-  const allItems = [...taskItems, ...noteItems, ...photoItems]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const allItems = [...taskItems, ...noteItems, ...photoItems].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 
   // Filter items based on current filter
-  const filteredItems = allItems.filter(item => {
-    if (filter === 'all') return true;
+  const filteredItems = allItems.filter((item) => {
+    if (filter === "all") return true;
     return item.type === filter;
   });
 
   // Toggle item selection
   const toggleItemSelection = (id: number) => {
     if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter(itemId => itemId !== id));
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
     } else {
       setSelectedItems([...selectedItems, id]);
     }
@@ -128,7 +133,7 @@ const SharePage = () => {
     if (selectedItems.length === filteredItems.length) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(filteredItems.map(item => item.id));
+      setSelectedItems(filteredItems.map((item) => item.id));
     }
   };
 
@@ -147,45 +152,69 @@ const SharePage = () => {
 
   // Create mutation for sharing work via email
   const shareWorkMutation = useMutation({
-    mutationFn: async (data: { recipientEmail: string; message: string; workItemIds: number[] }) => {
-      return apiRequest('/api/share/work', {
-        method: 'POST',
-        body: data
-      });
+    mutationFn: async (data: any) => {
+      console.log("🔍 [FRONTEND] Preparing to send share request...");
+      console.log(
+        "📤 [FRONTEND] Payload being sent:",
+        JSON.stringify(data, null, 2),
+      );
+      console.log("📧 [FRONTEND] Email:", data.recipientEmail);
+      console.log("💬 [FRONTEND] Message:", data.message);
+      console.log("📦 [FRONTEND] Work items count:", data.workItems?.length);
+      console.log("🔢 [FRONTEND] Work items:", data.workItems);
+
+      try {
+        console.log("🚀 [FRONTEND] Making API request to /api/share/work...");
+        const response = await apiRequest("POST", "/api/share/work", data);
+        console.log("✅ [FRONTEND] API response received:", response);
+        return response;
+      } catch (error) {
+        console.error("❌ [FRONTEND] API request failed:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
+      console.log("🎉 [FRONTEND] Share successful!");
       toast({
         title: "Work shared successfully!",
-        description: `${data.itemsShared} items sent to ${coachEmail}`,
+        description: data.message || `Items sent to ${coachEmail}`,
       });
-      
+
       // Close dialog and reset selection
       setShareDialogOpen(false);
       setSelectedItems([]);
-      setCoachEmail('');
-      setShareMessage('');
+      setCoachEmail("");
+      setShareMessage("");
     },
     onError: (error: any) => {
+      console.error("💥 [FRONTEND] Share work error:", error);
       toast({
         title: "Failed to share work",
-        description: error.message || "Please try again later.",
+        description:
+          error.message || "Please check the email address and try again.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   // Send to learning coach
   const handleSendToCoach = () => {
-    if (!coachEmail) {
+    console.log("🔄 [FRONTEND] handleSendToCoach called");
+    console.log("📋 [FRONTEND] Selected items:", selectedItems);
+    console.log("📧 [FRONTEND] Coach email:", coachEmail);
+
+    if (!coachEmail || !coachEmail.includes("@")) {
+      console.log("❌ [FRONTEND] Invalid email");
       toast({
-        title: "Email required",
-        description: "Please enter your learning coach's email address.",
+        title: "Valid email required",
+        description: "Please enter a valid learning coach's email address.",
         variant: "destructive",
       });
       return;
     }
 
     if (selectedItems.length === 0) {
+      console.log("❌ [FRONTEND] No items selected");
       toast({
         title: "No items selected",
         description: "Please select at least one item to share.",
@@ -194,22 +223,105 @@ const SharePage = () => {
       return;
     }
 
+    // Get the selected work items
+    const selectedWorkItems = allItems.filter((item) =>
+      selectedItems.includes(item.id),
+    );
+
+    console.log("🎯 [FRONTEND] Selected work items:", selectedWorkItems);
+
+    if (selectedWorkItems.length === 0) {
+      console.log("❌ [FRONTEND] No valid items found");
+      toast({
+        title: "No valid items selected",
+        description: "The selected items could not be found.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format work items for the API
+    const formattedWorkItems = selectedWorkItems.map((item) => ({
+      id: Number(item.id), // Ensure it's a number
+      type: item.type,
+      title: item.title,
+      subject: item.subject || "",
+      preview: item.preview || "",
+    }));
+
+    console.log("📝 [FRONTEND] Formatted work items:", formattedWorkItems);
+
+    // Create the payload
+    const payload = {
+      recipientEmail: coachEmail.trim(),
+      message: shareMessage || "",
+      workItems: formattedWorkItems,
+    };
+
+    console.log("📤 [FRONTEND] Final payload:", payload);
+
     // Share the work via email API
-    shareWorkMutation.mutate({
-      recipientEmail: coachEmail,
-      message: shareMessage,
-      workItemIds: selectedItems
-    });
+    shareWorkMutation.mutate(payload);
+  };
+
+  // Test function to debug the API
+  // Update the testApiConnection function in share.tsx
+  // Update the testApiConnection function in share.tsx
+  // Update the testApiConnection function in share.tsx
+  const testApiConnection = async () => {
+    console.log("🧪 [DEBUG TEST] Testing API connection...");
+    try {
+      const testData = {
+        recipientEmail: "test@example.com",
+        message: "Test message",
+        workItems: [
+          {
+            id: 1,
+            type: "task",
+            title: "Test Task",
+            subject: "Test Subject",
+            preview: "Test preview",
+          },
+        ],
+      };
+
+      console.log("🧪 [DEBUG TEST] Sending test data:", testData);
+
+      // Test the work-debug endpoint
+      const workDebugResponse = await apiRequest(
+        "POST",
+        "/api/share/work-debug",
+        testData,
+      );
+      console.log("🧪 [DEBUG TEST] Work debug response:", workDebugResponse);
+
+      // Test the actual work endpoint
+      const workResponse = await apiRequest(
+        "POST",
+        "/api/share/work",
+        testData,
+      );
+      console.log("🧪 [DEBUG TEST] Work endpoint response:", workResponse);
+
+      return { workDebugResponse, workResponse };
+    } catch (error) {
+      console.error("🧪 [DEBUG TEST] Test failed:", error);
+      throw error;
+    }
   };
 
   // Render the appropriate icon for the item type
   const renderItemIcon = (item: WorkItem) => {
     switch (item.type) {
-      case 'task':
-        return <CheckCircle className={`h-5 w-5 ${item.status === 'completed' ? 'text-green-500' : 'text-blue-500'}`} />;
-      case 'note':
+      case "task":
+        return (
+          <CheckCircle
+            className={`h-5 w-5 ${item.status === "completed" ? "text-green-500" : "text-blue-500"}`}
+          />
+        );
+      case "note":
         return <FileText className="h-5 w-5 text-amber-500" />;
-      case 'photo':
+      case "photo":
         return <Image className="h-5 w-5 text-purple-500" />;
       default:
         return null;
@@ -221,9 +333,9 @@ const SharePage = () => {
   return (
     <>
       <Helmet>
-        <title>Share Work | Student Work Tracker</title>
-        <meta 
-          name="description" 
+        <title>Share Work | Student Learning Platform</title>
+        <meta
+          name="description"
           content="Share your work with learning coaches, parents, and teachers."
         />
       </Helmet>
@@ -231,16 +343,20 @@ const SharePage = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Share Your Work</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Share Your Work
+            </h2>
             <p className="text-muted-foreground">
               Select items to share with your learning coach
             </p>
           </div>
-          
+
           <div className="flex flex-wrap sm:flex-nowrap gap-2">
             <div className="flex items-center gap-2 border rounded-md p-2">
-              <Label htmlFor="filter" className="whitespace-nowrap">Filter by:</Label>
-              <select 
+              <Label htmlFor="filter" className="whitespace-nowrap">
+                Filter by:
+              </Label>
+              <select
                 id="filter"
                 className="p-1 text-sm border-0 bg-transparent focus:ring-0 focus:outline-none"
                 value={filter}
@@ -253,8 +369,17 @@ const SharePage = () => {
               </select>
               <Filter className="h-4 w-4 text-gray-500" />
             </div>
-            
-            <Button 
+
+            {/* Temporary test button - you can remove this later */}
+            <Button
+              variant="outline"
+              onClick={testApiConnection}
+              className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+            >
+              Test API
+            </Button>
+
+            <Button
               onClick={handleShareClick}
               disabled={selectedItems.length === 0}
             >
@@ -267,9 +392,12 @@ const SharePage = () => {
         <div className="border rounded-md">
           <div className="bg-muted p-4 border-b flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Checkbox 
-                id="select-all" 
-                checked={selectedItems.length > 0 && selectedItems.length === filteredItems.length}
+              <Checkbox
+                id="select-all"
+                checked={
+                  selectedItems.length > 0 &&
+                  selectedItems.length === filteredItems.length
+                }
                 onCheckedChange={toggleSelectAll}
               />
               <Label htmlFor="select-all">Select All</Label>
@@ -285,46 +413,54 @@ const SharePage = () => {
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="p-8 text-center">
-              <p>No items found. Create some tasks, notes, or upload photos first.</p>
+              <p>
+                No items found. Create some tasks, notes, or upload photos
+                first.
+              </p>
             </div>
           ) : (
             <div className="divide-y">
               {filteredItems.map((item) => (
-                <div key={`${item.type}-${item.id}`} className="p-4 flex items-start gap-4">
-                  <Checkbox 
+                <div
+                  key={`${item.type}-${item.id}`}
+                  className="p-4 flex items-start gap-4"
+                >
+                  <Checkbox
                     id={`item-${item.type}-${item.id}`}
                     checked={selectedItems.includes(item.id)}
                     onCheckedChange={() => toggleItemSelection(item.id)}
                   />
-                  
+
                   <div className="flex-1 min-w-0 flex gap-3">
-                    <div className="pt-0.5">
-                      {renderItemIcon(item)}
-                    </div>
-                    
+                    <div className="pt-0.5">{renderItemIcon(item)}</div>
+
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium text-sm">{item.title}</p>
                           {item.subject && (
-                            <p className="text-xs text-muted-foreground">{item.subject}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.subject}
+                            </p>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground ml-2">{item.date}</div>
+                        <div className="text-xs text-muted-foreground ml-2">
+                          {item.date}
+                        </div>
                       </div>
-                      
+
                       {item.preview && (
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
                           {item.preview}
                         </p>
                       )}
-                      
-                      {item.type === 'photo' && item.thumbnail && (
+
+                      {item.type === "photo" && item.thumbnail && (
                         <div className="mt-2">
-                          <img 
-                            src={item.thumbnail} 
-                            alt={item.title} 
-                            className="h-16 object-cover rounded-sm"
+                          <img
+                            src={item.thumbnail}
+                            alt={item.title}
+                            className="h-16 w-16 object-cover rounded-sm"
                           />
                         </div>
                       )}
@@ -346,13 +482,13 @@ const SharePage = () => {
               Send your selected work to your learning coach for review.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="coach-email">Learning Coach Email</Label>
+              <Label htmlFor="coach-email">Learning Coach Email *</Label>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   id="coach-email"
                   placeholder="coach@example.com"
                   type="email"
@@ -362,10 +498,10 @@ const SharePage = () => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="share-message">Message (Optional)</Label>
-              <Textarea 
+              <Textarea
                 id="share-message"
                 placeholder="Add a message to your learning coach..."
                 value={shareMessage}
@@ -373,7 +509,7 @@ const SharePage = () => {
                 rows={4}
               />
             </div>
-            
+
             <div className="rounded-md border p-4 bg-muted/50">
               <div className="flex justify-between items-center">
                 <span className="font-medium">Selected Items</span>
@@ -381,29 +517,32 @@ const SharePage = () => {
               </div>
               <ul className="mt-2 max-h-[120px] overflow-y-auto">
                 {allItems
-                  .filter(item => selectedItems.includes(item.id))
-                  .map(item => (
-                    <li key={`summary-${item.type}-${item.id}`} className="text-sm py-1 flex items-center gap-2">
+                  .filter((item) => selectedItems.includes(item.id))
+                  .map((item) => (
+                    <li
+                      key={`summary-${item.type}-${item.id}`}
+                      className="text-sm py-1 flex items-center gap-2"
+                    >
                       {renderItemIcon(item)}
-                      <span>{item.title}</span>
+                      <span className="truncate">{item.title}</span>
                     </li>
-                  ))
-                }
+                  ))}
               </ul>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShareDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSendToCoach}
-              disabled={shareWorkMutation.isPending}
-              data-testid="button-send-to-coach"
+              disabled={
+                shareWorkMutation.isPending || !coachEmail.includes("@")
+              }
             >
               <Send className="mr-2 h-4 w-4" />
-              {shareWorkMutation.isPending ? 'Sending...' : 'Send to Coach'}
+              {shareWorkMutation.isPending ? "Sending..." : "Send to Coach"}
             </Button>
           </DialogFooter>
         </DialogContent>

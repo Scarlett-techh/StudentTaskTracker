@@ -4,6 +4,10 @@
     "name": "Jayden",
     "username": "Jay",
     "email": "meglagrotta26@gmail.com",
-    "settings": "{\"notifications\":true,\"emailReminders\":true,\"darkMode\":true,\"autoSave\":true}"
+    "settings": "{\"notifications\":true,\"emailReminders\":true,\"darkMode\":true,\"autoSave\":true}",
+    "mood": "happy",
+    "moodIntensity": 3,
+    "moodNote": "vv",
+    "lastMoodUpdate": "2025-10-06T03:53:54.847Z"
   }
 ]

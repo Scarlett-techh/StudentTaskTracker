@@ -17,26 +17,54 @@ export async function apiRequest(
   const normalizedUrl =
     typeof url === "string" && url.startsWith("/") ? url : `/${url}`;
 
+  console.log("🌐 [API REQUEST] Making request to:", normalizedUrl);
+  console.log("📦 [API REQUEST] Method:", method);
+  console.log("📤 [API REQUEST] Data being sent:", data);
+
   // Handle FormData objects differently (don't set Content-Type or stringify)
   const isFormData = data instanceof FormData;
 
-  const res = await fetch(normalizedUrl, {
+  const options: RequestInit = {
     method,
-    headers: data && !isFormData ? { "Content-Type": "application/json" } : {},
-    body:
-      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
+    headers: {},
     credentials: "include",
+  };
+
+  // Set headers and body
+  if (data) {
+    if (isFormData) {
+      options.body = data;
+    } else {
+      options.headers = {
+        "Content-Type": "application/json",
+      };
+      options.body = JSON.stringify(data);
+    }
+  }
+
+  console.log("🔧 [API REQUEST] Request options:", {
+    method: options.method,
+    headers: options.headers,
+    hasBody: !!options.body,
+    bodyType: typeof options.body,
   });
+
+  const res = await fetch(normalizedUrl, options);
+
+  console.log("📨 [API REQUEST] Response status:", res.status, res.statusText);
 
   await throwIfResNotOk(res);
 
   // Parse JSON response for non-empty responses
   const contentType = res.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
-    return await res.json();
+    const jsonResponse = await res.json();
+    console.log("✅ [API REQUEST] JSON response:", jsonResponse);
+    return jsonResponse;
   }
 
   // For empty responses (like 204 No Content), return nothing
+  console.log("📭 [API REQUEST] Empty response received");
   return;
 }
 

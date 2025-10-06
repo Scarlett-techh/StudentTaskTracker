@@ -10,72 +10,83 @@ import { sendSharedWorkEmail } from "./email";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+// Add this import with the other imports at the top
+import userRoutes from "./api/user.js";
 
 // ✅ Import portfolio routes
 import portfolioRoutes from "./routes/portfolio.js";
+// ✅ Import share routes
+import shareRoutes from "./routes/share.js"; // ADD THIS IMPORT
 
 // Configure multer for file uploads
 const upload = multer({
-  dest: 'uploads/',
+  dest: "uploads/",
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
     // Allow images and PDFs
-    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype === "application/pdf"
+    ) {
       cb(null, true);
     } else {
-      cb(new Error('Only images and PDF files are allowed'));
+      cb(new Error("Only images and PDF files are allowed"));
     }
-  }
+  },
 });
 
 // Ensure uploads directory exists
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads', { recursive: true });
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads", { recursive: true });
 }
 
 // Helper functions for skill calculations
 function calculateCriticalThinkingScore(tasks: any[]) {
   const diverseSubjects = new Set(tasks.map((t: any) => t.subject)).size;
-  const complexTasks = tasks.filter((t: any) => t.priority === 'high').length;
-  return Math.min(100, (diverseSubjects * 15) + (complexTasks * 5));
+  const complexTasks = tasks.filter((t: any) => t.priority === "high").length;
+  return Math.min(100, diverseSubjects * 15 + complexTasks * 5);
 }
 
 function calculateCreativityScore(tasks: any[]) {
-  const creativeTasks = tasks.filter((t: any) => 
-    t.subject?.toLowerCase().includes('art') || 
-    t.subject?.toLowerCase().includes('creative') ||
-    t.type === 'project'
+  const creativeTasks = tasks.filter(
+    (t: any) =>
+      t.subject?.toLowerCase().includes("art") ||
+      t.subject?.toLowerCase().includes("creative") ||
+      t.type === "project",
   ).length;
   return Math.min(100, creativeTasks * 10);
 }
 
 function calculateCollaborationScore(user: any, tasks: any[]) {
   const sharedTasks = tasks.filter((t: any) => t.shared === true).length;
-  const groupTasks = tasks.filter((t: any) => t.type === 'group').length;
-  return Math.min(100, (sharedTasks * 10) + (groupTasks * 15));
+  const groupTasks = tasks.filter((t: any) => t.type === "group").length;
+  return Math.min(100, sharedTasks * 10 + groupTasks * 15);
 }
 
 function calculateCommunicationScore(tasks: any[]) {
-  const communicationTasks = tasks.filter((t: any) => 
-    t.type === 'presentation' || 
-    t.type === 'writing' ||
-    t.subject?.toLowerCase().includes('language')
+  const communicationTasks = tasks.filter(
+    (t: any) =>
+      t.type === "presentation" ||
+      t.type === "writing" ||
+      t.subject?.toLowerCase().includes("language"),
   ).length;
   return Math.min(100, communicationTasks * 8);
 }
 
 function calculateSelfDirectionScore(user: any, tasks: any[]) {
   const streakBonus = (user.streak || 0) * 2;
-  const selfInitiated = tasks.filter((t: any) => t.assignedBy === 'self').length;
-  return Math.min(100, streakBonus + (selfInitiated * 8));
+  const selfInitiated = tasks.filter(
+    (t: any) => t.assignedBy === "self",
+  ).length;
+  return Math.min(100, streakBonus + selfInitiated * 8);
 }
 
 function calculateSocialEmotionalScore(user: any) {
   const streak = user.streak || 0;
   const moodScore = user.moodRating || 5;
-  return Math.min(100, (streak * 3) + (moodScore * 5));
+  return Math.min(100, streak * 3 + moodScore * 5);
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -91,6 +102,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     res.status(500).json({ message: err.message || "Internal server error" });
   }
+
+  // ========================
+  // Mood Endpoints - ADDED THESE
+  // ========================
+  app.get("/api/user/mood/today", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+
+      // For now, return null since we don't have mood storage implemented
+      // This will be updated once we add mood storage to the database
+      res.json(null);
+    } catch (err: any) {
+      handleError(err, res);
+    }
+  });
+
+  app.post("/api/user/mood", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+      const { moodType, intensity, note } = req.body;
+
+      if (!moodType || !intensity) {
+        return res.status(400).json({
+          message: "Mood type and intensity are required",
+        });
+      }
+
+      // For now, just update the user's mood in their profile
+      // This is a temporary solution until we implement proper mood storage
+      const updatedUser = await storage.updateUser(user.id, {
+        mood: moodType,
+        moodIntensity: intensity,
+        moodNote: note,
+        lastMoodUpdate: new Date().toISOString(),
+      });
+
+      // Return success response
+      res.json({
+        success: true,
+        message: "Mood shared successfully",
+        mood: {
+          moodType,
+          intensity,
+          note,
+          date: new Date().toISOString(),
+        },
+      });
+    } catch (err: any) {
+      console.error("Error saving mood:", err);
+      res.status(500).json({
+        message: "Failed to save mood. Please try again.",
+      });
+    }
+  });
 
   // ========================
   // Auth routes
@@ -237,30 +304,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========================
   // File Upload Endpoint for Proof/Attachments - SIMPLIFIED VERSION
   // ========================
-  app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+  app.post(
+    "/api/upload",
+    isAuthenticated,
+    upload.single("file"),
+    async (req: any, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        // Generate a public URL for the uploaded file
+        const fileUrl = `/uploads/${req.file.filename}`;
+
+        // Return file info without storing in database
+        res.json({
+          url: fileUrl,
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+        });
+      } catch (err: any) {
+        handleError(err, res);
       }
-
-      // Generate a public URL for the uploaded file
-      const fileUrl = `/uploads/${req.file.filename}`;
-
-      // Return file info without storing in database
-      res.json({
-        url: fileUrl,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype
-      });
-    } catch (err: any) {
-      handleError(err, res);
-    }
-  });
+    },
+  );
 
   // ========================
   // Serve uploaded files
   // ========================
-  app.use('/uploads', isAuthenticated, express.static('uploads'));
+  app.use("/uploads", isAuthenticated, express.static("uploads"));
 
   // ========================
   // User Stats Endpoint for Analytics
@@ -272,14 +344,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get task statistics
       const tasks = await storage.getTasks(user.id);
-      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+      const completedTasks = tasks.filter(
+        (task: any) => task.status === "completed",
+      );
 
       res.json({
         level: user.level || 1,
         points: user.points || 0,
         streak: user.streak || 0,
         totalTasks: tasks.length,
-        completedTasks: completedTasks.length
+        completedTasks: completedTasks.length,
       });
     } catch (err: any) {
       handleError(err, res);
@@ -313,27 +387,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========================
   // AI Learning Analysis Endpoint (Simplified)
   // ========================
-  app.get("/api/ai-learning-analysis", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
-      const tasks = await storage.getTasks(user.id);
-      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+  app.get(
+    "/api/ai-learning-analysis",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUserByReplitId(userId);
+        const tasks = await storage.getTasks(user.id);
+        const completedTasks = tasks.filter(
+          (task: any) => task.status === "completed",
+        );
 
-      // Simple analysis without external dependency
-      const analysis = {
-        analysis: `Based on your learning patterns, you've completed ${completedTasks.length} out of ${tasks.length} tasks. ${completedTasks.length > 5 ? "Great job maintaining consistency!" : "Keep going to build momentum!"}`,
-        strengths: ["Task completion", "Learning engagement"],
-        recommendations: ["Try to complete at least one task daily", "Explore different subject areas"],
-        achievements: [`Completed ${completedTasks.length} tasks`, `${user.streak || 0}-day streak`],
-        learningStyle: "Developing learning style"
-      };
+        // Simple analysis without external dependency
+        const analysis = {
+          analysis: `Based on your learning patterns, you've completed ${completedTasks.length} out of ${tasks.length} tasks. ${completedTasks.length > 5 ? "Great job maintaining consistency!" : "Keep going to build momentum!"}`,
+          strengths: ["Task completion", "Learning engagement"],
+          recommendations: [
+            "Try to complete at least one task daily",
+            "Explore different subject areas",
+          ],
+          achievements: [
+            `Completed ${completedTasks.length} tasks`,
+            `${user.streak || 0}-day streak`,
+          ],
+          learningStyle: "Developing learning style",
+        };
 
-      res.json(analysis);
-    } catch (err: any) {
-      handleError(err, res);
-    }
-  });
+        res.json(analysis);
+      } catch (err: any) {
+        handleError(err, res);
+      }
+    },
+  );
 
   // ========================
   // Skill Metrics Endpoint
@@ -343,7 +429,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUserByReplitId(userId);
       const tasks = await storage.getTasks(user.id);
-      const completedTasks = tasks.filter((task: any) => task.status === 'completed');
+      const completedTasks = tasks.filter(
+        (task: any) => task.status === "completed",
+      );
 
       // Calculate skill metrics based on actual behavior
       const metrics = {
@@ -352,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         collaboration: calculateCollaborationScore(user, tasks),
         communication: calculateCommunicationScore(completedTasks),
         selfDirection: calculateSelfDirectionScore(user, completedTasks),
-        socialEmotional: calculateSocialEmotionalScore(user)
+        socialEmotional: calculateSocialEmotionalScore(user),
       };
 
       res.json(metrics);
@@ -362,103 +450,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // Share Work via Email Endpoint
+  // REMOVED: Duplicate /api/share/work endpoint - using the one from shareRoutes instead
   // ========================
-  app.post("/api/share/work", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const { recipientEmail, message, workItemIds } = req.body;
-
-      // Validate required fields
-      if (!recipientEmail || !workItemIds || !Array.isArray(workItemIds) || workItemIds.length === 0) {
-        return res.status(400).json({ 
-          message: "Recipient email and work items are required" 
-        });
-      }
-
-      // Get all user's tasks, notes, and photos to find the selected items
-      const [tasks, notes, photos] = await Promise.all([
-        storage.getTasks(user.id),
-        storage.getNotes(user.id),
-        storage.getPhotos(user.id)
-      ]);
-
-      // Format items as work items for email
-      const allItems = [
-        ...tasks.map((task: any) => ({
-          id: task.id,
-          title: task.title,
-          type: 'task' as const,
-          subject: task.subject,
-          preview: task.description,
-          date: new Date(task.createdAt).toLocaleDateString(),
-          status: task.status
-        })),
-        ...notes.map((note: any) => ({
-          id: note.id,
-          title: note.title,
-          type: 'note' as const,
-          subject: note.subject,
-          preview: note.content,
-          date: new Date(note.createdAt).toLocaleDateString()
-        })),
-        ...photos.map((photo: any) => ({
-          id: photo.id,
-          title: photo.title,
-          type: 'photo' as const,
-          subject: photo.subject,
-          preview: `Photo: ${photo.title}`,
-          date: new Date(photo.createdAt).toLocaleDateString()
-        }))
-      ];
-
-      // Filter to only include selected work items
-      const selectedWorkItems = allItems.filter(item => workItemIds.includes(item.id));
-
-      if (selectedWorkItems.length === 0) {
-        return res.status(400).json({ 
-          message: "No valid work items found for the provided IDs" 
-        });
-      }
-
-      // Send the email
-      const emailSent = await sendSharedWorkEmail(
-        recipientEmail,
-        user.name || user.firstName || 'Student',
-        message || '',
-        selectedWorkItems
-      );
-
-      if (!emailSent) {
-        return res.status(500).json({ 
-          message: "Failed to send email. Please try again." 
-        });
-      }
-
-      res.json({ 
-        success: true, 
-        message: `Successfully shared ${selectedWorkItems.length} items with ${recipientEmail}`,
-        itemsShared: selectedWorkItems.length
-      });
-
-    } catch (error: any) {
-      console.error("Error sharing work via email:", error);
-      res.status(500).json({ 
-        message: error.message || "Failed to share work via email" 
-      });
-    }
-  });
 
   // ========================
   // ✅ Portfolio routes (use the imported router)
   // ========================
   app.use("/api/portfolio", portfolioRoutes);
+  // Add this with your other route mounts (around line 400+)
+  app.use("/api/user", userRoutes);
+  // ========================
+  // ✅ Share routes (use the imported router) - ADD THIS
+  // ========================
+  app.use("/api/share", shareRoutes);
 
   // ========================
   // Create HTTP server
