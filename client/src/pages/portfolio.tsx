@@ -77,7 +77,15 @@ const SAMPLE_SUBJECTS = [
 ];
 
 // Preview Modal Component
-function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; onOpenChange: (open: boolean) => void }) {
+function PreviewModal({
+  item,
+  open,
+  onOpenChange,
+}: {
+  item: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { toast } = useToast();
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
 
@@ -90,7 +98,11 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
     if (!fileUrl) return null;
 
     // If it's already a full URL or data URL, use it directly
-    if (fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/')) {
+    if (
+      fileUrl.startsWith("http") ||
+      fileUrl.startsWith("data:") ||
+      fileUrl.startsWith("/")
+    ) {
       return fileUrl;
     }
 
@@ -116,9 +128,9 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         return (
           <div className="bg-gray-50 p-4 rounded-md">
             <h4 className="font-semibold mb-2">Link Proof:</h4>
-            <a 
-              href={currentFile.proofLink} 
-              target="_blank" 
+            <a
+              href={currentFile.proofLink}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline break-all"
             >
@@ -135,9 +147,9 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         if (proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(proofUrl)) {
           return (
             <div className="flex justify-center">
-              <img 
-                src={proofUrl} 
-                alt={`Proof ${currentFileIndex + 1}`} 
+              <img
+                src={proofUrl}
+                alt={`Proof ${currentFileIndex + 1}`}
                 className="max-h-96 max-w-full object-contain rounded-md border"
               />
             </div>
@@ -145,8 +157,8 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         } else if (proofUrl && /\.(pdf)$/i.test(proofUrl)) {
           return (
             <div className="h-96">
-              <iframe 
-                src={proofUrl} 
+              <iframe
+                src={proofUrl}
                 className="w-full h-full border rounded-md"
                 title={currentFile.title}
               />
@@ -159,8 +171,12 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
           return (
             <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
               <File className="h-16 w-16 text-gray-400 mb-4" />
-              <p className="text-gray-500 mb-2">No preview available for this file type</p>
-              <p className="text-sm text-gray-400">Click download to access the file</p>
+              <p className="text-gray-500 mb-2">
+                No preview available for this file type
+              </p>
+              <p className="text-sm text-gray-400">
+                Click download to access the file
+              </p>
             </div>
           );
         }
@@ -178,8 +194,8 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
     if (currentFile.type === "link") {
       return (
         <div className="h-96">
-          <iframe 
-            src={currentFile.link} 
+          <iframe
+            src={currentFile.link}
             className="w-full h-full border rounded-md"
             title={currentFile.title}
             sandbox="allow-same-origin allow-scripts"
@@ -193,11 +209,14 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
 
     if (currentFile.type === "file" || currentFile.type === "photo") {
       // Determine file type for preview
-      if (currentFile.fileType === "pdf" || currentFile.proofUrl?.endsWith('.pdf')) {
+      if (
+        currentFile.fileType === "pdf" ||
+        currentFile.proofUrl?.endsWith(".pdf")
+      ) {
         return (
           <div className="h-96">
-            <iframe 
-              src={currentFile.fileUrl || currentFile.proofUrl} 
+            <iframe
+              src={currentFile.fileUrl || currentFile.proofUrl}
               className="w-full h-full border rounded-md"
               title={currentFile.title}
             />
@@ -206,12 +225,15 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
             </div>
           </div>
         );
-      } else if (currentFile.fileType === "image" || 
-                 (currentFile.proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(currentFile.proofUrl))) {
+      } else if (
+        currentFile.fileType === "image" ||
+        (currentFile.proofUrl &&
+          /\.(jpg|jpeg|png|gif|webp)$/i.test(currentFile.proofUrl))
+      ) {
         return (
           <div className="flex justify-center">
-            <img 
-              src={currentFile.fileUrl || currentFile.proofUrl} 
+            <img
+              src={currentFile.fileUrl || currentFile.proofUrl}
               alt={currentFile.title}
               className="max-h-96 max-w-full object-contain rounded-md border"
             />
@@ -221,8 +243,12 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         return (
           <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
             <File className="h-16 w-16 text-gray-400 mb-4" />
-            <p className="text-gray-500 mb-2">No preview available for this file type</p>
-            <p className="text-sm text-gray-400">Click download to access the file</p>
+            <p className="text-gray-500 mb-2">
+              No preview available for this file type
+            </p>
+            <p className="text-sm text-gray-400">
+              Click download to access the file
+            </p>
           </div>
         );
       }
@@ -243,7 +269,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
       // Create a temporary anchor element to trigger download
       const url = currentFile.fileUrl || currentFile.proofUrl;
       if (url) {
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = currentFile.fileName || currentFile.title;
         document.body.appendChild(a);
@@ -260,7 +286,7 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
       if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
         const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
         if (proofUrl) {
-          const a = document.createElement('a');
+          const a = document.createElement("a");
           a.href = proofUrl;
           a.download = `proof-${currentFileIndex + 1}`;
           document.body.appendChild(a);
@@ -274,9 +300,9 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         }
       } else if (currentFile.proofText) {
         // Download text proof as a text file
-        const blob = new Blob([currentFile.proofText], { type: 'text/plain' });
+        const blob = new Blob([currentFile.proofText], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `${currentFile.title}-proof.txt`;
         document.body.appendChild(a);
@@ -327,7 +353,9 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {currentFile.type === "link" && <LinkIcon className="h-5 w-5" />}
-            {(currentFile.type === "file" || currentFile.type === "task") && <FileText className="h-5 w-5" />}
+            {(currentFile.type === "file" || currentFile.type === "task") && (
+              <FileText className="h-5 w-5" />
+            )}
             {currentFile.type === "photo" && <Image className="h-5 w-5" />}
             {currentFile.title}
             {files.length > 1 && (
@@ -371,22 +399,67 @@ function PreviewModal({ item, open, onOpenChange }: { item: any; open: boolean; 
           <div>
             <h4 className="font-medium mb-1">Details</h4>
             <div className="space-y-1">
-              <p><span className="text-gray-500">Type:</span> {currentFile.type}</p>
-              {currentFile.subject && <p><span className="text-gray-500">Subject:</span> {currentFile.subject}</p>}
-              <p><span className="text-gray-500">Added:</span> {format(new Date(currentFile.createdAt), "PP")}</p>
+              <p>
+                <span className="text-gray-500">Type:</span> {currentFile.type}
+              </p>
+              {currentFile.subject && (
+                <p>
+                  <span className="text-gray-500">Subject:</span>{" "}
+                  {currentFile.subject}
+                </p>
+              )}
+              <p>
+                <span className="text-gray-500">Added:</span>{" "}
+                {format(new Date(currentFile.createdAt), "PP")}
+              </p>
             </div>
           </div>
           <div>
             <h4 className="font-medium mb-1">Proof Info</h4>
             <div className="space-y-1">
-              {currentFile.fileName && <p><span className="text-gray-500">Filename:</span> {currentFile.fileName}</p>}
-              {currentFile.fileType && <p><span className="text-gray-500">Filetype:</span> {currentFile.fileType}</p>}
-              {currentFile.link && <p><span className="text-gray-500">URL:</span> <span className="truncate">{currentFile.link}</span></p>}
-              {currentFile.proofUrl && <p><span className="text-gray-500">Proof URL:</span> <span className="truncate">{currentFile.proofUrl}</span></p>}
-              {currentFile.proofText && <p><span className="text-gray-500">Text Proof:</span> <span className="truncate">{currentFile.proofText.substring(0, 50)}...</span></p>}
-              {currentFile.proofLink && <p><span className="text-gray-500">Link Proof:</span> <span className="truncate">{currentFile.proofLink}</span></p>}
+              {currentFile.fileName && (
+                <p>
+                  <span className="text-gray-500">Filename:</span>{" "}
+                  {currentFile.fileName}
+                </p>
+              )}
+              {currentFile.fileType && (
+                <p>
+                  <span className="text-gray-500">Filetype:</span>{" "}
+                  {currentFile.fileType}
+                </p>
+              )}
+              {currentFile.link && (
+                <p>
+                  <span className="text-gray-500">URL:</span>{" "}
+                  <span className="truncate">{currentFile.link}</span>
+                </p>
+              )}
+              {currentFile.proofUrl && (
+                <p>
+                  <span className="text-gray-500">Proof URL:</span>{" "}
+                  <span className="truncate">{currentFile.proofUrl}</span>
+                </p>
+              )}
+              {currentFile.proofText && (
+                <p>
+                  <span className="text-gray-500">Text Proof:</span>{" "}
+                  <span className="truncate">
+                    {currentFile.proofText.substring(0, 50)}...
+                  </span>
+                </p>
+              )}
+              {currentFile.proofLink && (
+                <p>
+                  <span className="text-gray-500">Link Proof:</span>{" "}
+                  <span className="truncate">{currentFile.proofLink}</span>
+                </p>
+              )}
               {currentFile.proofFiles && currentFile.proofFiles.length > 0 && (
-                <p><span className="text-gray-500">Files:</span> {currentFile.proofFiles.length} file(s)</p>
+                <p>
+                  <span className="text-gray-500">Files:</span>{" "}
+                  {currentFile.proofFiles.length} file(s)
+                </p>
               )}
             </div>
           </div>
@@ -426,33 +499,26 @@ export default function Portfolio() {
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Fetch portfolio items from API
-  const { data: serverPortfolioItems = [], isLoading, refetch } = useQuery({
+  // Fetch portfolio items from API - this now gets ALL items from database
+  const {
+    data: portfolioItems = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["/api/portfolio"],
-  });
-
-  // Load manually added portfolio items from localStorage
-  const [manualPortfolioItems, setManualPortfolioItems] = useState<any[]>([]);
-
-  useEffect(() => {
-    const savedItems = localStorage.getItem('manualPortfolioItems');
-    if (savedItems) {
+    queryFn: async () => {
       try {
-        setManualPortfolioItems(JSON.parse(savedItems));
-      } catch (e) {
-        console.error("Failed to parse manual portfolio items from localStorage", e);
-        setManualPortfolioItems([]);
+        const response = await fetch("/api/portfolio");
+        if (!response.ok) throw new Error("Failed to fetch portfolio items");
+        const items = await response.json();
+        return items || [];
+      } catch (error) {
+        console.error("Error fetching portfolio items:", error);
+        setConnectionError(true);
+        return [];
       }
-    }
-  }, []);
-
-  // Save manual portfolio items to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('manualPortfolioItems', JSON.stringify(manualPortfolioItems));
-  }, [manualPortfolioItems]);
-
-  // Combine server items and manual items
-  const portfolioItems = [...serverPortfolioItems, ...manualPortfolioItems];
+    },
+  });
 
   // Set subjects data with fallback to sample data
   useEffect(() => {
@@ -460,48 +526,46 @@ export default function Portfolio() {
     setSubjects(SAMPLE_SUBJECTS);
   }, []);
 
-  // Create portfolio item mutation for manual uploads
+  // Create portfolio item mutation - now uses backend API
   const createPortfolioMutation = useMutation({
-    mutationFn: async (data: any) => {
-      // Create portfolio items for each selected file
-      const newItems = selectedFiles.map((file, index) => {
-        const fileType = file.type.startsWith('image/') ? 'image' : 
-                        file.type === 'application/pdf' ? 'pdf' : 'other';
+    mutationFn: async (formData: any) => {
+      const formDataToSend = new FormData();
 
-        return {
-          id: Date.now() + index, // Generate unique IDs
-          title: selectedFiles.length > 1 ? `${formData.title} (${index + 1})` : formData.title,
-          description: formData.description,
-          subject: formData.subject,
-          type: formData.type,
-          link: formData.type === "link" ? formData.link : null,
-          fileType,
-          fileName: file.name,
-          fileUrl: URL.createObjectURL(file),
-          createdAt: new Date().toISOString(),
-          source: "manual" // Mark as manually added
-        };
-      });
+      // Add basic fields
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("subject", formData.subject);
+      formDataToSend.append("type", formData.type);
 
-      // For link type, create a single item
       if (formData.type === "link") {
-        return [{
-          id: Date.now(),
-          title: formData.title,
-          description: formData.description,
-          subject: formData.subject,
-          type: "link",
-          link: formData.link,
-          createdAt: new Date().toISOString(),
-          source: "manual" // Mark as manually added
-        }];
+        formDataToSend.append("link", formData.link);
       }
 
-      return newItems;
+      // Add files if any
+      if (
+        (formData.type === "file" || formData.type === "photo") &&
+        selectedFiles.length > 0
+      ) {
+        selectedFiles.forEach((file) => {
+          formDataToSend.append("files", file);
+        });
+      }
+
+      const response = await fetch("/api/portfolio/upload", {
+        method: "POST",
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create portfolio item");
+      }
+
+      return await response.json();
     },
     onSuccess: (newItems) => {
-      // Add the new items to the manual portfolio items state
-      setManualPortfolioItems(prevItems => [...prevItems, ...newItems]);
+      // Refetch portfolio items to get the updated list from the server
+      refetch();
 
       toast({
         title: "Added to portfolio",
@@ -524,7 +588,8 @@ export default function Portfolio() {
     onError: (error: any) => {
       toast({
         title: "Error adding item",
-        description: error.message || "Failed to add item to portfolio. Please try again.",
+        description:
+          error.message || "Failed to add item to portfolio. Please try again.",
         variant: "destructive",
       });
       setConnectionError(true);
@@ -533,25 +598,21 @@ export default function Portfolio() {
 
   // Delete portfolio item mutation
   const deletePortfolioMutation = useMutation({
-    mutationFn: async (item: any) => {
-      if (item.source === "manual") {
-        // For manual items, just return the ID for local deletion
-        return item.id;
-      } else {
-        // For server items, make API call to delete
-        await apiRequest("DELETE", `/api/portfolio/${item.id}`);
-        return item.id;
-      }
-    },
-    onSuccess: (id, item) => {
-      if (item.source === "manual") {
-        // Remove the item from manual items state
-        setManualPortfolioItems(prevItems => prevItems.filter(item => item.id !== id));
-      } else {
-        // Refetch server items after deletion
-        refetch();
+    mutationFn: async (itemId: number) => {
+      const response = await fetch(`/api/portfolio/${itemId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete portfolio item");
       }
 
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Refetch portfolio items after deletion
+      refetch();
       toast({
         title: "Removed from portfolio",
         description: "Item has been removed from your portfolio.",
@@ -569,29 +630,49 @@ export default function Portfolio() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      toast({ title: "Error", description: "Please enter a title.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please enter a title.",
+        variant: "destructive",
+      });
       return;
     }
     if (formData.type === "link" && !formData.link.trim()) {
-      toast({ title: "Error", description: "Please enter a link URL.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please enter a link URL.",
+        variant: "destructive",
+      });
       return;
     }
-    if ((formData.type === "file" || formData.type === "photo") && selectedFiles.length === 0) {
-      toast({ title: "Error", description: "Please select at least one file.", variant: "destructive" });
+    if (
+      (formData.type === "file" || formData.type === "photo") &&
+      selectedFiles.length === 0
+    ) {
+      toast({
+        title: "Error",
+        description: "Please select at least one file.",
+        variant: "destructive",
+      });
       return;
     }
-    const portfolioData = { ...formData, link: formData.type === "link" ? formData.link : null };
-    createPortfolioMutation.mutate(portfolioData);
+
+    createPortfolioMutation.mutate(formData);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       setSelectedFiles(files);
-      const urls = files.map((file) => (file.type.startsWith("image/") ? URL.createObjectURL(file) : ""));
+      const urls = files.map((file) =>
+        file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+      );
       setPreviewUrls(urls);
       if (!formData.title && files[0]) {
-        setFormData((prev) => ({ ...prev, title: files[0].name.split(".")[0] }));
+        setFormData((prev) => ({
+          ...prev,
+          title: files[0].name.split(".")[0],
+        }));
       }
     }
   };
@@ -606,18 +687,18 @@ export default function Portfolio() {
 
   const handleItemClick = (item: any) => {
     // Check if this item is part of a multi-file upload
-    const baseTitle = item.title.replace(/\s*\(\d+\)$/, '');
-    const relatedItems = portfolioItems.filter(i => 
-      i.title.replace(/\s*\(\d+\)$/, '') === baseTitle && 
-      i.type === item.type &&
-      i.source === item.source
+    const baseTitle = item.title.replace(/\s*\(\d+\)$/, "");
+    const relatedItems = portfolioItems.filter(
+      (i) =>
+        i.title.replace(/\s*\(\d+\)$/, "") === baseTitle &&
+        i.type === item.type,
     );
 
     if (relatedItems.length > 1) {
       // Group related items for carousel view
       setPreviewItem({
         ...item,
-        files: relatedItems
+        files: relatedItems,
       });
     } else {
       setPreviewItem(item);
@@ -626,15 +707,22 @@ export default function Portfolio() {
   };
 
   const getFileIcon = (item: any) => {
-    if (item.type === "link") return <LinkIcon className="h-5 w-5 text-blue-500" />;
-    if (item.type === "photo") return <Image className="h-5 w-5 text-green-500" />;
-    if (item.type === "task") return <CheckCircle className="h-5 w-5 text-purple-500" />;
+    if (item.type === "link")
+      return <LinkIcon className="h-5 w-5 text-blue-500" />;
+    if (item.type === "photo")
+      return <Image className="h-5 w-5 text-green-500" />;
+    if (item.type === "task")
+      return <CheckCircle className="h-5 w-5 text-purple-500" />;
 
     // For file types
-    if (item.fileType === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
-    if (item.fileType === "image") return <FileImage className="h-5 w-5 text-purple-500" />;
-    if (item.fileType === "video") return <FileVideo className="h-5 w-5 text-orange-500" />;
-    if (item.fileType === "code") return <FileCode className="h-5 w-5 text-yellow-500" />;
+    if (item.fileType === "pdf")
+      return <FileText className="h-5 w-5 text-red-500" />;
+    if (item.fileType === "image")
+      return <FileImage className="h-5 w-5 text-purple-500" />;
+    if (item.fileType === "video")
+      return <FileVideo className="h-5 w-5 text-orange-500" />;
+    if (item.fileType === "code")
+      return <FileCode className="h-5 w-5 text-yellow-500" />;
 
     return <File className="h-5 w-5 text-gray-500" />;
   };
@@ -654,7 +742,11 @@ export default function Portfolio() {
     if (!fileUrl) return null;
 
     // If it's already a full URL or data URL, use it directly
-    if (fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/')) {
+    if (
+      fileUrl.startsWith("http") ||
+      fileUrl.startsWith("data:") ||
+      fileUrl.startsWith("/")
+    ) {
       return fileUrl;
     }
 
@@ -676,7 +768,10 @@ export default function Portfolio() {
       {/* Header */}
       <div className="text-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">My Portfolio</h1>
-        <p className="text-gray-500">Showcase your learning journey, achievements, and creative work in one place.</p>
+        <p className="text-gray-500">
+          Showcase your learning journey, achievements, and creative work in one
+          place.
+        </p>
       </div>
 
       {/* Add to Portfolio Button */}
@@ -690,7 +785,9 @@ export default function Portfolio() {
           <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add to Portfolio</DialogTitle>
-              <DialogDescription>Add a file, link, or photo to your portfolio</DialogDescription>
+              <DialogDescription>
+                Add a file, link, or photo to your portfolio
+              </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -717,7 +814,9 @@ export default function Portfolio() {
                 <Label>Title</Label>
                 <Input
                   value={formData.title}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                  }
                   placeholder="Enter a title for your work"
                   required
                 />
@@ -734,7 +833,9 @@ export default function Portfolio() {
                   />
                   {selectedFiles.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Selected ({selectedFiles.length}):</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        Selected ({selectedFiles.length}):
+                      </p>
                       <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                         {selectedFiles.map((file, index) => (
                           <div key={index} className="relative group">
@@ -745,7 +846,9 @@ export default function Portfolio() {
                                 className="w-full h-16 object-cover rounded border"
                               />
                             )}
-                            <div className="text-xs truncate text-gray-700">{file.name}</div>
+                            <div className="text-xs truncate text-gray-700">
+                              {file.name}
+                            </div>
                             <Button
                               type="button"
                               variant="ghost"
@@ -769,7 +872,9 @@ export default function Portfolio() {
                   <Input
                     type="url"
                     value={formData.link}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, link: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, link: e.target.value }))
+                    }
                     placeholder="https://example.com"
                     required
                   />
@@ -785,7 +890,9 @@ export default function Portfolio() {
                 <Label>Subject (Optional)</Label>
                 <Select
                   value={formData.subject}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, subject: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, subject: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a subject" />
@@ -793,11 +900,16 @@ export default function Portfolio() {
                   <SelectContent className="max-h-60 overflow-y-auto">
                     {subjects.length > 0 ? (
                       subjects.map((subject: any) => (
-                        <SelectItem key={subject.id || subject.name} value={subject.name}>
+                        <SelectItem
+                          key={subject.id || subject.name}
+                          value={subject.name}
+                        >
                           <div className="flex items-center">
                             <span
                               className="w-3 h-3 rounded-full mr-2"
-                              style={{ backgroundColor: subject.color || "#6B7280" }}
+                              style={{
+                                backgroundColor: subject.color || "#6B7280",
+                              }}
                             ></span>
                             {subject.name}
                           </div>
@@ -816,14 +928,23 @@ export default function Portfolio() {
                 <Label>Description (Optional)</Label>
                 <Textarea
                   value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                   placeholder="Describe your work..."
                   rows={3}
                 />
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -831,7 +952,9 @@ export default function Portfolio() {
                   disabled={createPortfolioMutation.isPending}
                   className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
-                  {createPortfolioMutation.isPending ? "Adding..." : "Add to Portfolio"}
+                  {createPortfolioMutation.isPending
+                    ? "Adding..."
+                    : "Add to Portfolio"}
                 </Button>
               </DialogFooter>
             </form>
@@ -845,9 +968,12 @@ export default function Portfolio() {
           <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
             <FileText className="h-12 w-12 text-purple-600" />
           </div>
-          <h3 className="text-2xl font-semibold text-gray-700 mb-2">Your Portfolio is Empty</h3>
+          <h3 className="text-2xl font-semibold text-gray-700 mb-2">
+            Your Portfolio is Empty
+          </h3>
           <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Start building your portfolio by adding your work, projects, and achievements.
+            Start building your portfolio by adding your work, projects, and
+            achievements.
           </p>
           <Button
             onClick={() => setAddDialogOpen(true)}
@@ -868,17 +994,21 @@ export default function Portfolio() {
                 {/* For task items, show appropriate preview based on proof type */}
                 {item.type === "task" && (
                   <>
-                    {item.proofFiles && item.proofFiles.length > 0 && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofFiles[0]) && (
-                      <img
-                        src={getProofUrl(item.proofFiles[0])}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                        }}
-                      />
-                    )}
+                    {item.proofFiles &&
+                      item.proofFiles.length > 0 &&
+                      /\.(jpg|jpeg|png|gif|webp)$/i.test(
+                        item.proofFiles[0],
+                      ) && (
+                        <img
+                          src={getProofUrl(item.proofFiles[0])}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                          }}
+                        />
+                      )}
                     {item.proofText && (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
                         <Text className="h-12 w-12 text-purple-500" />
@@ -889,17 +1019,20 @@ export default function Portfolio() {
                         <LinkIcon className="h-12 w-12 text-blue-500" />
                       </div>
                     )}
-                    {(!item.proofFiles || item.proofFiles.length === 0) && !item.proofText && !item.proofLink && (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
-                        <CheckCircle className="h-12 w-12 text-green-500" />
-                      </div>
-                    )}
+                    {(!item.proofFiles || item.proofFiles.length === 0) &&
+                      !item.proofText &&
+                      !item.proofLink && (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
+                          <CheckCircle className="h-12 w-12 text-green-500" />
+                        </div>
+                      )}
                   </>
                 )}
 
-                {(item.type === "photo" || (item.type === "file" && item.fileType === "image")) && (
+                {(item.type === "photo" ||
+                  (item.type === "file" && item.fileType === "image")) && (
                   <img
-                    src={item.fileUrl}
+                    src={item.fileUrl || item.proofUrl}
                     alt={item.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -913,7 +1046,7 @@ export default function Portfolio() {
                     <LinkIcon className="h-12 w-12 text-blue-500" />
                   </div>
                 )}
-                {(item.type === "file" && item.fileType !== "image") && (
+                {item.type === "file" && item.fileType !== "image" && (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
                     {getFileIcon(item)}
                   </div>
@@ -932,7 +1065,7 @@ export default function Portfolio() {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    deletePortfolioMutation.mutate(item);
+                    deletePortfolioMutation.mutate(item.id);
                   }}
                   className="absolute top-2 right-2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                 >
@@ -940,12 +1073,13 @@ export default function Portfolio() {
                 </Button>
               </div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold line-clamp-1">{item.title}</CardTitle>
-                {item.source === "manual" && (
-                  <div className="text-xs text-gray-500">Manually added</div>
-                )}
+                <CardTitle className="text-lg font-semibold line-clamp-1">
+                  {item.title}
+                </CardTitle>
                 {item.type === "task" && (
-                  <div className="text-xs text-blue-500">From completed task</div>
+                  <div className="text-xs text-blue-500">
+                    From completed task
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="pt-2">
@@ -966,8 +1100,8 @@ export default function Portfolio() {
                 </div>
               </CardContent>
               <CardFooter className="pt-2">
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   variant="outline"
                   onClick={() => handleItemClick(item)}
                 >
@@ -981,10 +1115,10 @@ export default function Portfolio() {
 
       {/* Preview Modal */}
       {previewItem && (
-        <PreviewModal 
-          item={previewItem} 
-          open={previewOpen} 
-          onOpenChange={setPreviewOpen} 
+        <PreviewModal
+          item={previewItem}
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
         />
       )}
 
@@ -992,7 +1126,10 @@ export default function Portfolio() {
       {connectionError && (
         <div className="fixed bottom-4 right-4 bg-yellow-100 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg shadow-lg flex items-center max-w-md">
           <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-          <span>Working in demo mode. Some features may be limited without a server connection.</span>
+          <span>
+            Working in demo mode. Some features may be limited without a server
+            connection.
+          </span>
         </div>
       )}
     </div>

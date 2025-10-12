@@ -16,7 +16,12 @@ const __dirname = path.dirname(__filename);
 const uploadDir = path.join(__dirname, "../../uploads/portfolio");
 
 // Multer storage setup
-const upload = multer({ dest: uploadDir });
+const upload = multer({
+  dest: uploadDir,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 
 // ========================
 // Portfolio Routes
@@ -37,11 +42,93 @@ router.get("/", isAuthenticated, async (req: any, res) => {
     res.json(items || []);
   } catch (error: any) {
     console.error("Error fetching portfolio items:", error);
-    res.status(500).json({ message: error.message || "Failed to fetch portfolio items" });
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to fetch portfolio items" });
   }
 });
 
-// Create a new portfolio item from a task
+// Create a new portfolio item (for manual uploads)
+router.post(
+  "/upload",
+  isAuthenticated,
+  upload.array("files"),
+  async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { title, description, subject, type, link } = req.body;
+      const files = req.files as Express.Multer.File[];
+
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+
+      const savedItems = [];
+
+      // Handle multiple files
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const portfolioData = {
+            userId: user.id,
+            title:
+              files.length > 1
+                ? `${title} (${files.indexOf(file) + 1})`
+                : title,
+            description,
+            subject,
+            type,
+            filePath: file.path,
+            link: type === "link" ? link : null,
+            attachments: [
+              {
+                filename: file.originalname,
+                path: file.path,
+                mimetype: file.mimetype,
+                size: file.size,
+              },
+            ],
+          };
+
+          const newItem = await storage.createPortfolioItem(portfolioData);
+          savedItems.push(newItem);
+        }
+      } else if (type === "link") {
+        // Handle link type items
+        const portfolioData = {
+          userId: user.id,
+          title,
+          description,
+          subject,
+          type: "link",
+          link,
+          attachments: [],
+        };
+
+        const newItem = await storage.createPortfolioItem(portfolioData);
+        savedItems.push(newItem);
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Files are required for file/photo types" });
+      }
+
+      res.status(201).json(savedItems);
+    } catch (error: any) {
+      console.error("Error creating portfolio item:", error);
+      res
+        .status(500)
+        .json({ message: error.message || "Failed to create portfolio item" });
+    }
+  },
+);
+
+// Create portfolio item from form data (alternative endpoint)
 router.post("/", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.user.claims.sub;
@@ -60,13 +147,17 @@ router.post("/", isAuthenticated, async (req: any, res) => {
     const newItem = await storage.createPortfolioItem(portfolioData);
 
     if (!newItem) {
-      return res.status(500).json({ message: "Failed to create portfolio item" });
+      return res
+        .status(500)
+        .json({ message: "Failed to create portfolio item" });
     }
 
     res.status(201).json(newItem);
   } catch (error: any) {
     console.error("Error creating portfolio item:", error);
-    res.status(500).json({ message: error.message || "Failed to create portfolio item" });
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to create portfolio item" });
   }
 });
 
@@ -80,7 +171,14 @@ router.post("/share-task", isAuthenticated, async (req: any, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const { taskId, portfolioIds, includeProof, proofFiles, proofText, proofLink } = req.body;
+    const {
+      taskId,
+      portfolioIds,
+      includeProof,
+      proofFiles,
+      proofText,
+      proofLink,
+    } = req.body;
 
     // Get task details
     const task = await db.query.tasks.findFirst({
@@ -98,14 +196,14 @@ router.post("/share-task", isAuthenticated, async (req: any, res) => {
         userId: user.id,
         title: task.title,
         description: task.description,
-        type: 'task',
+        type: "task",
         subject: task.subject,
         category: task.category,
         sourceId: taskId,
         // Include all proof types if requested
         proofFiles: includeProof ? proofFiles || [] : [],
-        proofText: includeProof ? proofText || '' : '',
-        proofLink: includeProof ? proofLink || '' : '',
+        proofText: includeProof ? proofText || "" : "",
+        proofLink: includeProof ? proofLink || "" : "",
         // For backward compatibility, also populate attachments with files
         attachments: includeProof ? proofFiles || [] : [],
       };
@@ -118,26 +216,9 @@ router.post("/share-task", isAuthenticated, async (req: any, res) => {
     res.status(201).json({ success: true, items: results });
   } catch (error: any) {
     console.error("Error sharing task to portfolio:", error);
-    res.status(500).json({ message: error.message || "Failed to share task to portfolio" });
-  }
-});
-
-// Upload portfolio items (allow multiple files)
-router.post("/upload", isAuthenticated, upload.array("files"), async (req: any, res) => {
-  try {
-    const files = req.files as Express.Multer.File[];
-    const savedItems = await Promise.all(
-      files.map(file =>
-        storage.addPortfolioItem({
-          filename: file.filename,
-          originalName: file.originalname,
-          path: file.path,
-        })
-      )
-    );
-    res.json(savedItems);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to share task to portfolio" });
   }
 });
 
