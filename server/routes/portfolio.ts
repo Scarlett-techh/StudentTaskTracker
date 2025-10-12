@@ -3,9 +3,10 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import { storage } from "../storage.js";
 import { isAuthenticated } from "../replitAuth.js";
-import { db } from "../db.js"; // Import the database connection
+import { db } from "../db.js";
 
 const router = express.Router();
 
@@ -15,9 +16,25 @@ const __dirname = path.dirname(__filename);
 
 const uploadDir = path.join(__dirname, "../../uploads/portfolio");
 
-// Multer storage setup
+// Ensure upload directory exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer storage setup with custom filename
+const storageConfig = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Create unique filename with timestamp
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
 const upload = multer({
-  dest: uploadDir,
+  storage: storageConfig,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
@@ -26,6 +43,42 @@ const upload = multer({
 // ========================
 // Portfolio Routes
 // ========================
+
+// Serve portfolio files
+router.get("/files/:filename", (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadDir, filename);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Set appropriate headers
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes: { [key: string]: string } = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".pdf": "application/pdf",
+      ".mp4": "video/mp4",
+      ".mov": "video/quicktime",
+      ".avi": "video/x-msvideo",
+    };
+
+    const mimeType = mimeTypes[ext] || "application/octet-stream";
+    res.setHeader("Content-Type", mimeType);
+
+    // Send the file
+    res.sendFile(filePath);
+  } catch (error: any) {
+    console.error("Error serving file:", error);
+    res.status(500).json({ message: "Error serving file" });
+  }
+});
 
 // Get portfolio items for authenticated user
 router.get("/", isAuthenticated, async (req: any, res) => {
@@ -39,7 +92,21 @@ router.get("/", isAuthenticated, async (req: any, res) => {
 
     // Get portfolio items for the user
     const items = await storage.getPortfolioItems(user.id);
-    res.json(items || []);
+
+    // Enhance items with file URLs
+    const enhancedItems = items.map((item) => {
+      if (item.filePath) {
+        const filename = path.basename(item.filePath);
+        return {
+          ...item,
+          fileUrl: `/api/portfolio/files/${filename}`,
+          proofUrl: `/api/portfolio/files/${filename}`, // For compatibility
+        };
+      }
+      return item;
+    });
+
+    res.json(enhancedItems || []);
   } catch (error: any) {
     console.error("Error fetching portfolio items:", error);
     res
@@ -74,6 +141,16 @@ router.post(
       // Handle multiple files
       if (files && files.length > 0) {
         for (const file of files) {
+          const filename = path.basename(file.path);
+          const fileUrl = `/api/portfolio/files/${filename}`;
+
+          // Determine file type
+          const fileType = file.mimetype.startsWith("image/")
+            ? "image"
+            : file.mimetype === "application/pdf"
+              ? "pdf"
+              : "other";
+
           const portfolioData = {
             userId: user.id,
             title:
@@ -82,8 +159,11 @@ router.post(
                 : title,
             description,
             subject,
-            type,
+            type: type === "photo" ? "photo" : "file",
             filePath: file.path,
+            fileUrl: fileUrl,
+            fileType: fileType,
+            fileName: file.originalname,
             link: type === "link" ? link : null,
             attachments: [
               {
@@ -91,12 +171,22 @@ router.post(
                 path: file.path,
                 mimetype: file.mimetype,
                 size: file.size,
+                url: fileUrl,
               },
             ],
+            createdAt: new Date(),
           };
 
           const newItem = await storage.createPortfolioItem(portfolioData);
-          savedItems.push(newItem);
+
+          // Add fileUrl to the response
+          const enhancedItem = {
+            ...newItem,
+            fileUrl: fileUrl,
+            proofUrl: fileUrl, // For compatibility
+          };
+
+          savedItems.push(enhancedItem);
         }
       } else if (type === "link") {
         // Handle link type items
@@ -108,6 +198,7 @@ router.post(
           type: "link",
           link,
           attachments: [],
+          createdAt: new Date(),
         };
 
         const newItem = await storage.createPortfolioItem(portfolioData);
@@ -238,6 +329,11 @@ router.delete("/:id", isAuthenticated, async (req: any, res) => {
     const item = await storage.getPortfolioItem(itemId);
     if (!item || item.userId !== user.id) {
       return res.status(404).json({ message: "Portfolio item not found" });
+    }
+
+    // Delete the associated file if it exists
+    if (item.filePath && fs.existsSync(item.filePath)) {
+      fs.unlinkSync(item.filePath);
     }
 
     await storage.deletePortfolioItem(itemId);

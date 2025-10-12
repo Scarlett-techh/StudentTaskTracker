@@ -1037,7 +1037,13 @@ export default function Portfolio() {
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
+                      // If image fails to load, show fallback
                       target.style.display = "none";
+                      // You could also set a fallback background here
+                    }}
+                    onLoad={(e) => {
+                      // Image loaded successfully
+                      console.log("Image loaded successfully:", item.fileUrl);
                     }}
                   />
                 )}
@@ -1051,7 +1057,6 @@ export default function Portfolio() {
                     {getFileIcon(item)}
                   </div>
                 )}
-
                 {item.subject && (
                   <div className="absolute top-2 left-2">
                     <span className="px-2 py-1 text-xs font-medium bg-white/90 text-gray-700 rounded-full shadow-sm">
@@ -1059,7 +1064,6 @@ export default function Portfolio() {
                     </span>
                   </div>
                 )}
-
                 <Button
                   variant="ghost"
                   size="sm"

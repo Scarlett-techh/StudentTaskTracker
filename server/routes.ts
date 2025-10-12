@@ -14,7 +14,7 @@ import fs from "fs";
 import userRoutes from "./api/user.js";
 
 // ✅ Import portfolio routes
-import portfolioRoutes from "./routes/portfolio.js";
+import portfolioRoutes from "./routes/portfolio";
 // ✅ Import share routes
 import shareRoutes from "./routes/share.js"; // ADD THIS IMPORT
 
