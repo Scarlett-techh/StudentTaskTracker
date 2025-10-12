@@ -2,12 +2,12 @@ import { useState, FC } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Edit, 
-  Trash2, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  Edit,
+  Trash2,
+  Clock,
+  CheckCircle,
+  AlertCircle,
   Menu as MenuIcon,
   Share2,
   Paperclip,
@@ -16,12 +16,18 @@ import {
   Image as ImageIcon,
   FileText,
   Download,
-  Eye
+  Eye,
 } from "lucide-react";
 
-import TaskAttachmentSimple from "./task-attachment-simple";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import TaskForm from "@/components/forms/task-form";
 import { format } from "date-fns";
@@ -53,10 +59,10 @@ interface TaskCardProps {
   isDraggable?: boolean;
 }
 
-const TaskCard: FC<TaskCardProps> = ({ 
-  task, 
+const TaskCard: FC<TaskCardProps> = ({
+  task,
   onTaskUpdate,
-  isDraggable = true
+  isDraggable = true,
 }) => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -71,37 +77,40 @@ const TaskCard: FC<TaskCardProps> = ({
     pending: {
       icon: <Clock className="mr-1 h-3 w-3" />,
       label: "Pending",
-      variant: "secondary" as const
+      variant: "secondary" as const,
     },
     "in-progress": {
       icon: <AlertCircle className="mr-1 h-3 w-3" />,
       label: "In Progress",
-      variant: "outline" as const
+      variant: "outline" as const,
     },
     completed: {
       icon: <CheckCircle className="mr-1 h-3 w-3" />,
       label: "Completed",
-      variant: "default" as const
-    }
+      variant: "default" as const,
+    },
   };
 
-  const currentStatus = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.pending;
+  const currentStatus =
+    statusConfig[task.status as keyof typeof statusConfig] ||
+    statusConfig.pending;
 
   // Get all proof files (support both single proofUrl and multiple proofFiles)
-  const proofFiles = task.proofFiles && task.proofFiles.length > 0 
-    ? task.proofFiles 
-    : task.proofUrl 
-      ? [task.proofUrl] 
-      : [];
+  const proofFiles =
+    task.proofFiles && task.proofFiles.length > 0
+      ? task.proofFiles
+      : task.proofUrl
+        ? [task.proofUrl]
+        : [];
 
   // Check if we have any image proofs
-  const hasImageProofs = proofFiles.some(file => 
-    file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+  const hasImageProofs = proofFiles.some(
+    (file) => file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file),
   );
 
   // Get the first image proof for background (if available)
-  const firstImageProof = proofFiles.find(file => 
-    file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+  const firstImageProof = proofFiles.find(
+    (file) => file && /\.(jpg|jpeg|png|gif|webp)$/i.test(file),
   );
 
   // Get the correct URL for a proof file
@@ -109,7 +118,11 @@ const TaskCard: FC<TaskCardProps> = ({
     if (!fileUrl) return null;
 
     // If it's already a full URL or data URL, use it directly
-    if (fileUrl.startsWith('http') || fileUrl.startsWith('data:') || fileUrl.startsWith('/')) {
+    if (
+      fileUrl.startsWith("http") ||
+      fileUrl.startsWith("data:") ||
+      fileUrl.startsWith("/")
+    ) {
       return fileUrl;
     }
 
@@ -117,12 +130,16 @@ const TaskCard: FC<TaskCardProps> = ({
     return `/${fileUrl}`;
   };
 
-  const backgroundProofUrl = firstImageProof ? getProofUrl(firstImageProof) : null;
+  const backgroundProofUrl = firstImageProof
+    ? getProofUrl(firstImageProof)
+    : null;
 
   // Task status toggle mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      return apiRequest("PATCH", `/api/tasks/${task.id}`, { status: newStatus });
+      return apiRequest("PATCH", `/api/tasks/${task.id}`, {
+        status: newStatus,
+      });
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -133,7 +150,7 @@ const TaskCard: FC<TaskCardProps> = ({
       if (onTaskUpdate) onTaskUpdate();
 
       // Show special toast when completing a task (earning points)
-      if (variables === 'completed') {
+      if (variables === "completed") {
         // Base points + category bonus
         const basePoints = 10;
         const categoryBonus = task.category ? 5 : 0;
@@ -157,7 +174,7 @@ const TaskCard: FC<TaskCardProps> = ({
         description: error.message,
         variant: "destructive",
       });
-    }
+    },
   });
 
   // Delete task mutation
@@ -180,16 +197,16 @@ const TaskCard: FC<TaskCardProps> = ({
         description: error.message,
         variant: "destructive",
       });
-    }
+    },
   });
 
   const handleStatusToggle = () => {
     // Open completion modal instead of directly toggling status
-    if (task.status !== 'completed') {
+    if (task.status !== "completed") {
       setCompletionDialogOpen(true);
     } else {
       // If already completed, allow marking as pending
-      toggleStatusMutation.mutate('pending');
+      toggleStatusMutation.mutate("pending");
     }
   };
 
@@ -200,11 +217,11 @@ const TaskCard: FC<TaskCardProps> = ({
   }) => {
     try {
       // Update task with proof and mark as completed
-      await apiRequest("PATCH", `/api/tasks/${task.id}`, { 
-        status: 'completed',
+      await apiRequest("PATCH", `/api/tasks/${task.id}`, {
+        status: "completed",
         proofFiles: proofData.proofUrls, // Store as array for multiple files
         proofText: proofData.proofText,
-        proofLink: proofData.proofLink
+        proofLink: proofData.proofLink,
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -246,14 +263,14 @@ const TaskCard: FC<TaskCardProps> = ({
 
     try {
       // Parse the time string (assuming format like "13:00")
-      const [hours, minutes] = task.dueTime.split(':').map(Number);
+      const [hours, minutes] = task.dueTime.split(":").map(Number);
 
       if (isNaN(hours) || isNaN(minutes)) return task.dueTime;
 
       const date = new Date();
       date.setHours(hours, minutes);
 
-      return format(date, 'h:mm a');
+      return format(date, "h:mm a");
     } catch (error) {
       return task.dueTime;
     }
@@ -265,14 +282,16 @@ const TaskCard: FC<TaskCardProps> = ({
   };
 
   const handlePrevProof = () => {
-    setCurrentProofIndex((prev) => (prev - 1 + proofFiles.length) % proofFiles.length);
+    setCurrentProofIndex(
+      (prev) => (prev - 1 + proofFiles.length) % proofFiles.length,
+    );
   };
 
   // Function to download proof file
   const downloadProofFile = (fileUrl: string, fileName: string) => {
-    const link = document.createElement('a');
-    link.href = getProofUrl(fileUrl) || '';
-    link.download = fileName || 'proof';
+    const link = document.createElement("a");
+    link.href = getProofUrl(fileUrl) || "";
+    link.download = fileName || "proof";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -280,33 +299,38 @@ const TaskCard: FC<TaskCardProps> = ({
 
   return (
     <>
-      <div 
+      <div
         className={cn(
           "task-card group border-l-4 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all card-shadow relative overflow-hidden",
-          task.status === 'completed' 
-            ? "border-l-emerald-400" 
-            : task.status === 'in-progress'
+          task.status === "completed"
+            ? "border-l-emerald-400"
+            : task.status === "in-progress"
               ? "border-l-indigo-400"
-              : "border-l-amber-400"
+              : "border-l-amber-400",
         )}
         data-task-id={task.id}
-        style={backgroundProofUrl && task.status === 'completed' ? {
-          backgroundImage: `url(${backgroundProofUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        } : {
-          background: task.status === 'completed' 
-            ? "linear-gradient(to right, rgba(209, 250, 229, 0.5), white)" 
-            : task.status === 'in-progress'
-              ? "white"
-              : "white"
-        }}
+        style={
+          backgroundProofUrl && task.status === "completed"
+            ? {
+                backgroundImage: `url(${backgroundProofUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }
+            : {
+                background:
+                  task.status === "completed"
+                    ? "linear-gradient(to right, rgba(209, 250, 229, 0.5), white)"
+                    : task.status === "in-progress"
+                      ? "white"
+                      : "white",
+              }
+        }
       >
         {/* Background overlay for better readability - stronger overlay for image backgrounds */}
-        {backgroundProofUrl && task.status === 'completed' ? (
+        {backgroundProofUrl && task.status === "completed" ? (
           <div className="absolute inset-0 bg-black bg-opacity-60 z-0" />
-        ) : task.status === 'completed' ? (
+        ) : task.status === "completed" ? (
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-50/80 to-white/80 z-0" />
         ) : null}
 
@@ -322,14 +346,14 @@ const TaskCard: FC<TaskCardProps> = ({
                 <div className="flex items-center">
                   <div className="mr-3">
                     {/* Enhanced completion button */}
-                    {task.status !== 'completed' ? (
+                    {task.status !== "completed" ? (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setCompletionDialogOpen(true)}
                         className={cn(
                           "h-8 w-8 p-0 rounded-full transition-all duration-300 hover:scale-110",
-                          "bg-white border-2 border-amber-400 hover:bg-amber-50"
+                          "bg-white border-2 border-amber-400 hover:bg-amber-50",
                         )}
                       >
                         <CheckSquare className="h-4 w-4 text-amber-600" />
@@ -341,61 +365,76 @@ const TaskCard: FC<TaskCardProps> = ({
                     )}
                   </div>
                   <div>
-                    <h4 
+                    <h4
                       className={cn(
                         "text-sm sm:text-base font-medium",
-                        task.status === 'completed' && backgroundProofUrl
-                          ? "text-white font-semibold drop-shadow-md" 
-                          : task.status === 'completed'
+                        task.status === "completed" && backgroundProofUrl
+                          ? "text-white font-semibold drop-shadow-md"
+                          : task.status === "completed"
                             ? "line-through text-gray-800 font-semibold"
                             : "text-gray-900 font-semibold",
-                        task.isCoachTask && "cursor-pointer hover:text-blue-600 transition-colors"
+                        task.isCoachTask &&
+                          "cursor-pointer hover:text-blue-600 transition-colors",
                       )}
-                      onClick={task.isCoachTask ? () => setEditDialogOpen(true) : undefined}
+                      onClick={
+                        task.isCoachTask
+                          ? () => setEditDialogOpen(true)
+                          : undefined
+                      }
                     >
                       {task.title}
                     </h4>
                     <div className="mt-1 flex items-center flex-wrap gap-2">
                       {task.subject && (
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={cn(
                             "shadow-sm border-transparent font-medium",
-                            task.status === 'completed' && backgroundProofUrl
-                              ? "bg-white/90 text-gray-800" 
-                              : task.subject === 'Mathematics' && "bg-blue-100 text-blue-800",
-                            task.subject === 'Science' && "bg-purple-100 text-purple-800",
-                            task.subject === 'English' && "bg-green-100 text-green-800",
-                            task.subject === 'History' && "bg-amber-100 text-amber-800",
-                            task.subject === 'Physical Activity' && "bg-pink-100 text-pink-800",
-                            task.subject === 'Life Skills' && "bg-orange-100 text-orange-800",
-                            task.subject === 'Interest / Passion' && "bg-teal-100 text-teal-800"
+                            task.status === "completed" && backgroundProofUrl
+                              ? "bg-white/90 text-gray-800"
+                              : task.subject === "Mathematics" &&
+                                  "bg-blue-100 text-blue-800",
+                            task.subject === "Science" &&
+                              "bg-purple-100 text-purple-800",
+                            task.subject === "English" &&
+                              "bg-green-100 text-green-800",
+                            task.subject === "History" &&
+                              "bg-amber-100 text-amber-800",
+                            task.subject === "Physical Activity" &&
+                              "bg-pink-100 text-pink-800",
+                            task.subject === "Life Skills" &&
+                              "bg-orange-100 text-orange-800",
+                            task.subject === "Interest / Passion" &&
+                              "bg-teal-100 text-teal-800",
                           )}
                         >
                           {task.subject}
                         </Badge>
                       )}
                       {task.isCoachTask && (
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={cn(
-                            task.status === 'completed' && backgroundProofUrl
-                              ? "bg-white/90 text-blue-800" 
-                              : "bg-blue-50 text-blue-700 border-blue-200 font-medium"
+                            task.status === "completed" && backgroundProofUrl
+                              ? "bg-white/90 text-blue-800"
+                              : "bg-blue-50 text-blue-700 border-blue-200 font-medium",
                           )}
                         >
                           Coach Assignment
                         </Badge>
                       )}
-                      <Badge 
+                      <Badge
                         variant={currentStatus.variant}
                         className={cn(
                           "flex items-center shadow-sm",
-                          task.status === 'completed' && backgroundProofUrl
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
-                            : task.status === 'completed' && "bg-emerald-500 hover:bg-emerald-600",  
-                          task.status === 'in-progress' && "bg-indigo-500 hover:bg-indigo-600",
-                          task.status === 'pending' && "bg-amber-500 hover:bg-amber-600" 
+                          task.status === "completed" && backgroundProofUrl
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : task.status === "completed" &&
+                                "bg-emerald-500 hover:bg-emerald-600",
+                          task.status === "in-progress" &&
+                            "bg-indigo-500 hover:bg-indigo-600",
+                          task.status === "pending" &&
+                            "bg-amber-500 hover:bg-amber-600",
                         )}
                       >
                         {currentStatus.icon}
@@ -406,74 +445,80 @@ const TaskCard: FC<TaskCardProps> = ({
                 </div>
 
                 {task.description && (
-                  <div className={cn(
-                    "mt-2 pl-8 text-sm",
-                    task.status === 'completed' && backgroundProofUrl
-                      ? "text-white drop-shadow-md" 
-                      : task.status === 'completed' 
-                        ? "line-through text-gray-600" 
-                        : "text-gray-600"
-                  )}>
+                  <div
+                    className={cn(
+                      "mt-2 pl-8 text-sm",
+                      task.status === "completed" && backgroundProofUrl
+                        ? "text-white drop-shadow-md"
+                        : task.status === "completed"
+                          ? "line-through text-gray-600"
+                          : "text-gray-600",
+                    )}
+                  >
                     {task.description}
                   </div>
                 )}
 
                 {/* Show proof if task is completed and has proof */}
-                {(task.status === 'completed' && (proofFiles.length > 0 || task.proofText || task.proofLink)) && (
-                  <div className="mt-2 pl-8">
-                    <div className={cn(
-                      "flex items-center text-sm rounded-lg p-2 border",
-                      backgroundProofUrl
-                        ? "bg-white/90 text-emerald-800 border-emerald-300"
-                        : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                    )}>
-                      <Paperclip className="h-4 w-4 mr-2" />
-
-                      {proofFiles.length > 0 && (
-                        <span>{proofFiles.length} proof file{proofFiles.length !== 1 ? 's' : ''} attached</span>
-                      )}
-                      {task.proofText && (
-                        <span>Text proof attached</span>
-                      )}
-                      {task.proofLink && (
-                        <span>Link proof attached</span>
-                      )}
-
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="ml-2 h-6 px-2 text-xs"
-                        onClick={() => setProofPreviewOpen(true)}
+                {task.status === "completed" &&
+                  (proofFiles.length > 0 ||
+                    task.proofText ||
+                    task.proofLink) && (
+                    <div className="mt-2 pl-8">
+                      <div
+                        className={cn(
+                          "flex items-center text-sm rounded-lg p-2 border",
+                          backgroundProofUrl
+                            ? "bg-white/90 text-emerald-800 border-emerald-300"
+                            : "text-emerald-700 bg-emerald-50 border-emerald-200",
+                        )}
                       >
-                        View All
-                      </Button>
-                    </div>
+                        <Paperclip className="h-4 w-4 mr-2" />
 
-                    {/* Image preview for first image */}
-                    {backgroundProofUrl && (
-                      <div className="mt-2">
-                        <img 
-                          src={backgroundProofUrl} 
-                          alt="Proof preview" 
-                          className="h-20 w-auto object-contain rounded border border-gray-200 cursor-pointer"
+                        {proofFiles.length > 0 && (
+                          <span>
+                            {proofFiles.length} proof file
+                            {proofFiles.length !== 1 ? "s" : ""} attached
+                          </span>
+                        )}
+                        {task.proofText && <span>Text proof attached</span>}
+                        {task.proofLink && <span>Link proof attached</span>}
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 h-6 px-2 text-xs"
                           onClick={() => setProofPreviewOpen(true)}
-                        />
+                        >
+                          View All
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Image preview for first image */}
+                      {backgroundProofUrl && (
+                        <div className="mt-2">
+                          <img
+                            src={backgroundProofUrl}
+                            alt="Proof preview"
+                            className="h-20 w-auto object-contain rounded border border-gray-200 cursor-pointer"
+                            onClick={() => setProofPreviewOpen(true)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                 {task.resourceLink && (
                   <div className="mt-2 pl-8">
-                    <a 
+                    <a
                       href={task.resourceLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={cn(
                         "inline-flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm font-medium hover:shadow-sm",
-                        task.status === 'completed' && backgroundProofUrl
+                        task.status === "completed" && backgroundProofUrl
                           ? "bg-white/90 text-blue-700 hover:bg-white border-blue-200 hover:text-blue-800"
-                          : "bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border-blue-200"
+                          : "bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border-blue-200",
                       )}
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -486,13 +531,13 @@ const TaskCard: FC<TaskCardProps> = ({
 
             <div className="flex flex-col items-end ml-4">
               <div className="flex space-x-1">
-                {task.status === 'completed' && (
-                  <button 
+                {task.status === "completed" && (
+                  <button
                     className={cn(
                       "transition-all hover:scale-110 p-1 rounded-full",
                       backgroundProofUrl
                         ? "text-white/80 hover:text-white hover:bg-white/20"
-                        : "text-gray-400 hover:text-blue-600 hover:bg-blue-100"
+                        : "text-gray-400 hover:text-blue-600 hover:bg-blue-100",
                     )}
                     onClick={() => setShareDialogOpen(true)}
                     title="Share completed task"
@@ -500,24 +545,24 @@ const TaskCard: FC<TaskCardProps> = ({
                     <Share2 className="h-4 w-4" />
                   </button>
                 )}
-                <button 
+                <button
                   className={cn(
                     "transition-all hover:scale-110 p-1 rounded-full",
                     backgroundProofUrl
                       ? "text-white/80 hover:text-white hover:bg-white/20"
-                      : "text-gray-400 hover:text-primary hover:bg-primary/10"
+                      : "text-gray-400 hover:text-primary hover:bg-primary/10",
                   )}
                   onClick={handleEditClick}
                   title="Edit task"
                 >
                   <Edit className="h-4 w-4" />
                 </button>
-                <button 
+                <button
                   className={cn(
                     "transition-all hover:scale-110 p-1 rounded-full",
                     backgroundProofUrl
                       ? "text-white/80 hover:text-white hover:bg-white/20"
-                      : "text-gray-400 hover:text-red-600 hover:bg-red-100"
+                      : "text-gray-400 hover:text-red-600 hover:bg-red-100",
                   )}
                   onClick={() => setDeleteDialogOpen(true)}
                   title="Delete task"
@@ -527,14 +572,16 @@ const TaskCard: FC<TaskCardProps> = ({
               </div>
               {(task.dueDate || task.dueTime) && (
                 <div className="mt-auto pt-3">
-                  <div className={cn(
-                    "text-xs px-2 py-1 rounded-full flex items-center shadow-sm",
-                    backgroundProofUrl
-                      ? "bg-white/90 text-gray-700"
-                      : "bg-gray-100 text-gray-700"
-                  )}>
+                  <div
+                    className={cn(
+                      "text-xs px-2 py-1 rounded-full flex items-center shadow-sm",
+                      backgroundProofUrl
+                        ? "bg-white/90 text-gray-700"
+                        : "bg-gray-100 text-gray-700",
+                    )}
+                  >
                     <Clock className="h-3 w-3 mr-1" />
-                    {task.dueTime ? `Due at ${formatDueTime()}` : 'Due today'}
+                    {task.dueTime ? `Due at ${formatDueTime()}` : "Due today"}
                   </div>
                 </div>
               )}
@@ -547,26 +594,30 @@ const TaskCard: FC<TaskCardProps> = ({
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="bg-white border-0 rounded-xl shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-primary">Delete Task</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary">
+              Delete Task
+            </DialogTitle>
             <DialogDescription className="text-gray-600">
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
           <div className="bg-red-50 p-4 rounded-lg my-2 border border-red-100">
-            <p className="text-sm text-red-800">Are you sure you want to delete this task?</p>
+            <p className="text-sm text-red-800">
+              Are you sure you want to delete this task?
+            </p>
           </div>
 
           <DialogFooter className="gap-2 mt-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               className="btn-bounce border-gray-300 hover:bg-gray-100"
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDeleteTask}
               disabled={deleteTaskMutation.isPending}
               className="btn-bounce"
@@ -581,18 +632,20 @@ const TaskCard: FC<TaskCardProps> = ({
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="bg-white border-0 rounded-xl shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold gradient-heading">Edit Task</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary">
+              Edit Task
+            </DialogTitle>
             <DialogDescription className="text-gray-600">
               Make changes to your task here.
             </DialogDescription>
           </DialogHeader>
-          <TaskForm 
+          <TaskForm
             task={{
               ...task,
               status: task.status as "pending" | "in-progress" | "completed",
             }}
-            onSuccess={handleEditSuccess} 
-            onCancel={handleEditClose} 
+            onSuccess={handleEditSuccess}
+            onCancel={handleEditClose}
           />
         </DialogContent>
       </Dialog>
@@ -616,9 +669,10 @@ const TaskCard: FC<TaskCardProps> = ({
       <Dialog open={proofPreviewOpen} onOpenChange={setProofPreviewOpen}>
         <DialogContent className="bg-white border-0 rounded-xl shadow-lg max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold gradient-heading">
+            <DialogTitle className="text-xl font-bold text-primary">
               Proof Preview
-              {proofFiles.length > 0 && ` (${currentProofIndex + 1} of ${proofFiles.length})`}
+              {proofFiles.length > 0 &&
+                ` (${currentProofIndex + 1} of ${proofFiles.length})`}
             </DialogTitle>
           </DialogHeader>
 
@@ -635,9 +689,9 @@ const TaskCard: FC<TaskCardProps> = ({
             {task.proofLink && (
               <div className="mb-4 p-4 bg-gray-100 rounded-lg">
                 <h4 className="font-semibold mb-2">Link Proof:</h4>
-                <a 
-                  href={task.proofLink} 
-                  target="_blank" 
+                <a
+                  href={task.proofLink}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline break-all"
                 >
@@ -652,16 +706,16 @@ const TaskCard: FC<TaskCardProps> = ({
                 <div className="flex justify-center relative">
                   {proofFiles.length > 1 && (
                     <>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="icon"
                         className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10"
                         onClick={handlePrevProof}
                       >
                         ←
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="icon"
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10"
                         onClick={handleNextProof}
@@ -671,33 +725,44 @@ const TaskCard: FC<TaskCardProps> = ({
                     </>
                   )}
 
-                  {/\.(jpg|jpeg|png|gif|webp)$/i.test(proofFiles[currentProofIndex]) ? (
-                    <img 
-                      src={getProofUrl(proofFiles[currentProofIndex]) || ''} 
-                      alt={`Proof ${currentProofIndex + 1}`} 
+                  {/\.(jpg|jpeg|png|gif|webp)$/i.test(
+                    proofFiles[currentProofIndex],
+                  ) ? (
+                    <img
+                      src={getProofUrl(proofFiles[currentProofIndex]) || ""}
+                      alt={`Proof ${currentProofIndex + 1}`}
                       className="max-h-64 w-auto object-contain rounded"
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center p-8 bg-gray-100 rounded-lg w-full">
                       <FileText className="h-24 w-24 text-gray-400 mb-4" />
-                      <p className="text-gray-600 mb-2">Document preview not available</p>
+                      <p className="text-gray-600 mb-2">
+                        Document preview not available
+                      </p>
                       <p className="text-sm text-gray-500 mb-4 break-all max-w-full">
                         {proofFiles[currentProofIndex]}
                       </p>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="default" 
-                          onClick={() => window.open(getProofUrl(proofFiles[currentProofIndex]), '_blank')}
+                        <Button
+                          variant="default"
+                          onClick={() =>
+                            window.open(
+                              getProofUrl(proofFiles[currentProofIndex]),
+                              "_blank",
+                            )
+                          }
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           View
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => downloadProofFile(
-                            proofFiles[currentProofIndex], 
-                            `proof-${task.id}-${currentProofIndex + 1}`
-                          )}
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            downloadProofFile(
+                              proofFiles[currentProofIndex],
+                              `proof-${task.id}-${currentProofIndex + 1}`,
+                            )
+                          }
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download
@@ -713,7 +778,9 @@ const TaskCard: FC<TaskCardProps> = ({
                       <button
                         key={index}
                         className={`h-2 w-2 rounded-full mx-1 ${
-                          index === currentProofIndex ? 'bg-primary' : 'bg-gray-300'
+                          index === currentProofIndex
+                            ? "bg-primary"
+                            : "bg-gray-300"
                         }`}
                         onClick={() => setCurrentProofIndex(index)}
                         aria-label={`Go to proof ${index + 1}`}
@@ -726,19 +793,21 @@ const TaskCard: FC<TaskCardProps> = ({
           </div>
 
           <DialogFooter className="gap-2 mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setProofPreviewOpen(false)}
               className="btn-bounce border-gray-300 hover:bg-gray-100"
             >
               Close
             </Button>
             {proofFiles.length > 0 && (
-              <Button 
-                onClick={() => downloadProofFile(
-                  proofFiles[currentProofIndex], 
-                  `proof-${task.id}-${currentProofIndex + 1}`
-                )}
+              <Button
+                onClick={() =>
+                  downloadProofFile(
+                    proofFiles[currentProofIndex],
+                    `proof-${task.id}-${currentProofIndex + 1}`,
+                  )
+                }
                 className="btn-bounce bg-primary hover:bg-primary/90"
               >
                 <Download className="h-4 w-4 mr-2" />

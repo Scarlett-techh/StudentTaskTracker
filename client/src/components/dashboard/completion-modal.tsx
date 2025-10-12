@@ -2,15 +2,35 @@ import { useState, useRef, FC, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Paperclip, X, Image, FileText, Upload, CheckCircle, Link, Text } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Paperclip,
+  X,
+  Image,
+  FileText,
+  Upload,
+  CheckCircle,
+  Link,
+  Text,
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CompletionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: any;
-  onComplete: (proofUrls: string[], previews: string[]) => void;
+  onComplete: (proofData: {
+    proofUrls?: string[];
+    proofText?: string;
+    proofLink?: string;
+  }) => void;
 }
 
 interface FileWithPreview {
@@ -20,23 +40,25 @@ interface FileWithPreview {
 
 // Second Navigation Tabs
 const TABS = [
-  { id: 'files', label: 'Files', icon: Paperclip },
-  { id: 'text', label: 'Text', icon: Text },
-  { id: 'links', label: 'Links', icon: Link }
+  { id: "files", label: "Files", icon: Paperclip },
+  { id: "text", label: "Text", icon: Text },
+  { id: "links", label: "Links", icon: Link },
 ];
 
-const CompletionModal: FC<CompletionModalProps> = ({ 
-  open, 
-  onOpenChange, 
+const CompletionModal: FC<CompletionModalProps> = ({
+  open,
+  onOpenChange,
   task,
-  onComplete 
+  onComplete,
 }) => {
   const { toast } = useToast();
-  const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>([]);
+  const [filesWithPreviews, setFilesWithPreviews] = useState<FileWithPreview[]>(
+    [],
+  );
   const [isUploading, setIsUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState('files');
-  const [textProof, setTextProof] = useState('');
-  const [links, setLinks] = useState<string[]>(['']);
+  const [activeTab, setActiveTab] = useState("files");
+  const [textProof, setTextProof] = useState("");
+  const [links, setLinks] = useState<string[]>([""]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const proofSectionRef = useRef<HTMLDivElement>(null);
 
@@ -44,12 +66,25 @@ const CompletionModal: FC<CompletionModalProps> = ({
   useEffect(() => {
     return () => {
       filesWithPreviews.forEach(({ previewUrl }) => {
-        if (previewUrl.startsWith('blob:')) {
+        if (previewUrl.startsWith("blob:")) {
           URL.revokeObjectURL(previewUrl);
         }
       });
     };
   }, []);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setFilesWithPreviews([]);
+      setTextProof("");
+      setLinks([""]);
+      setActiveTab("files");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [open]);
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,28 +104,28 @@ const CompletionModal: FC<CompletionModalProps> = ({
       }
 
       // Create preview for images
-      let previewUrl = '';
-      if (file.type.startsWith('image/')) {
+      let previewUrl = "";
+      if (file.type.startsWith("image/")) {
         previewUrl = URL.createObjectURL(file);
       }
 
       newFiles.push({ file, previewUrl });
     });
 
-    setFilesWithPreviews(prev => [...prev, ...newFiles]);
+    setFilesWithPreviews((prev) => [...prev, ...newFiles]);
   };
 
   // Handle adding new link field
   const addLinkField = () => {
-    setLinks(prev => [...prev, '']);
+    setLinks((prev) => [...prev, ""]);
   };
 
   // Handle removing link field
   const removeLinkField = (index: number) => {
     if (links.length === 1) {
-      setLinks(['']);
+      setLinks([""]);
     } else {
-      setLinks(prev => prev.filter((_, i) => i !== index));
+      setLinks((prev) => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -106,13 +141,18 @@ const CompletionModal: FC<CompletionModalProps> = ({
     setIsUploading(true);
 
     try {
-      const proofUrls: string[] = [];
-      const previewUrls: string[] = [];
+      const proofData: {
+        proofUrls?: string[];
+        proofText?: string;
+        proofLink?: string;
+      } = {};
 
       // Handle different proof types based on active tab
-      if (activeTab === 'files' && filesWithPreviews.length > 0) {
+      if (activeTab === "files" && filesWithPreviews.length > 0) {
         // Upload files if selected
-        for (const { file, previewUrl } of filesWithPreviews) {
+        const proofUrls: string[] = [];
+
+        for (const { file } of filesWithPreviews) {
           const formData = new FormData();
           formData.append("file", file);
 
@@ -120,40 +160,48 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
           if (response && response.url) {
             proofUrls.push(response.url);
-            previewUrls.push(previewUrl);
           } else {
-            throw new Error(`Invalid response from server for file ${file.name} - no URL returned`);
+            throw new Error(
+              `Invalid response from server for file ${file.name} - no URL returned`,
+            );
           }
         }
-      } else if (activeTab === 'text' && textProof.trim()) {
-        // For text proof, we'll store it as a text file or in the database
-        // This is a placeholder implementation
-        proofUrls.push(`text-proof:${btoa(textProof)}`);
-        previewUrls.push('');
-      } else if (activeTab === 'links') {
-        // For links, filter out empty ones
-        const validLinks = links.filter(link => link.trim());
+
+        proofData.proofUrls = proofUrls;
+      } else if (activeTab === "text" && textProof.trim()) {
+        // Store text proof directly
+        proofData.proofText = textProof.trim();
+      } else if (activeTab === "links") {
+        // For links, filter out empty ones and use the first valid link
+        const validLinks = links.filter((link) => link.trim());
         if (validLinks.length > 0) {
-          proofUrls.push(...validLinks);
-          previewUrls.push(...Array(validLinks.length).fill(''));
+          // Store the first link as proofLink (or you could store multiple)
+          proofData.proofLink = validLinks[0];
+          // If you want to support multiple links, you could store them as an array in proofUrls
+          if (validLinks.length > 1) {
+            proofData.proofUrls = validLinks;
+          }
         }
       }
 
       // Complete task with or without proof
-      onComplete(proofUrls, previewUrls);
+      onComplete(proofData);
       onOpenChange(false);
 
       toast({
         title: "Task completed!",
-        description: proofUrls.length > 0 
-          ? `Your task has been marked as completed with ${proofUrls.length} proof item(s).` 
-          : "Your task has been marked as completed.",
+        description:
+          proofData.proofUrls || proofData.proofText || proofData.proofLink
+            ? `Your task has been marked as completed with proof.`
+            : "Your task has been marked as completed.",
       });
     } catch (error: any) {
       console.error("Proof upload error:", error);
       toast({
         title: "Error uploading proof",
-        description: error.message || "Please try again or contact support if the issue persists.",
+        description:
+          error.message ||
+          "Please try again or contact support if the issue persists.",
         variant: "destructive",
       });
     } finally {
@@ -168,14 +216,14 @@ const CompletionModal: FC<CompletionModalProps> = ({
   const clearSelection = () => {
     // Revoke all object URLs
     filesWithPreviews.forEach(({ previewUrl }) => {
-      if (previewUrl.startsWith('blob:')) {
+      if (previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
     });
 
     setFilesWithPreviews([]);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -183,11 +231,26 @@ const CompletionModal: FC<CompletionModalProps> = ({
     const fileToRemove = filesWithPreviews[index];
 
     // Revoke URL to prevent memory leaks for image previews
-    if (fileToRemove.previewUrl && fileToRemove.previewUrl.startsWith('blob:')) {
+    if (
+      fileToRemove.previewUrl &&
+      fileToRemove.previewUrl.startsWith("blob:")
+    ) {
       URL.revokeObjectURL(fileToRemove.previewUrl);
     }
 
-    setFilesWithPreviews(prev => prev.filter((_, i) => i !== index));
+    setFilesWithPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Check if we can complete the task (has proof if any tab has content)
+  const canComplete = () => {
+    if (activeTab === "files") {
+      return filesWithPreviews.length > 0;
+    } else if (activeTab === "text") {
+      return textProof.trim().length > 0;
+    } else if (activeTab === "links") {
+      return links.some((link) => link.trim().length > 0);
+    }
+    return true; // Allow completion without proof
   };
 
   return (
@@ -199,7 +262,8 @@ const CompletionModal: FC<CompletionModalProps> = ({
             Complete Task
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            Mark this task as completed. You can upload proof of your work (optional).
+            Mark this task as completed. You can upload proof of your work
+            (optional).
           </DialogDescription>
         </DialogHeader>
 
@@ -212,7 +276,9 @@ const CompletionModal: FC<CompletionModalProps> = ({
           </div>
 
           <div>
-            <p className="text-sm font-medium mb-2">Upload proof of completion (optional):</p>
+            <p className="text-sm font-medium mb-2">
+              Upload proof of completion (optional):
+            </p>
 
             {/* Second Navigation - Horizontal Scroll */}
             <div className="overflow-x-auto whitespace-nowrap scrollbar-hide mb-4">
@@ -225,8 +291,8 @@ const CompletionModal: FC<CompletionModalProps> = ({
                       onClick={() => setActiveTab(tab.id)}
                       className={`px-3 py-2 text-sm font-medium rounded-md flex items-center gap-1 transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-white text-emerald-600 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
+                          ? "bg-white text-emerald-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
                       }`}
                     >
                       <IconComponent className="h-4 w-4" />
@@ -240,20 +306,24 @@ const CompletionModal: FC<CompletionModalProps> = ({
         </div>
 
         {/* Scrollable Proof Section */}
-        <div 
+        <div
           ref={proofSectionRef}
           className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
         >
           {/* Files Tab Content */}
-          {activeTab === 'files' && (
+          {activeTab === "files" && (
             <>
-              <div 
+              <div
                 className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors mb-4"
                 onClick={triggerFileInput}
               >
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG, PDF up to 10MB (multiple files allowed)</p>
+                <p className="text-sm text-gray-600">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  PNG, JPG, PDF up to 10MB (multiple files allowed)
+                </p>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -282,8 +352,11 @@ const CompletionModal: FC<CompletionModalProps> = ({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {filesWithPreviews.map(({ file, previewUrl }, index) => (
-                      <div key={index} className="relative bg-gray-50 p-2 rounded border">
-                        <button 
+                      <div
+                        key={index}
+                        className="relative bg-gray-50 p-2 rounded border"
+                      >
+                        <button
                           onClick={() => removeFile(index)}
                           className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100 z-10"
                         >
@@ -292,10 +365,10 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
                         {previewUrl ? (
                           <div className="flex flex-col items-center">
-                            <img 
-                              src={previewUrl} 
-                              alt={`Preview ${index + 1}`} 
-                              className="h-16 w-auto object-contain mb-1 rounded" 
+                            <img
+                              src={previewUrl}
+                              alt={`Preview ${index + 1}`}
+                              className="h-16 w-auto object-contain mb-1 rounded"
                             />
                             <span className="text-xs text-gray-500 truncate w-full text-center">
                               {file.name}
@@ -318,7 +391,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
           )}
 
           {/* Text Tab Content */}
-          {activeTab === 'text' && (
+          {activeTab === "text" && (
             <div className="border border-gray-300 rounded-lg p-4 mb-4">
               <textarea
                 value={textProof}
@@ -333,7 +406,7 @@ const CompletionModal: FC<CompletionModalProps> = ({
           )}
 
           {/* Links Tab Content */}
-          {activeTab === 'links' && (
+          {activeTab === "links" && (
             <div className="space-y-3 mb-4">
               {links.map((link, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -368,23 +441,19 @@ const CompletionModal: FC<CompletionModalProps> = ({
         </div>
 
         <DialogFooter className="gap-2 mt-2 flex-shrink-0">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="btn-bounce border-gray-300 hover:bg-gray-100"
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleCompleteTask}
             disabled={isUploading}
             className="btn-bounce bg-emerald-600 hover:bg-emerald-700"
           >
-            {isUploading ? (
-              <>Uploading...</>
-            ) : (
-              <>Mark as Completed</>
-            )}
+            {isUploading ? <>Uploading...</> : <>Mark as Completed</>}
           </Button>
         </DialogFooter>
       </DialogContent>
