@@ -136,6 +136,16 @@ const CompletionModal: FC<CompletionModalProps> = ({
     setLinks(newLinks);
   };
 
+  // Convert file to base64 for storage
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   // Upload proof and complete task
   const handleCompleteTask = async () => {
     setIsUploading(true);
@@ -149,21 +159,16 @@ const CompletionModal: FC<CompletionModalProps> = ({
 
       // Handle different proof types based on active tab
       if (activeTab === "files" && filesWithPreviews.length > 0) {
-        // Upload files if selected
+        // Convert files to base64 data URLs for direct storage
         const proofUrls: string[] = [];
 
         for (const { file } of filesWithPreviews) {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          const response = await apiRequest("POST", "/api/upload", formData);
-
-          if (response && response.url) {
-            proofUrls.push(response.url);
-          } else {
-            throw new Error(
-              `Invalid response from server for file ${file.name} - no URL returned`,
-            );
+          try {
+            const base64Data = await fileToBase64(file);
+            proofUrls.push(base64Data);
+          } catch (error) {
+            console.error("Error converting file to base64:", error);
+            throw new Error(`Failed to process file ${file.name}`);
           }
         }
 
@@ -322,14 +327,14 @@ const CompletionModal: FC<CompletionModalProps> = ({
                   Click to upload or drag and drop
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  PNG, JPG, PDF up to 10MB (multiple files allowed)
+                  PNG, JPG, PDF, DOC, TXT up to 10MB (multiple files allowed)
                 </p>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept="image/*,application/pdf"
+                  accept="image/*,application/pdf,.doc,.docx,.txt,.md,.json,.xml,.csv"
                   multiple
                 />
               </div>
@@ -373,6 +378,9 @@ const CompletionModal: FC<CompletionModalProps> = ({
                             <span className="text-xs text-gray-500 truncate w-full text-center">
                               {file.name}
                             </span>
+                            <span className="text-xs text-gray-400">
+                              {file.type.split("/")[1]?.toUpperCase() || "FILE"}
+                            </span>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center">
@@ -380,10 +388,18 @@ const CompletionModal: FC<CompletionModalProps> = ({
                             <span className="text-xs text-gray-500 truncate w-full text-center">
                               {file.name}
                             </span>
+                            <span className="text-xs text-gray-400">
+                              {file.type.split("/")[1]?.toUpperCase() || "FILE"}
+                            </span>
                           </div>
                         )}
                       </div>
                     ))}
+                  </div>
+                  <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                    <strong>Note:</strong> Files will be stored as base64 data
+                    for immediate preview. Large files may take longer to
+                    process.
                   </div>
                 </div>
               )}
@@ -450,7 +466,12 @@ const CompletionModal: FC<CompletionModalProps> = ({
           </Button>
           <Button
             onClick={handleCompleteTask}
-            disabled={isUploading}
+            disabled={
+              isUploading ||
+              (activeTab === "files" && filesWithPreviews.length === 0) ||
+              (activeTab === "text" && !textProof.trim()) ||
+              (activeTab === "links" && !links.some((link) => link.trim()))
+            }
             className="btn-bounce bg-emerald-600 hover:bg-emerald-700"
           >
             {isUploading ? <>Uploading...</> : <>Mark as Completed</>}

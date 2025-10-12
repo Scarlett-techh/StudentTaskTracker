@@ -35,6 +35,7 @@ import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import CompletionModal from "./completion-modal";
 import PortfolioShareModal from "./portfolio-share-modal";
+import FilePreview from "./file-preview"; // Import the fixed FilePreview component
 
 interface TaskCardProps {
   task: {
@@ -665,131 +666,26 @@ const TaskCard: FC<TaskCardProps> = ({
         onComplete={handleCompleteWithProof}
       />
 
-      {/* Proof Preview Dialog - Updated to support multiple proof types */}
+      {/* Proof Preview Dialog - NOW USING THE FIXED FILEPREVIEW COMPONENT */}
       <Dialog open={proofPreviewOpen} onOpenChange={setProofPreviewOpen}>
         <DialogContent className="bg-white border-0 rounded-xl shadow-lg max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-primary">
               Proof Preview
-              {proofFiles.length > 0 &&
-                ` (${currentProofIndex + 1} of ${proofFiles.length})`}
             </DialogTitle>
           </DialogHeader>
 
           <div className="max-h-96 overflow-y-auto">
-            {/* Text Proof */}
-            {task.proofText && (
-              <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-                <h4 className="font-semibold mb-2">Text Proof:</h4>
-                <p className="whitespace-pre-wrap">{task.proofText}</p>
-              </div>
-            )}
-
-            {/* Link Proof */}
-            {task.proofLink && (
-              <div className="mb-4 p-4 bg-gray-100 rounded-lg">
-                <h4 className="font-semibold mb-2">Link Proof:</h4>
-                <a
-                  href={task.proofLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  {task.proofLink}
-                </a>
-              </div>
-            )}
-
-            {/* File Proofs */}
-            {proofFiles.length > 0 && (
-              <>
-                <div className="flex justify-center relative">
-                  {proofFiles.length > 1 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10"
-                        onClick={handlePrevProof}
-                      >
-                        ←
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10"
-                        onClick={handleNextProof}
-                      >
-                        →
-                      </Button>
-                    </>
-                  )}
-
-                  {/\.(jpg|jpeg|png|gif|webp)$/i.test(
-                    proofFiles[currentProofIndex],
-                  ) ? (
-                    <img
-                      src={getProofUrl(proofFiles[currentProofIndex]) || ""}
-                      alt={`Proof ${currentProofIndex + 1}`}
-                      className="max-h-64 w-auto object-contain rounded"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-8 bg-gray-100 rounded-lg w-full">
-                      <FileText className="h-24 w-24 text-gray-400 mb-4" />
-                      <p className="text-gray-600 mb-2">
-                        Document preview not available
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4 break-all max-w-full">
-                        {proofFiles[currentProofIndex]}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="default"
-                          onClick={() =>
-                            window.open(
-                              getProofUrl(proofFiles[currentProofIndex]),
-                              "_blank",
-                            )
-                          }
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            downloadProofFile(
-                              proofFiles[currentProofIndex],
-                              `proof-${task.id}-${currentProofIndex + 1}`,
-                            )
-                          }
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {proofFiles.length > 1 && (
-                  <div className="flex justify-center mt-4">
-                    {proofFiles.map((_, index) => (
-                      <button
-                        key={index}
-                        className={`h-2 w-2 rounded-full mx-1 ${
-                          index === currentProofIndex
-                            ? "bg-primary"
-                            : "bg-gray-300"
-                        }`}
-                        onClick={() => setCurrentProofIndex(index)}
-                        aria-label={`Go to proof ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+            <FilePreview
+              attachmentType="task-proof"
+              proofFiles={proofFiles}
+              proofText={task.proofText}
+              proofLink={task.proofLink}
+              currentIndex={currentProofIndex}
+              onNext={handleNextProof}
+              onPrev={handlePrevProof}
+              totalItems={proofFiles.length}
+            />
           </div>
 
           <DialogFooter className="gap-2 mt-4">
@@ -800,20 +696,6 @@ const TaskCard: FC<TaskCardProps> = ({
             >
               Close
             </Button>
-            {proofFiles.length > 0 && (
-              <Button
-                onClick={() =>
-                  downloadProofFile(
-                    proofFiles[currentProofIndex],
-                    `proof-${task.id}-${currentProofIndex + 1}`,
-                  )
-                }
-                className="btn-bounce bg-primary hover:bg-primary/90"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
