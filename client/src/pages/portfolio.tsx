@@ -90,8 +90,41 @@ function PreviewModal({
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
 
   // Handle multiple files if they exist
-  const files = item.files || [item];
+  // For task items, use proofFiles array if available, otherwise create array from single item
+  const files =
+    item.type === "task" && item.proofFiles
+      ? item.proofFiles.map((file: string, index: number) => ({
+          ...item,
+          proofUrl: file,
+          fileName: `proof-${index + 1}`,
+          fileType: getFileTypeFromUrl(file),
+        }))
+      : [item];
+
   const currentFile = files[currentFileIndex];
+
+  // Function to get file type from URL
+  function getFileTypeFromUrl(url: string): string {
+    if (!url) return "unknown";
+
+    if (url.startsWith("data:")) {
+      // Handle data URLs
+      const mimeType = url.split(":")[1]?.split(";")[0];
+      if (mimeType?.startsWith("image/")) return "image";
+      if (mimeType === "application/pdf") return "pdf";
+      return "file";
+    }
+
+    // Handle file extensions
+    const extension = url.split(".").pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || ""))
+      return "image";
+    if (extension === "pdf") return "pdf";
+    if (["mp4", "mov", "avi", "wmv"].includes(extension || "")) return "video";
+    if (["txt", "doc", "docx"].includes(extension || "")) return "document";
+
+    return "file";
+  }
 
   // Function to get proof URL for task items
   const getProofUrl = (fileUrl: string) => {
@@ -140,46 +173,57 @@ function PreviewModal({
         );
       }
 
-      // File proof
-      if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
-        const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
+      // File proof - use the current file from the files array
+      const proofUrl = getProofUrl(
+        currentFile.proofUrl || currentFile.proofFiles?.[currentFileIndex],
+      );
 
-        if (proofUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(proofUrl)) {
-          return (
-            <div className="flex justify-center">
-              <img
-                src={proofUrl}
-                alt={`Proof ${currentFileIndex + 1}`}
-                className="max-h-96 max-w-full object-contain rounded-md border"
-              />
+      if (proofUrl && currentFile.fileType === "image") {
+        return (
+          <div className="flex justify-center">
+            <img
+              src={proofUrl}
+              alt={`Proof ${currentFileIndex + 1}`}
+              className="max-h-96 max-w-full object-contain rounded-md border"
+              onError={(e) => {
+                console.error("Failed to load image:", proofUrl);
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+                // You might want to show a fallback here
+              }}
+            />
+          </div>
+        );
+      } else if (proofUrl && currentFile.fileType === "pdf") {
+        return (
+          <div className="h-96">
+            <iframe
+              src={proofUrl}
+              className="w-full h-full border rounded-md"
+              title={currentFile.title}
+            />
+            <div className="mt-2 text-sm text-gray-500">
+              PDF preview powered by browser's built-in PDF viewer
             </div>
-          );
-        } else if (proofUrl && /\.(pdf)$/i.test(proofUrl)) {
-          return (
-            <div className="h-96">
-              <iframe
-                src={proofUrl}
-                className="w-full h-full border rounded-md"
-                title={currentFile.title}
-              />
-              <div className="mt-2 text-sm text-gray-500">
-                PDF preview powered by browser's built-in PDF viewer
-              </div>
-            </div>
-          );
-        } else {
-          return (
-            <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
-              <File className="h-16 w-16 text-gray-400 mb-4" />
-              <p className="text-gray-500 mb-2">
-                No preview available for this file type
-              </p>
-              <p className="text-sm text-gray-400">
-                Click download to access the file
-              </p>
-            </div>
-          );
-        }
+          </div>
+        );
+      } else if (proofUrl) {
+        // For other file types, show download option
+        return (
+          <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-md">
+            <File className="h-16 w-16 text-gray-400 mb-4" />
+            <p className="text-gray-500 mb-2">
+              No preview available for this file type
+            </p>
+            <p className="text-sm text-gray-400 mb-4">
+              Click download to access the file
+            </p>
+            <Button onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download File
+            </Button>
+          </div>
+        );
       }
 
       // Default for task items with no proof
@@ -208,15 +252,13 @@ function PreviewModal({
     }
 
     if (currentFile.type === "file" || currentFile.type === "photo") {
-      // Determine file type for preview
-      if (
-        currentFile.fileType === "pdf" ||
-        currentFile.proofUrl?.endsWith(".pdf")
-      ) {
+      const fileUrl = currentFile.fileUrl || currentFile.proofUrl;
+
+      if (currentFile.fileType === "pdf" || fileUrl?.endsWith(".pdf")) {
         return (
           <div className="h-96">
             <iframe
-              src={currentFile.fileUrl || currentFile.proofUrl}
+              src={fileUrl}
               className="w-full h-full border rounded-md"
               title={currentFile.title}
             />
@@ -227,15 +269,19 @@ function PreviewModal({
         );
       } else if (
         currentFile.fileType === "image" ||
-        (currentFile.proofUrl &&
-          /\.(jpg|jpeg|png|gif|webp)$/i.test(currentFile.proofUrl))
+        /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl || "")
       ) {
         return (
           <div className="flex justify-center">
             <img
-              src={currentFile.fileUrl || currentFile.proofUrl}
+              src={fileUrl}
               alt={currentFile.title}
               className="max-h-96 max-w-full object-contain rounded-md border"
+              onError={(e) => {
+                console.error("Failed to load image:", fileUrl);
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+              }}
             />
           </div>
         );
@@ -266,7 +312,6 @@ function PreviewModal({
     if (currentFile.type === "link") {
       window.open(currentFile.link, "_blank");
     } else if (currentFile.type === "file" || currentFile.type === "photo") {
-      // Create a temporary anchor element to trigger download
       const url = currentFile.fileUrl || currentFile.proofUrl;
       if (url) {
         const a = document.createElement("a");
@@ -283,21 +328,21 @@ function PreviewModal({
       }
     } else if (currentFile.type === "task") {
       // Handle download for task proofs
-      if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
-        const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
-        if (proofUrl) {
-          const a = document.createElement("a");
-          a.href = proofUrl;
-          a.download = `proof-${currentFileIndex + 1}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+      const proofUrl = getProofUrl(
+        currentFile.proofUrl || currentFile.proofFiles?.[currentFileIndex],
+      );
+      if (proofUrl) {
+        const a = document.createElement("a");
+        a.href = proofUrl;
+        a.download = currentFile.fileName || `proof-${currentFileIndex + 1}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-          toast({
-            title: "Download Started",
-            description: "Downloading proof file",
-          });
-        }
+        toast({
+          title: "Download Started",
+          description: "Downloading proof file",
+        });
       } else if (currentFile.proofText) {
         // Download text proof as a text file
         const blob = new Blob([currentFile.proofText], { type: "text/plain" });
@@ -325,12 +370,13 @@ function PreviewModal({
       const url = currentFile.fileUrl || currentFile.proofUrl;
       if (url) window.open(url, "_blank");
     } else if (currentFile.type === "task") {
-      // Handle external opening for task proofs
-      if (currentFile.proofLink) {
+      const proofUrl = getProofUrl(
+        currentFile.proofUrl || currentFile.proofFiles?.[currentFileIndex],
+      );
+      if (proofUrl) {
+        window.open(proofUrl, "_blank");
+      } else if (currentFile.proofLink) {
         window.open(currentFile.proofLink, "_blank");
-      } else if (currentFile.proofFiles && currentFile.proofFiles.length > 0) {
-        const proofUrl = getProofUrl(currentFile.proofFiles[currentFileIndex]);
-        if (proofUrl) window.open(proofUrl, "_blank");
       }
     }
   };
@@ -686,25 +732,47 @@ export default function Portfolio() {
   };
 
   const handleItemClick = (item: any) => {
-    // Check if this item is part of a multi-file upload
-    const baseTitle = item.title.replace(/\s*\(\d+\)$/, "");
-    const relatedItems = portfolioItems.filter(
-      (i) =>
-        i.title.replace(/\s*\(\d+\)$/, "") === baseTitle &&
-        i.type === item.type,
-    );
+    // For task items with proofFiles, create a proper files array for the carousel
+    if (item.type === "task" && item.proofFiles && item.proofFiles.length > 0) {
+      const filesWithMetadata = item.proofFiles.map(
+        (fileUrl: string, index: number) => ({
+          ...item,
+          proofUrl: fileUrl,
+          fileName: `proof-${index + 1}`,
+          fileType: getFileTypeFromUrl(fileUrl),
+        }),
+      );
 
-    if (relatedItems.length > 1) {
-      // Group related items for carousel view
       setPreviewItem({
         ...item,
-        files: relatedItems,
+        files: filesWithMetadata,
       });
     } else {
       setPreviewItem(item);
     }
     setPreviewOpen(true);
   };
+
+  // Helper function to get file type from URL
+  function getFileTypeFromUrl(url: string): string {
+    if (!url) return "unknown";
+
+    if (url.startsWith("data:")) {
+      const mimeType = url.split(":")[1]?.split(";")[0];
+      if (mimeType?.startsWith("image/")) return "image";
+      if (mimeType === "application/pdf") return "pdf";
+      return "file";
+    }
+
+    const extension = url.split(".").pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || ""))
+      return "image";
+    if (extension === "pdf") return "pdf";
+    if (["mp4", "mov", "avi", "wmv"].includes(extension || "")) return "video";
+    if (["txt", "doc", "docx"].includes(extension || "")) return "document";
+
+    return "file";
+  }
 
   const getFileIcon = (item: any) => {
     if (item.type === "link")
@@ -725,16 +793,6 @@ export default function Portfolio() {
       return <FileCode className="h-5 w-5 text-yellow-500" />;
 
     return <File className="h-5 w-5 text-gray-500" />;
-  };
-
-  // Determine file type for task items
-  const getFileTypeForTask = (item: any) => {
-    if (item.proofUrl) {
-      if (/\.(jpg|jpeg|png|gif|webp)$/i.test(item.proofUrl)) return "image";
-      if (/\.(pdf)$/i.test(item.proofUrl)) return "pdf";
-      if (/\.(mp4|mov|avi|wmv)$/i.test(item.proofUrl)) return "video";
-    }
-    return "task";
   };
 
   // Function to get proof URL for task items
@@ -1037,12 +1095,9 @@ export default function Portfolio() {
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      // If image fails to load, show fallback
                       target.style.display = "none";
-                      // You could also set a fallback background here
                     }}
                     onLoad={(e) => {
-                      // Image loaded successfully
                       console.log("Image loaded successfully:", item.fileUrl);
                     }}
                   />
