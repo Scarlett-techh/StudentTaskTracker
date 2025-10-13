@@ -76,6 +76,46 @@ const SAMPLE_SUBJECTS = [
   { id: "18", name: "Coding", color: "#059669" },
 ];
 
+// Helper function to get file type from URL
+function getFileTypeFromUrl(url: string): string {
+  if (!url) return "unknown";
+
+  if (url.startsWith("data:")) {
+    // Handle data URLs
+    const mimeType = url.split(":")[1]?.split(";")[0];
+    if (mimeType?.startsWith("image/")) return "image";
+    if (mimeType === "application/pdf") return "pdf";
+    return "file";
+  }
+
+  // Handle file extensions
+  const extension = url.split(".").pop()?.toLowerCase();
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || ""))
+    return "image";
+  if (extension === "pdf") return "pdf";
+  if (["mp4", "mov", "avi", "wmv"].includes(extension || "")) return "video";
+  if (["txt", "doc", "docx"].includes(extension || "")) return "document";
+
+  return "file";
+}
+
+// Function to get proof URL for task items
+const getProofUrl = (fileUrl: string) => {
+  if (!fileUrl) return null;
+
+  // If it's already a full URL or data URL, use it directly
+  if (
+    fileUrl.startsWith("http") ||
+    fileUrl.startsWith("data:") ||
+    fileUrl.startsWith("/")
+  ) {
+    return fileUrl;
+  }
+
+  // Otherwise, assume it's a relative path from the server
+  return `/${fileUrl}`;
+};
+
 // Preview Modal Component
 function PreviewModal({
   item,
@@ -102,46 +142,6 @@ function PreviewModal({
       : [item];
 
   const currentFile = files[currentFileIndex];
-
-  // Function to get file type from URL
-  function getFileTypeFromUrl(url: string): string {
-    if (!url) return "unknown";
-
-    if (url.startsWith("data:")) {
-      // Handle data URLs
-      const mimeType = url.split(":")[1]?.split(";")[0];
-      if (mimeType?.startsWith("image/")) return "image";
-      if (mimeType === "application/pdf") return "pdf";
-      return "file";
-    }
-
-    // Handle file extensions
-    const extension = url.split(".").pop()?.toLowerCase();
-    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || ""))
-      return "image";
-    if (extension === "pdf") return "pdf";
-    if (["mp4", "mov", "avi", "wmv"].includes(extension || "")) return "video";
-    if (["txt", "doc", "docx"].includes(extension || "")) return "document";
-
-    return "file";
-  }
-
-  // Function to get proof URL for task items
-  const getProofUrl = (fileUrl: string) => {
-    if (!fileUrl) return null;
-
-    // If it's already a full URL or data URL, use it directly
-    if (
-      fileUrl.startsWith("http") ||
-      fileUrl.startsWith("data:") ||
-      fileUrl.startsWith("/")
-    ) {
-      return fileUrl;
-    }
-
-    // Otherwise, assume it's a relative path from the server
-    return `/${fileUrl}`;
-  };
 
   const renderPreview = () => {
     // Handle task items with different proof types
@@ -189,7 +189,6 @@ function PreviewModal({
                 console.error("Failed to load image:", proofUrl);
                 const target = e.target as HTMLImageElement;
                 target.style.display = "none";
-                // You might want to show a fallback here
               }}
             />
           </div>
@@ -753,27 +752,6 @@ export default function Portfolio() {
     setPreviewOpen(true);
   };
 
-  // Helper function to get file type from URL
-  function getFileTypeFromUrl(url: string): string {
-    if (!url) return "unknown";
-
-    if (url.startsWith("data:")) {
-      const mimeType = url.split(":")[1]?.split(";")[0];
-      if (mimeType?.startsWith("image/")) return "image";
-      if (mimeType === "application/pdf") return "pdf";
-      return "file";
-    }
-
-    const extension = url.split(".").pop()?.toLowerCase();
-    if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension || ""))
-      return "image";
-    if (extension === "pdf") return "pdf";
-    if (["mp4", "mov", "avi", "wmv"].includes(extension || "")) return "video";
-    if (["txt", "doc", "docx"].includes(extension || "")) return "document";
-
-    return "file";
-  }
-
   const getFileIcon = (item: any) => {
     if (item.type === "link")
       return <LinkIcon className="h-5 w-5 text-blue-500" />;
@@ -795,21 +773,100 @@ export default function Portfolio() {
     return <File className="h-5 w-5 text-gray-500" />;
   };
 
-  // Function to get proof URL for task items
-  const getProofUrl = (fileUrl: string) => {
-    if (!fileUrl) return null;
+  // Function to render background image for task items in grid
+  const renderTaskBackground = (item: any) => {
+    if (item.type !== "task") return null;
 
-    // If it's already a full URL or data URL, use it directly
-    if (
-      fileUrl.startsWith("http") ||
-      fileUrl.startsWith("data:") ||
-      fileUrl.startsWith("/")
-    ) {
-      return fileUrl;
+    // Check for image proof files
+    if (item.proofFiles && item.proofFiles.length > 0) {
+      const firstImageProof = item.proofFiles.find(
+        (file: string) => getFileTypeFromUrl(file) === "image",
+      );
+
+      if (firstImageProof) {
+        const proofUrl = getProofUrl(firstImageProof);
+        return (
+          <img
+            src={proofUrl}
+            alt={item.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              console.error("Failed to load task proof image:", proofUrl);
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+            }}
+            onLoad={(e) => {
+              console.log("Task proof image loaded successfully:", proofUrl);
+            }}
+          />
+        );
+      }
     }
 
-    // Otherwise, assume it's a relative path from the server
-    return `/${fileUrl}`;
+    // Show appropriate background based on proof type
+    if (item.proofText) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
+          <Text className="h-12 w-12 text-purple-500" />
+        </div>
+      );
+    }
+
+    if (item.proofLink) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
+          <LinkIcon className="h-12 w-12 text-blue-500" />
+        </div>
+      );
+    }
+
+    // Default background for tasks with no proof
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
+        <CheckCircle className="h-12 w-12 text-green-500" />
+      </div>
+    );
+  };
+
+  // Function to render background for non-task items
+  const renderNonTaskBackground = (item: any) => {
+    if (
+      item.type === "photo" ||
+      (item.type === "file" && item.fileType === "image")
+    ) {
+      return (
+        <img
+          src={item.fileUrl || item.proofUrl}
+          alt={item.title}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = "none";
+          }}
+          onLoad={(e) => {
+            console.log("Image loaded successfully:", item.fileUrl);
+          }}
+        />
+      );
+    }
+
+    if (item.type === "link") {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
+          <LinkIcon className="h-12 w-12 text-blue-500" />
+        </div>
+      );
+    }
+
+    if (item.type === "file") {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
+          {getFileIcon(item)}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   if (isLoading) {
@@ -1049,69 +1106,11 @@ export default function Portfolio() {
               onClick={() => handleItemClick(item)}
             >
               <div className="relative h-32 rounded-t-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                {/* For task items, show appropriate preview based on proof type */}
-                {item.type === "task" && (
-                  <>
-                    {item.proofFiles &&
-                      item.proofFiles.length > 0 &&
-                      /\.(jpg|jpeg|png|gif|webp)$/i.test(
-                        item.proofFiles[0],
-                      ) && (
-                        <img
-                          src={getProofUrl(item.proofFiles[0])}
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = "none";
-                          }}
-                        />
-                      )}
-                    {item.proofText && (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100">
-                        <Text className="h-12 w-12 text-purple-500" />
-                      </div>
-                    )}
-                    {item.proofLink && (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
-                        <LinkIcon className="h-12 w-12 text-blue-500" />
-                      </div>
-                    )}
-                    {(!item.proofFiles || item.proofFiles.length === 0) &&
-                      !item.proofText &&
-                      !item.proofLink && (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
-                          <CheckCircle className="h-12 w-12 text-green-500" />
-                        </div>
-                      )}
-                  </>
-                )}
+                {/* Render background based on item type */}
+                {item.type === "task"
+                  ? renderTaskBackground(item)
+                  : renderNonTaskBackground(item)}
 
-                {(item.type === "photo" ||
-                  (item.type === "file" && item.fileType === "image")) && (
-                  <img
-                    src={item.fileUrl || item.proofUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                    }}
-                    onLoad={(e) => {
-                      console.log("Image loaded successfully:", item.fileUrl);
-                    }}
-                  />
-                )}
-                {item.type === "link" && item.link && (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100">
-                    <LinkIcon className="h-12 w-12 text-blue-500" />
-                  </div>
-                )}
-                {item.type === "file" && item.fileType !== "image" && (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100">
-                    {getFileIcon(item)}
-                  </div>
-                )}
                 {item.subject && (
                   <div className="absolute top-2 left-2">
                     <span className="px-2 py-1 text-xs font-medium bg-white/90 text-gray-700 rounded-full shadow-sm">
