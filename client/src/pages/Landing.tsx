@@ -1,10 +1,26 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Trophy, Users, CheckCircle, TrendingUp } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  BookOpen,
+  Target,
+  Trophy,
+  Users,
+  CheckCircle,
+  TrendingUp,
+} from "lucide-react";
+import { useLocation } from "wouter";
 
 export function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const [, setLocation] = useLocation();
+
+  const handleGetStarted = () => {
+    setLocation("/student-login");
   };
 
   return (
@@ -16,9 +32,14 @@ export function Landing() {
             Student Learning Platform
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Track your learning journey, manage tasks, build portfolios, and achieve your goals with gamified progress tracking.
+            Track your learning journey, manage tasks, build portfolios, and
+            achieve your goals with gamified progress tracking.
           </p>
-          <Button onClick={handleLogin} size="lg" className="text-lg px-8 py-3">
+          <Button
+            onClick={handleGetStarted}
+            size="lg"
+            className="text-lg px-8 py-3"
+          >
             Get Started
           </Button>
         </div>
@@ -30,7 +51,8 @@ export function Landing() {
               <Target className="h-12 w-12 text-blue-600 mb-4" />
               <CardTitle>Task Management</CardTitle>
               <CardDescription>
-                Organize your learning tasks with smart categorization and deadline tracking
+                Organize your learning tasks with smart categorization and
+                deadline tracking
               </CardDescription>
             </CardHeader>
           </Card>
@@ -50,7 +72,8 @@ export function Landing() {
               <Trophy className="h-12 w-12 text-yellow-600 mb-4" />
               <CardTitle>Achievements</CardTitle>
               <CardDescription>
-                Earn points, level up, and unlock achievements as you complete tasks
+                Earn points, level up, and unlock achievements as you complete
+                tasks
               </CardDescription>
             </CardHeader>
           </Card>
@@ -80,7 +103,8 @@ export function Landing() {
               <TrendingUp className="h-12 w-12 text-red-600 mb-4" />
               <CardTitle>AI-Powered</CardTitle>
               <CardDescription>
-                Smart task categorization and personalized learning recommendations
+                Smart task categorization and personalized learning
+                recommendations
               </CardDescription>
             </CardHeader>
           </Card>
@@ -90,17 +114,24 @@ export function Landing() {
         <div className="text-center">
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
-              <CardTitle className="text-3xl">Ready to Start Learning?</CardTitle>
+              <CardTitle className="text-3xl">
+                Ready to Start Learning?
+              </CardTitle>
               <CardDescription className="text-lg">
-                Join thousands of students already using our platform to achieve their learning goals.
+                Join thousands of students already using our platform to achieve
+                their learning goals.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleLogin} size="lg" className="text-lg px-8 py-3">
-              Log in with Replit 
+              <Button
+                onClick={handleGetStarted}
+                size="lg"
+                className="text-lg px-8 py-3"
+              >
+                Get Started Now
               </Button>
               <p className="text-sm text-gray-500 mt-4">
-                Secure authentication powered by Replit
+                Create your free account and start your learning journey today
               </p>
             </CardContent>
           </Card>

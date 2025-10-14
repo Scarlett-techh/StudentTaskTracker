@@ -1,6 +1,19 @@
 // shared/schema.ts (updated)
-import { sql } from 'drizzle-orm';
-import { pgTable, text, serial, integer, boolean, timestamp, json, varchar, index, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  boolean,
+  timestamp,
+  json,
+  varchar,
+  index,
+  jsonb,
+  pgEnum,
+  date,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,18 +28,20 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User schema - Updated for Replit Auth with backward compatibility
+// User schema - Updated for traditional authentication
 export const users = pgTable("users", {
   id: serial("id").primaryKey(), // Keep existing integer ID
-  // Replit Auth fields
-  replitId: varchar("replit_id").unique(), // Replit user ID (string)
-  email: text("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
+  // Traditional auth fields (now required)
+  email: text("email").notNull().unique(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(), // Hashed password
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  dateOfBirth: date("date_of_birth").notNull(), // NEW FIELD
+  // Replit Auth fields (optional)
+  replitId: varchar("replit_id").unique(),
   profileImageUrl: varchar("profile_image_url"),
   // Legacy fields for backward compatibility
-  username: text("username"),
-  password: text("password"),
   name: text("name"),
   avatar: text("avatar"),
   resetToken: text("reset_token"),
@@ -57,9 +72,11 @@ export type User = typeof users.$inferSelect;
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
-  name: true,
-  avatar: true,
   email: true,
+  firstName: true,
+  lastName: true,
+  dateOfBirth: true,
+  userType: true,
 });
 
 // Task schema - Updated to include proof fields
@@ -159,10 +176,12 @@ export const taskAttachments = pgTable("task_attachments", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).pick({
+export const insertTaskAttachmentSchema = createInsertSchema(
+  taskAttachments,
+).pick({
   taskId: true,
   photoId: true,
-  noteId: true, 
+  noteId: true,
   attachmentType: true,
 });
 
@@ -207,7 +226,9 @@ export const userAchievements = pgTable("user_achievements", {
   achievedAt: timestamp("achieved_at").notNull().defaultNow(),
 });
 
-export const insertUserAchievementSchema = createInsertSchema(userAchievements).pick({
+export const insertUserAchievementSchema = createInsertSchema(
+  userAchievements,
+).pick({
   userId: true,
   achievementId: true,
 });
@@ -222,12 +243,14 @@ export const pointsHistory = pgTable("points_history", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick({
-  userId: true,
-  amount: true,
-  reason: true,
-  taskId: true,
-});
+export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick(
+  {
+    userId: true,
+    amount: true,
+    reason: true,
+    taskId: true,
+  },
+);
 
 // Portfolio items table - UPDATED to include task proof fields
 export const portfolioItems = pgTable("portfolio_items", {
@@ -247,11 +270,13 @@ export const portfolioItems = pgTable("portfolio_items", {
   proofText: text("proof_text"), // Text proof
   proofLink: text("proof_link"), // Link proof
   // Keep attachments for backward compatibility
-  attachments: jsonb("attachments").default('[]').notNull(),
+  attachments: jsonb("attachments").default("[]").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).pick({
+export const insertPortfolioItemSchema = createInsertSchema(
+  portfolioItems,
+).pick({
   userId: true,
   title: true,
   description: true,
@@ -285,7 +310,9 @@ export const insertCoachStudentSchema = createInsertSchema(coachStudents).pick({
   studentId: true,
 });
 
-export const insertDailyNotificationSchema = createInsertSchema(dailyNotifications).pick({
+export const insertDailyNotificationSchema = createInsertSchema(
+  dailyNotifications,
+).pick({
   coachId: true,
   studentId: true,
   notificationDate: true,
@@ -315,7 +342,9 @@ export type CoachStudent = typeof coachStudents.$inferSelect;
 export type InsertCoachStudent = z.infer<typeof insertCoachStudentSchema>;
 
 export type DailyNotification = typeof dailyNotifications.$inferSelect;
-export type InsertDailyNotification = z.infer<typeof insertDailyNotificationSchema>;
+export type InsertDailyNotification = z.infer<
+  typeof insertDailyNotificationSchema
+>;
 
 export type MoodEntry = typeof moodEntries.$inferSelect;
 export type InsertMoodEntry = z.infer<typeof insertMoodEntrySchema>;
