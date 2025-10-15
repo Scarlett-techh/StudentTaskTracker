@@ -276,23 +276,26 @@ const StudentLogin = () => {
                   />
                 </div>
 
-                <FormField
-                  control={registerForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Enter your email"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Debug Email Input - Using plain HTML input */}
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={registerForm.watch("email") || ""}
+                      onChange={(e) => {
+                        console.log("Setting email to:", e.target.value);
+                        registerForm.setValue("email", e.target.value);
+                      }}
+                      onBlur={() => registerForm.trigger("email")}
+                    />
+                  </FormControl>
+                  <FormMessage>
+                    {registerForm.formState.errors.email?.message}
+                  </FormMessage>
+                </FormItem>
 
                 <FormField
                   control={registerForm.control}
@@ -392,6 +395,14 @@ const StudentLogin = () => {
                     </FormItem>
                   )}
                 />
+
+                {/* Debug Information - Remove after testing */}
+                <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+                  <div>Email Value: "{registerForm.watch("email")}"</div>
+                  <div>
+                    Form Valid: {registerForm.formState.isValid ? "Yes" : "No"}
+                  </div>
+                </div>
 
                 <Button
                   type="submit"

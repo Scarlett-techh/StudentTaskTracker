@@ -5,8 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import { pool } from "./db";
-import { sessions } from "@shared/schema";
-import { sql } from "drizzle-orm";
+import PgSession from "connect-pg-simple";
 
 // Import your API routes
 import userRoutes from "./api/user.js";
@@ -15,6 +14,9 @@ import settingsRoutes from "./api/user/settings.js";
 import authRoutes from "./routes/auth"; // NEW IMPORT
 
 const app = express();
+
+// Initialize PostgreSQL session store
+const PgStore = PgSession(session);
 
 // Session configuration
 app.use(
@@ -27,37 +29,11 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
-    store: {
-      // Simple in-memory store for development
-      // In production, use a proper store like connect-pg-simple
-      set: (sid, sess, callback) => {
-        // Store session in database
-        pool
-          .query(
-            "INSERT INTO sessions (sid, sess, expire) VALUES ($1, $2, $3) ON CONFLICT (sid) DO UPDATE SET sess = $2, expire = $3",
-            [sid, sess, new Date(Date.now() + 24 * 60 * 60 * 1000)],
-          )
-          .then(() => callback())
-          .catch(callback);
-      },
-      get: (sid, callback) => {
-        pool
-          .query(
-            "SELECT sess FROM sessions WHERE sid = $1 AND expire > NOW()",
-            [sid],
-          )
-          .then((result) => {
-            callback(null, result.rows[0]?.sess || null);
-          })
-          .catch(callback);
-      },
-      destroy: (sid, callback) => {
-        pool
-          .query("DELETE FROM sessions WHERE sid = $1", [sid])
-          .then(() => callback())
-          .catch(callback);
-      },
-    } as any,
+    store: new PgStore({
+      pool: pool,
+      createTableIfMissing: true,
+      tableName: "sessions",
+    }),
   }),
 );
 
