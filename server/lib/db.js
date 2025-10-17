@@ -1,81 +1,161 @@
-// server/lib/db.js
-import fs from 'fs';
-import path from 'path';
+// server/lib/db.js - Updated to use PostgreSQL
+import { db } from "../db"; // Changed from '../db.js' to '../db'
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
-const dataPath = path.join(process.cwd(), 'data');
-const usersFile = path.join(dataPath, 'users.json');
+// Create new user
+export async function createUser(userData) {
+  try {
+    // Hash password if provided
+    const hashedPassword = userData.password
+      ? await bcrypt.hash(userData.password, 12)
+      : "oauth_user_no_password"; // Default for OAuth users
 
-// Ensure data directory exists
-if (!fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true });
-}
-
-// Initialize users file if it doesn't exist
-if (!fs.existsSync(usersFile)) {
-  fs.writeFileSync(usersFile, JSON.stringify([
-    {
-      id: 1,
-      name: "John Doe",
-      username: "johndoe",
-      email: "john@example.com",
-      settings: JSON.stringify({
-        notifications: true,
-        emailReminders: true,
-        darkMode: false,
-        autoSave: true
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        username: userData.username,
+        password: hashedPassword,
+        email: userData.email,
+        firstName: userData.firstName || userData.name?.split(" ")[0] || "User",
+        lastName:
+          userData.lastName ||
+          userData.name?.split(" ").slice(1).join(" ") ||
+          "Unknown",
+        dateOfBirth: userData.dateOfBirth || "2000-01-01",
+        name: userData.name || `${userData.firstName} ${userData.lastName}`,
+        avatar: userData.avatar || userData.profileImageUrl || null,
+        replitId: userData.replitId || null,
+        profileImageUrl: userData.profileImageUrl || null,
+        userType: userData.userType || "student",
       })
+      .returning();
+
+    return newUser || null;
+  } catch (error) {
+    console.error("Error creating user:", error);
+
+    // Handle specific database errors
+    if (error.code === "23505") {
+      // Unique constraint violation
+      if (error.detail?.includes("username")) {
+        throw new Error("Username already exists");
+      }
+      if (error.detail?.includes("email")) {
+        throw new Error("Email already exists");
+      }
+      if (error.detail?.includes("replit_id")) {
+        throw new Error("Replit ID already exists");
+      }
     }
-  ]));
-}
 
-// Read users from file
-function readUsers() {
-  try {
-    const data = fs.readFileSync(usersFile, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading users:', error);
-    return [];
-  }
-}
-
-// Write users to file
-function writeUsers(users) {
-  try {
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-  } catch (error) {
-    console.error('Error writing users:', error);
+    throw error;
   }
 }
 
 // Get user by ID
-export function getUserById(id) {
-  const users = readUsers();
-  return users.find(user => user.id === id);
+export async function getUserById(id) {
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || null;
+  } catch (error) {
+    console.error("Error getting user by ID:", error);
+    return null;
+  }
 }
 
 // Update user
-export function updateUser(id, data) {
-  const users = readUsers();
-  const userIndex = users.findIndex(user => user.id === id);
+export async function updateUser(id, data) {
+  try {
+    // If password is being updated, hash it
+    if (data.password && data.password !== "oauth_user_no_password") {
+      data.password = await bcrypt.hash(data.password, 12);
+    }
 
-  if (userIndex === -1) return null;
+    const [updatedUser] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
 
-  users[userIndex] = { ...users[userIndex], ...data };
-  writeUsers(users);
-
-  return users[userIndex];
+    return updatedUser || null;
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return null;
+  }
 }
 
-// Get user from request (simplified for demo)
-export function getUserFromRequest(req) {
-  // In a real app, you would get user from session or JWT
-  // For demo purposes, we'll just return the first user
-  const users = readUsers();
-  return users[0];
+// Get user from request
+export async function getUserFromRequest(req) {
+  try {
+    // First check traditional session
+    if (req.session && req.session.user) {
+      return await getUserById(req.session.user.id);
+    }
+
+    // Then check Replit Auth (Passport)
+    if (req.user && req.user.dbUserId) {
+      return await getUserById(req.user.dbUserId);
+    }
+
+    // Check for user ID in session directly (fallback)
+    if (req.session && req.session.userId) {
+      return await getUserById(req.session.userId);
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error getting user from request:", error);
+    return null;
+  }
+}
+
+// Get user by email
+export async function getUserByEmail(email) {
+  try {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || null;
+  } catch (error) {
+    console.error("Error getting user by email:", error);
+    return null;
+  }
+}
+
+// Get user by username
+export async function getUserByUsername(username) {
+  try {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return user || null;
+  } catch (error) {
+    console.error("Error getting user by username:", error);
+    return null;
+  }
+}
+
+// Get user by Replit ID
+export async function getUserByReplitId(replitId) {
+  try {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.replitId, replitId));
+    return user || null;
+  } catch (error) {
+    console.error("Error getting user by Replit ID:", error);
+    return null;
+  }
 }
 
 // Get all users (for debugging)
-export function getUsers() {
-  return readUsers();
+export async function getUsers() {
+  try {
+    return await db.select().from(users);
+  } catch (error) {
+    console.error("Error getting users:", error);
+    return [];
+  }
 }

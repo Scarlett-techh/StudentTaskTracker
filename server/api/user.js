@@ -1,5 +1,5 @@
 import express from "express";
-import { getUserFromRequest, updateUser } from "../lib/db.js";
+import { getUserFromRequest, updateUser, createUser } from "../lib/db.js";
 
 const router = express.Router();
 
@@ -51,7 +51,7 @@ router.patch("/", async (req, res) => {
     if (settings !== undefined) updateData.settings = JSON.stringify(settings);
 
     // Update user in database
-    const updatedUser = updateUser(user.id, updateData);
+    const updatedUser = await updateUser(user.id, updateData);
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
@@ -105,7 +105,7 @@ router.post("/mood", async (req, res) => {
     };
 
     // Update user in database
-    const updatedUser = updateUser(user.id, updateData);
+    const updatedUser = await updateUser(user.id, updateData);
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
