@@ -56,6 +56,9 @@ const StudentLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Add local state for debugging
+  const [emailValue, setEmailValue] = useState("");
+
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -85,7 +88,7 @@ const StudentLogin = () => {
     onSuccess: (data) => {
       toast({
         title: "Welcome back!",
-        description: `Successfully logged in as ${data.user?.firstName || 'User'}`,
+        description: `Successfully logged in as ${data.user?.firstName || "User"}`,
       });
 
       // Simple redirect with delay to allow session to be set
@@ -116,7 +119,7 @@ const StudentLogin = () => {
     onSuccess: (data) => {
       toast({
         title: "Account created!",
-        description: `Welcome ${data.user?.firstName || 'User'}! Your account has been created successfully.`,
+        description: `Welcome ${data.user?.firstName || "User"}! Your account has been created successfully.`,
       });
 
       // Simple redirect with delay to allow session to be set
@@ -141,6 +144,14 @@ const StudentLogin = () => {
 
   const onRegister = (data: RegisterForm) => {
     registerMutation.mutate(data);
+  };
+
+  // Debug function to test input
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmailValue(value);
+    registerForm.setValue("email", value);
+    console.log("Email input:", value); // For debugging
   };
 
   return (
@@ -191,6 +202,7 @@ const StudentLogin = () => {
                           type="email"
                           placeholder="Enter your email"
                           {...field}
+                          autoComplete="email"
                         />
                       </FormControl>
                       <FormMessage />
@@ -210,6 +222,7 @@ const StudentLogin = () => {
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             {...field}
+                            autoComplete="current-password"
                           />
                           <Button
                             type="button"
@@ -264,7 +277,11 @@ const StudentLogin = () => {
                       <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="First name" {...field} />
+                          <Input
+                            placeholder="First name"
+                            {...field}
+                            autoComplete="given-name"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -277,7 +294,11 @@ const StudentLogin = () => {
                       <FormItem>
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Last name" {...field} />
+                          <Input
+                            placeholder="Last name"
+                            {...field}
+                            autoComplete="family-name"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -285,23 +306,22 @@ const StudentLogin = () => {
                   />
                 </div>
 
-                <FormField
-                  control={registerForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Enter your email"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                {/* TEMPORARY FIX: Replace FormField with direct input */}
+                <div className="space-y-2">
+                  <FormLabel>Email</FormLabel>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={registerForm.watch("email")}
+                    onChange={handleEmailChange}
+                    autoComplete="email"
+                  />
+                  {registerForm.formState.errors.email && (
+                    <p className="text-sm font-medium text-destructive">
+                      {registerForm.formState.errors.email.message}
+                    </p>
                   )}
-                />
+                </div>
 
                 <FormField
                   control={registerForm.control}
@@ -310,7 +330,11 @@ const StudentLogin = () => {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Choose a username" {...field} />
+                        <Input
+                          placeholder="Choose a username"
+                          {...field}
+                          autoComplete="username"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -325,7 +349,7 @@ const StudentLogin = () => {
                       <FormLabel>Date of Birth</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} autoComplete="bday" />
                           <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
                         </div>
                       </FormControl>
@@ -346,6 +370,7 @@ const StudentLogin = () => {
                             type={showPassword ? "text" : "password"}
                             placeholder="Create a secure password"
                             {...field}
+                            autoComplete="new-password"
                           />
                           <Button
                             type="button"
@@ -379,6 +404,7 @@ const StudentLogin = () => {
                             type={showConfirmPassword ? "text" : "password"}
                             placeholder="Confirm your password"
                             {...field}
+                            autoComplete="new-password"
                           />
                           <Button
                             type="button"
