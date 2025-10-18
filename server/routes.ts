@@ -10,6 +10,7 @@ import { sendSharedWorkEmail } from "./email";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 // Add this import with the other imports at the top
 import userRoutes from "./api/user.js";
 
@@ -102,6 +103,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     res.status(500).json({ message: err.message || "Internal server error" });
   }
+
+  // ========================
+  // Traditional Registration Endpoint - UPDATED TO FIX DATABASE ISSUE
+  // ========================
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, username, password, firstName, lastName, userType } =
+        req.body;
+
+      // Validate required fields
+      if (!email || !username || !password || !firstName || !lastName) {
+        return res.status(400).json({
+          message:
+            "Required fields: email, username, password, firstName, lastName",
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({
+          message: "User with this email already exists",
+        });
+      }
+
+      const existingUsername = await storage.getUserByUsername(username);
+      if (existingUsername) {
+        return res.status(400).json({
+          message: "Username already taken",
+        });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Create user data - REMOVED dateOfBirth to fix database error
+      const userData = {
+        email,
+        username,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        userType: userType || "student",
+        name: `${firstName} ${lastName}`,
+        points: 0,
+        level: 1,
+        streak: 0,
+        // OAuth fields set to null for traditional users
+        replitId: null,
+        profileImageUrl: null,
+        avatar: null,
+      };
+
+      console.log("Creating user with data:", {
+        email,
+        username,
+        firstName,
+        lastName,
+      });
+
+      // Create user
+      const newUser = await storage.createUser(userData);
+
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = newUser;
+
+      res.status(201).json({
+        message: "User registered successfully",
+        user: userWithoutPassword,
+      });
+    } catch (err: any) {
+      console.error("Registration error:", err);
+
+      // More specific error handling for database issues
+      if (err.message && err.message.includes("date_of_birth")) {
+        return res.status(500).json({
+          message: "Database configuration error. Please contact support.",
+        });
+      }
+
+      handleError(err, res);
+    }
+  });
+
+  // ========================
+  // Traditional Login Endpoint - ADDED THIS
+  // ========================
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({
+          message: "Email and password are required",
+        });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({
+          message: "Invalid email or password",
+        });
+      }
+
+      // Check if user has a password (OAuth users might not have passwords)
+      if (!user.password) {
+        return res.status(401).json({
+          message:
+            "This account uses OAuth login. Please use Replit Auth to sign in.",
+        });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          message: "Invalid email or password",
+        });
+      }
+
+      // For traditional auth, we'll use session-based authentication
+      // You might want to implement JWT tokens here instead
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({
+            message: "Login failed",
+          });
+        }
+
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({
+          message: "Login successful",
+          user: userWithoutPassword,
+        });
+      });
+    } catch (err: any) {
+      console.error("Login error:", err);
+      handleError(err, res);
+    }
+  });
 
   // ========================
   // Mood Endpoints - ADDED THESE

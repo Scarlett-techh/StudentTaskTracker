@@ -51,7 +51,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user;
   }
 
@@ -61,19 +64,54 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByResetToken(token: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.resetToken, token));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.resetToken, token));
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
+    try {
+      // Remove dateOfBirth from the insert data since the column doesn't exist
+      const { dateOfBirth, ...userDataWithoutDateOfBirth } = insertUser as any;
+      const [user] = await db
+        .insert(users)
+        .values(userDataWithoutDateOfBirth)
+        .returning();
+      return user;
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      // Fallback: try without the problematic fields
+      const safeUserData = {
+        email: insertUser.email,
+        username: insertUser.username,
+        password: insertUser.password,
+        firstName: insertUser.firstName,
+        lastName: insertUser.lastName,
+        userType: insertUser.userType || "student",
+        name: `${insertUser.firstName} ${insertUser.lastName}`,
+        points: 0,
+        level: 1,
+        streak: 0,
+      };
+      const [user] = await db.insert(users).values(safeUserData).returning();
+      return user;
+    }
   }
 
-  async updateUser(id: number, updateData: Partial<InsertUser> & { resetToken?: string | null, resetTokenExpiry?: Date | null }): Promise<User | undefined> {
+  async updateUser(
+    id: number,
+    updateData: Partial<InsertUser> & {
+      resetToken?: string | null;
+      resetTokenExpiry?: Date | null;
+    },
+  ): Promise<User | undefined> {
+    // Remove dateOfBirth from update data if present
+    const { dateOfBirth, ...safeUpdateData } = updateData as any;
     const [user] = await db
       .update(users)
-      .set(updateData)
+      .set(safeUpdateData)
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -81,32 +119,49 @@ export class DatabaseStorage implements IStorage {
 
   // Replit Auth methods
   async getUserByReplitId(replitId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.replitId, replitId));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.replitId, replitId));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.replitId,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      // Remove dateOfBirth from the upsert data
+      const { dateOfBirth, ...safeUserData } = userData as any;
+      const [user] = await db
+        .insert(users)
+        .values(safeUserData)
+        .onConflictDoUpdate({
+          target: users.replitId,
+          set: {
+            ...safeUserData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return user;
+    } catch (error: any) {
+      console.error("Error upserting user:", error);
+      throw error;
+    }
   }
 
   // Task methods
   async getTasks(userId: number): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.userId, userId)).orderBy(tasks.order);
+    return await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.userId, userId))
+      .orderBy(tasks.order);
   }
 
   async getTasksByStatus(userId: number, status: string): Promise<Task[]> {
-    return await db.select().from(tasks).where(and(eq(tasks.userId, userId), eq(tasks.status, status)));
+    return await db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.userId, userId), eq(tasks.status, status)));
   }
 
   async getTask(id: number): Promise<Task | undefined> {
@@ -119,7 +174,10 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
 
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(
+    id: number,
+    taskUpdate: Partial<InsertTask>,
+  ): Promise<Task | undefined> {
     const [task] = await db
       .update(tasks)
       .set(taskUpdate)
@@ -133,10 +191,15 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  async updateTaskOrder(taskList: { id: number, order: number }[]): Promise<boolean> {
+  async updateTaskOrder(
+    taskList: { id: number; order: number }[],
+  ): Promise<boolean> {
     try {
       for (const task of taskList) {
-        await db.update(tasks).set({ order: task.order }).where(eq(tasks.id, task.id));
+        await db
+          .update(tasks)
+          .set({ order: task.order })
+          .where(eq(tasks.id, task.id));
       }
       return true;
     } catch {
@@ -146,7 +209,11 @@ export class DatabaseStorage implements IStorage {
 
   // Note methods
   async getNotes(userId: number): Promise<Note[]> {
-    return await db.select().from(notes).where(eq(notes.userId, userId)).orderBy(desc(notes.createdAt));
+    return await db
+      .select()
+      .from(notes)
+      .where(eq(notes.userId, userId))
+      .orderBy(desc(notes.createdAt));
   }
 
   async getNote(id: number): Promise<Note | undefined> {
@@ -159,7 +226,10 @@ export class DatabaseStorage implements IStorage {
     return note;
   }
 
-  async updateNote(id: number, noteUpdate: Partial<InsertNote>): Promise<Note | undefined> {
+  async updateNote(
+    id: number,
+    noteUpdate: Partial<InsertNote>,
+  ): Promise<Note | undefined> {
     const [note] = await db
       .update(notes)
       .set(noteUpdate)
@@ -175,7 +245,11 @@ export class DatabaseStorage implements IStorage {
 
   // Photo methods
   async getPhotos(userId: number): Promise<Photo[]> {
-    return await db.select().from(photos).where(eq(photos.userId, userId)).orderBy(desc(photos.createdAt));
+    return await db
+      .select()
+      .from(photos)
+      .where(eq(photos.userId, userId))
+      .orderBy(desc(photos.createdAt));
   }
 
   async getPhoto(id: number): Promise<Photo | undefined> {
@@ -188,7 +262,10 @@ export class DatabaseStorage implements IStorage {
     return photo;
   }
 
-  async updatePhoto(id: number, photoUpdate: Partial<InsertPhoto>): Promise<Photo | undefined> {
+  async updatePhoto(
+    id: number,
+    photoUpdate: Partial<InsertPhoto>,
+  ): Promise<Photo | undefined> {
     const [photo] = await db
       .update(photos)
       .set(photoUpdate)
@@ -204,16 +281,26 @@ export class DatabaseStorage implements IStorage {
 
   // TaskAttachment methods
   async getTaskAttachments(taskId: number): Promise<TaskAttachment[]> {
-    return await db.select().from(taskAttachments).where(eq(taskAttachments.taskId, taskId));
+    return await db
+      .select()
+      .from(taskAttachments)
+      .where(eq(taskAttachments.taskId, taskId));
   }
 
-  async createTaskAttachment(insertAttachment: InsertTaskAttachment): Promise<TaskAttachment> {
-    const [attachment] = await db.insert(taskAttachments).values(insertAttachment).returning();
+  async createTaskAttachment(
+    insertAttachment: InsertTaskAttachment,
+  ): Promise<TaskAttachment> {
+    const [attachment] = await db
+      .insert(taskAttachments)
+      .values(insertAttachment)
+      .returning();
     return attachment;
   }
 
   async deleteTaskAttachment(id: number): Promise<boolean> {
-    const result = await db.delete(taskAttachments).where(eq(taskAttachments.id, id));
+    const result = await db
+      .delete(taskAttachments)
+      .where(eq(taskAttachments.id, id));
     return result.rowCount > 0;
   }
 
@@ -223,11 +310,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSubject(insertSubject: InsertSubject): Promise<Subject> {
-    const [subject] = await db.insert(subjects).values(insertSubject).returning();
+    const [subject] = await db
+      .insert(subjects)
+      .values(insertSubject)
+      .returning();
     return subject;
   }
 
-  async updateSubject(id: number, subjectUpdate: Partial<InsertSubject>): Promise<Subject | undefined> {
+  async updateSubject(
+    id: number,
+    subjectUpdate: Partial<InsertSubject>,
+  ): Promise<Subject | undefined> {
     const [subject] = await db
       .update(subjects)
       .set(subjectUpdate)
@@ -246,31 +339,48 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(achievements);
   }
 
-  async getUserAchievements(userId: number): Promise<(UserAchievement & { achievement: Achievement })[]> {
+  async getUserAchievements(
+    userId: number,
+  ): Promise<(UserAchievement & { achievement: Achievement })[]> {
     const result = await db
       .select()
       .from(userAchievements)
-      .leftJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+      .leftJoin(
+        achievements,
+        eq(userAchievements.achievementId, achievements.id),
+      )
       .where(eq(userAchievements.userId, userId));
 
-    return result.map(row => ({
+    return result.map((row) => ({
       ...row.user_achievements,
-      achievement: row.achievements!
+      achievement: row.achievements!,
     }));
   }
 
-  async awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
-    const [newUserAchievement] = await db.insert(userAchievements).values(userAchievement).returning();
+  async awardAchievement(
+    userAchievement: InsertUserAchievement,
+  ): Promise<UserAchievement> {
+    const [newUserAchievement] = await db
+      .insert(userAchievements)
+      .values(userAchievement)
+      .returning();
     return newUserAchievement;
   }
 
   async addPoints(pointsData: InsertPointsHistory): Promise<PointsHistory> {
-    const [pointsRecord] = await db.insert(pointsHistory).values(pointsData).returning();
+    const [pointsRecord] = await db
+      .insert(pointsHistory)
+      .values(pointsData)
+      .returning();
     return pointsRecord;
   }
 
   async getPointsHistory(userId: number): Promise<PointsHistory[]> {
-    return await db.select().from(pointsHistory).where(eq(pointsHistory.userId, userId)).orderBy(desc(pointsHistory.createdAt));
+    return await db
+      .select()
+      .from(pointsHistory)
+      .where(eq(pointsHistory.userId, userId))
+      .orderBy(desc(pointsHistory.createdAt));
   }
 
   async updateUserStreak(userId: number): Promise<User | undefined> {
@@ -281,11 +391,15 @@ export class DatabaseStorage implements IStorage {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const lastStreakDate = user.lastStreakDate ? new Date(user.lastStreakDate) : null;
+    const lastStreakDate = user.lastStreakDate
+      ? new Date(user.lastStreakDate)
+      : null;
 
     let newStreak = 1;
     if (lastStreakDate) {
-      const daysDiff = Math.floor((today.getTime() - lastStreakDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysDiff = Math.floor(
+        (today.getTime() - lastStreakDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
       if (daysDiff === 1) {
         newStreak = user.streak + 1;
       } else if (daysDiff > 1) {
@@ -297,15 +411,20 @@ export class DatabaseStorage implements IStorage {
 
     return await this.updateUser(userId, {
       streak: newStreak,
-      lastStreakDate: today
+      lastStreakDate: today,
     });
   }
 
-  async getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }> {
+  async getUserStats(
+    userId: number,
+  ): Promise<{ points: number; level: number; streak: number }> {
     const user = await this.getUser(userId);
     const pointsHistoryRecords = await this.getPointsHistory(userId);
 
-    const totalPoints = pointsHistoryRecords.reduce((sum, record) => sum + record.amount, 0);
+    const totalPoints = pointsHistoryRecords.reduce(
+      (sum, record) => sum + record.amount,
+      0,
+    );
     const level = Math.floor(totalPoints / 100) + 1;
     const streak = user?.streak || 0;
 
@@ -314,44 +433,69 @@ export class DatabaseStorage implements IStorage {
 
   // Coach-Student methods
   async getCoachesByEmail(email: string): Promise<User[]> {
-    return await db.select().from(users).where(and(eq(users.email, email), eq(users.userType, 'coach')));
+    return await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.userType, "coach")));
   }
 
   async getCoachStudents(coachId: number): Promise<User[]> {
     return await db.select().from(users).where(eq(users.coachId, coachId));
   }
 
-  async getCoachStats(coachId: number): Promise<{ totalStudents: number, tasksAssigned: number, completedToday: number, pendingTasks: number }> {
+  async getCoachStats(
+    coachId: number,
+  ): Promise<{
+    totalStudents: number;
+    tasksAssigned: number;
+    completedToday: number;
+    pendingTasks: number;
+  }> {
     const students = await this.getCoachStudents(coachId);
-    const studentIds = students.map(s => s.id);
+    const studentIds = students.map((s) => s.id);
 
     if (studentIds.length === 0) {
-      return { totalStudents: 0, tasksAssigned: 0, completedToday: 0, pendingTasks: 0 };
+      return {
+        totalStudents: 0,
+        tasksAssigned: 0,
+        completedToday: 0,
+        pendingTasks: 0,
+      };
     }
 
-    const allTasks = await db.select().from(tasks).where(sql`user_id IN (${studentIds.join(',')})`);
-    const coachTasks = allTasks.filter(task => task.isCoachTask);
+    const allTasks = await db
+      .select()
+      .from(tasks)
+      .where(sql`user_id IN (${studentIds.join(",")})`);
+    const coachTasks = allTasks.filter((task) => task.isCoachTask);
 
-    const today = new Date().toISOString().split('T')[0];
-    const completedToday = allTasks.filter(task => 
-      task.status === 'completed' && 
-      task.updatedAt && 
-      task.updatedAt.toISOString().split('T')[0] === today
+    const today = new Date().toISOString().split("T")[0];
+    const completedToday = allTasks.filter(
+      (task) =>
+        task.status === "completed" &&
+        task.updatedAt &&
+        task.updatedAt.toISOString().split("T")[0] === today,
     ).length;
 
-    const pendingTasks = allTasks.filter(task => task.status === 'pending').length;
+    const pendingTasks = allTasks.filter(
+      (task) => task.status === "pending",
+    ).length;
 
     return {
       totalStudents: students.length,
       tasksAssigned: coachTasks.length,
       completedToday,
-      pendingTasks
+      pendingTasks,
     };
   }
 
   // Mood tracking methods
   async getMoodEntries(userId: number): Promise<MoodEntry[]> {
-    return await db.select().from(moodEntries).where(eq(moodEntries.userId, userId)).orderBy(desc(moodEntries.createdAt));
+    return await db
+      .select()
+      .from(moodEntries)
+      .where(eq(moodEntries.userId, userId))
+      .orderBy(desc(moodEntries.createdAt));
   }
 
   async getTodaysMood(userId: number): Promise<MoodEntry | undefined> {
@@ -366,42 +510,52 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(moodEntries.userId, userId),
-          sql`DATE(created_at) = DATE('now')`
-        )
+          sql`DATE(created_at) = DATE('now')`,
+        ),
       );
     return mood;
   }
 
   async createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry> {
-    const [newMoodEntry] = await db.insert(moodEntries).values(moodEntry).returning();
+    const [newMoodEntry] = await db
+      .insert(moodEntries)
+      .values(moodEntry)
+      .returning();
     return newMoodEntry;
   }
 
-  async getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]> {
+  async getStudentsMoodsToday(
+    studentIds: number[],
+  ): Promise<(MoodEntry & { studentName: string })[]> {
     if (studentIds.length === 0) return [];
 
     const result = await db
       .select({
         ...moodEntries,
-        studentName: users.name
+        studentName: users.name,
       })
       .from(moodEntries)
       .leftJoin(users, eq(moodEntries.userId, users.id))
       .where(
         and(
-          sql`user_id IN (${studentIds.join(',')})`,
-          sql`DATE(mood_entries.created_at) = DATE('now')`
-        )
+          sql`user_id IN (${studentIds.join(",")})`,
+          sql`DATE(mood_entries.created_at) = DATE('now')`,
+        ),
       );
 
-    return result.map(row => ({
+    return result.map((row) => ({
       ...row,
-      studentName: row.studentName || 'Unknown Student'
+      studentName: row.studentName || "Unknown Student",
     }));
   }
 
-  private async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
-    const [newAchievement] = await db.insert(achievements).values(achievement).returning();
+  private async createAchievement(
+    achievement: InsertAchievement,
+  ): Promise<Achievement> {
+    const [newAchievement] = await db
+      .insert(achievements)
+      .values(achievement)
+      .returning();
     return newAchievement;
   }
 
@@ -415,32 +569,32 @@ export class DatabaseStorage implements IStorage {
           title: "First Task",
           description: "Complete your first task",
           icon: "CheckCircle",
-          pointsRequired: 0
+          pointsRequired: 0,
         },
         {
           title: "Task Master",
           description: "Complete 10 tasks",
           icon: "Trophy",
-          pointsRequired: 100
+          pointsRequired: 100,
         },
         {
           title: "Streak Champion",
           description: "Maintain a 7-day learning streak",
           icon: "Fire",
-          pointsRequired: 0
+          pointsRequired: 0,
         },
         {
           title: "Explorer",
           description: "Try 3 different subjects",
           icon: "Compass",
-          pointsRequired: 0
+          pointsRequired: 0,
         },
         {
           title: "Dedicated Learner",
           description: "Earn 500 points",
           icon: "Star",
-          pointsRequired: 500
-        }
+          pointsRequired: 500,
+        },
       ];
 
       for (const achievement of defaultAchievements) {
@@ -453,26 +607,47 @@ export class DatabaseStorage implements IStorage {
 
   // Portfolio methods
   async getPortfolioItems(userId: number): Promise<PortfolioItem[]> {
-    return await db.select().from(portfolioItems).where(eq(portfolioItems.userId, userId)).orderBy(desc(portfolioItems.createdAt));
+    return await db
+      .select()
+      .from(portfolioItems)
+      .where(eq(portfolioItems.userId, userId))
+      .orderBy(desc(portfolioItems.createdAt));
   }
 
   async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
-    const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id));
+    const [item] = await db
+      .select()
+      .from(portfolioItems)
+      .where(eq(portfolioItems.id, id));
     return item;
   }
 
-  async createPortfolioItem(portfolioItem: InsertPortfolioItem): Promise<PortfolioItem> {
-    const [item] = await db.insert(portfolioItems).values(portfolioItem).returning();
+  async createPortfolioItem(
+    portfolioItem: InsertPortfolioItem,
+  ): Promise<PortfolioItem> {
+    const [item] = await db
+      .insert(portfolioItems)
+      .values(portfolioItem)
+      .returning();
     return item;
   }
 
-  async updatePortfolioItem(id: number, portfolioItem: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined> {
-    const [item] = await db.update(portfolioItems).set(portfolioItem).where(eq(portfolioItems.id, id)).returning();
+  async updatePortfolioItem(
+    id: number,
+    portfolioItem: Partial<InsertPortfolioItem>,
+  ): Promise<PortfolioItem | undefined> {
+    const [item] = await db
+      .update(portfolioItems)
+      .set(portfolioItem)
+      .where(eq(portfolioItems.id, id))
+      .returning();
     return item;
   }
 
   async deletePortfolioItem(id: number): Promise<boolean> {
-    const result = await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+    const result = await db
+      .delete(portfolioItems)
+      .where(eq(portfolioItems.id, id));
     return (result.rowCount || 0) > 0;
   }
 
@@ -480,7 +655,11 @@ export class DatabaseStorage implements IStorage {
   async initializeDefaultSubjectsForUser(userId: number): Promise<void> {
     try {
       // Check if user already has subjects
-      const existingSubjects = await db.select().from(subjects).where(eq(subjects.userId, userId)).limit(1);
+      const existingSubjects = await db
+        .select()
+        .from(subjects)
+        .where(eq(subjects.userId, userId))
+        .limit(1);
       if (existingSubjects.length > 0) {
         return; // User already has subjects
       }
@@ -502,7 +681,10 @@ export class DatabaseStorage implements IStorage {
         await db.insert(subjects).values(subject);
       }
     } catch (error) {
-      console.log("Default subjects already initialized for user or error occurred:", error);
+      console.log(
+        "Default subjects already initialized for user or error occurred:",
+        error,
+      );
     }
   }
 
@@ -513,7 +695,7 @@ export class DatabaseStorage implements IStorage {
     return {
       id: Date.now(),
       ...insertFile,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
   }
 

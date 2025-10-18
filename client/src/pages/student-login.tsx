@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { UserCheck, BookOpen, Eye, EyeOff, Calendar } from "lucide-react";
 
 const loginSchema = z.object({
@@ -52,6 +53,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 const StudentLogin = () => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { setUser } = useAuth();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -80,14 +82,24 @@ const StudentLogin = () => {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
       const response = await apiRequest("POST", "/api/auth/login", data);
-      return response;
+      return response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Welcome back!",
-        description: `Successfully logged in as ${data.user.firstName}`,
-      });
-      setLocation("/dashboard");
+      // Update user state in auth context
+      if (data.user) {
+        setUser(data.user);
+        toast({
+          title: "Welcome back!",
+          description: `Successfully logged in as ${data.user.firstName}`,
+        });
+        setLocation("/dashboard");
+      } else {
+        toast({
+          title: "Login failed",
+          description: "User data not received",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -107,14 +119,24 @@ const StudentLogin = () => {
         "/api/auth/register",
         submitData,
       );
-      return response;
+      return response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Account created!",
-        description: `Welcome ${data.user.firstName}! Your account has been created successfully.`,
-      });
-      setLocation("/dashboard");
+      // Update user state in auth context
+      if (data.user) {
+        setUser(data.user);
+        toast({
+          title: "Account created!",
+          description: `Welcome ${data.user.firstName}! Your account has been created successfully.`,
+        });
+        setLocation("/dashboard");
+      } else {
+        toast({
+          title: "Registration incomplete",
+          description: "Account created but user data not received",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -133,6 +155,15 @@ const StudentLogin = () => {
   const onRegister = (data: RegisterForm) => {
     registerMutation.mutate(data);
   };
+
+  // Reset forms when switching modes
+  useEffect(() => {
+    if (isRegisterMode) {
+      loginForm.reset();
+    } else {
+      registerForm.reset();
+    }
+  }, [isRegisterMode]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -276,26 +307,23 @@ const StudentLogin = () => {
                   />
                 </div>
 
-                {/* Debug Email Input - Using plain HTML input */}
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <input
-                      type="email"
-                      placeholder="Enter your email"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={registerForm.watch("email") || ""}
-                      onChange={(e) => {
-                        console.log("Setting email to:", e.target.value);
-                        registerForm.setValue("email", e.target.value);
-                      }}
-                      onBlur={() => registerForm.trigger("email")}
-                    />
-                  </FormControl>
-                  <FormMessage>
-                    {registerForm.formState.errors.email?.message}
-                  </FormMessage>
-                </FormItem>
+                <FormField
+                  control={registerForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="Enter your email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={registerForm.control}
@@ -395,14 +423,6 @@ const StudentLogin = () => {
                     </FormItem>
                   )}
                 />
-
-                {/* Debug Information - Remove after testing */}
-                <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-                  <div>Email Value: "{registerForm.watch("email")}"</div>
-                  <div>
-                    Form Valid: {registerForm.formState.isValid ? "Yes" : "No"}
-                  </div>
-                </div>
 
                 <Button
                   type="submit"
