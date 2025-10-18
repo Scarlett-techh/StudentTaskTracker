@@ -29,32 +29,74 @@ import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import MobileNav from "@/components/layout/mobile-nav";
 import Footer from "@/components/layout/footer";
-import { ThemeProvider } from "@/hooks/use-theme"; // Import ThemeProvider
+import { ThemeProvider } from "@/hooks/use-theme";
+
+// Layout component for authenticated routes
+function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="flex flex-1">
+        <Sidebar currentPath={location} />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+          {children}
+        </main>
+      </div>
+      <Footer />
+      <MobileNav currentPath={location} />
+    </div>
+  );
+}
 
 function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, refetch } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // ✅ Redirect users to correct dashboard after login - but only from auth pages
+  // ✅ Enhanced redirect logic with immediate refetch
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Only redirect if we're on an auth-related page
+    const checkAuthAndRedirect = async () => {
+      // If we're on an auth page and not authenticated, stay
       const authPages = ["/", "/login", "/student-login", "/coach/login"];
-      if (authPages.includes(location)) {
+      const isAuthPage = authPages.includes(location);
+
+      if (isAuthPage && !isAuthenticated && !isLoading) {
+        return; // Stay on auth page
+      }
+
+      // If authenticated and on auth page, redirect to appropriate dashboard
+      if (isAuthenticated && user && isAuthPage) {
         if (user.userType === "coach") {
           setLocation("/coach/dashboard");
         } else {
           setLocation("/dashboard");
         }
       }
+
+      // If not authenticated and trying to access protected route, redirect to login
+      if (!isAuthenticated && !isLoading && !isAuthPage) {
+        setLocation("/");
+      }
+    };
+
+    checkAuthAndRedirect();
+  }, [isAuthenticated, user, isLoading, location, setLocation]);
+
+  // ✅ Manually refetch auth state when on auth pages to catch immediate login changes
+  useEffect(() => {
+    const authPages = ["/", "/login", "/student-login", "/coach/login"];
+    if (authPages.includes(location)) {
+      // Refetch auth state immediately when on login pages
+      refetch();
     }
-  }, [isAuthenticated, user, setLocation, location]);
+  }, [location, refetch]);
 
   // ✅ Show a loading screen while auth is being checked
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-600 text-lg">Loading...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
@@ -78,162 +120,78 @@ function Router() {
   return (
     <Switch>
       {/* Coach routes */}
-      <Route path="/coach/dashboard" component={CoachDashboard} />
+      <Route path="/coach/dashboard">
+        <AuthenticatedLayout>
+          <CoachDashboard />
+        </AuthenticatedLayout>
+      </Route>
 
       {/* Student routes with layout */}
       <Route path="/dashboard">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Dashboard />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Dashboard />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/tasks">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Tasks />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Tasks />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/calendar">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Calendar />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Calendar />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/resources">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Resources />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Resources />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/portfolio">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Portfolio />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Portfolio />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/analytics">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Analytics />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Analytics />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/share">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Share />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Share />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/parent">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Parent />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Parent />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/profile">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Profile />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Profile />
+        </AuthenticatedLayout>
       </Route>
 
       <Route path="/settings">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Settings />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          <Settings />
+        </AuthenticatedLayout>
       </Route>
 
-      {/* Root route for authenticated users */}
+      {/* Root route for authenticated users - redirect to appropriate dashboard */}
       <Route path="/">
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar currentPath={location} />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
-              <Dashboard />
-            </main>
-          </div>
-          <Footer />
-          <MobileNav currentPath={location} />
-        </div>
+        <AuthenticatedLayout>
+          {user?.userType === "coach" ? <CoachDashboard /> : <Dashboard />}
+        </AuthenticatedLayout>
       </Route>
 
       {/* Fallback */}
@@ -247,7 +205,7 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <ThemeProvider> {/* Wrap with ThemeProvider */}
+          <ThemeProvider>
             <Toaster />
             <Router />
           </ThemeProvider>

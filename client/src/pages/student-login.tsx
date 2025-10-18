@@ -85,9 +85,14 @@ const StudentLogin = () => {
     onSuccess: (data) => {
       toast({
         title: "Welcome back!",
-        description: `Successfully logged in as ${data.user.firstName}`,
+        description: `Successfully logged in as ${data.user?.firstName || 'User'}`,
       });
-      setLocation("/dashboard");
+
+      // Simple redirect with delay to allow session to be set
+      setTimeout(() => {
+        // Force a hard refresh to ensure auth state is properly loaded
+        window.location.href = "/dashboard";
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
@@ -100,7 +105,6 @@ const StudentLogin = () => {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterForm) => {
-      // Remove confirmPassword before sending to API
       const { confirmPassword, ...submitData } = data;
       const response = await apiRequest(
         "POST",
@@ -112,9 +116,14 @@ const StudentLogin = () => {
     onSuccess: (data) => {
       toast({
         title: "Account created!",
-        description: `Welcome ${data.user.firstName}! Your account has been created successfully.`,
+        description: `Welcome ${data.user?.firstName || 'User'}! Your account has been created successfully.`,
       });
-      setLocation("/dashboard");
+
+      // Simple redirect with delay to allow session to be set
+      setTimeout(() => {
+        // Force a hard refresh to ensure auth state is properly loaded
+        window.location.href = "/dashboard";
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
@@ -276,24 +285,23 @@ const StudentLogin = () => {
                   />
                 </div>
 
-                {/* Fixed Email Field - Using direct input with proper form registration */}
-                <div className="space-y-2">
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      value={registerForm.watch("email") || ""}
-                      onChange={(e) => registerForm.setValue("email", e.target.value, { shouldValidate: true })}
-                      onBlur={() => registerForm.trigger("email")}
-                    />
-                  </FormControl>
-                  {registerForm.formState.errors.email && (
-                    <p className="text-sm font-medium text-destructive">
-                      {registerForm.formState.errors.email.message}
-                    </p>
+                <FormField
+                  control={registerForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="Enter your email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
+                />
 
                 <FormField
                   control={registerForm.control}
