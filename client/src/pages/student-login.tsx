@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,6 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { UserCheck, BookOpen, Eye, EyeOff, Calendar } from "lucide-react";
 
 const loginSchema = z.object({
@@ -53,7 +52,6 @@ type RegisterForm = z.infer<typeof registerSchema>;
 const StudentLogin = () => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { setUser } = useAuth();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -82,24 +80,14 @@ const StudentLogin = () => {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
       const response = await apiRequest("POST", "/api/auth/login", data);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
-      // Update user state in auth context
-      if (data.user) {
-        setUser(data.user);
-        toast({
-          title: "Welcome back!",
-          description: `Successfully logged in as ${data.user.firstName}`,
-        });
-        setLocation("/dashboard");
-      } else {
-        toast({
-          title: "Login failed",
-          description: "User data not received",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Welcome back!",
+        description: `Successfully logged in as ${data.user.firstName}`,
+      });
+      setLocation("/dashboard");
     },
     onError: (error: any) => {
       toast({
@@ -119,24 +107,14 @@ const StudentLogin = () => {
         "/api/auth/register",
         submitData,
       );
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
-      // Update user state in auth context
-      if (data.user) {
-        setUser(data.user);
-        toast({
-          title: "Account created!",
-          description: `Welcome ${data.user.firstName}! Your account has been created successfully.`,
-        });
-        setLocation("/dashboard");
-      } else {
-        toast({
-          title: "Registration incomplete",
-          description: "Account created but user data not received",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Account created!",
+        description: `Welcome ${data.user.firstName}! Your account has been created successfully.`,
+      });
+      setLocation("/dashboard");
     },
     onError: (error: any) => {
       toast({
@@ -155,15 +133,6 @@ const StudentLogin = () => {
   const onRegister = (data: RegisterForm) => {
     registerMutation.mutate(data);
   };
-
-  // Reset forms when switching modes
-  useEffect(() => {
-    if (isRegisterMode) {
-      loginForm.reset();
-    } else {
-      registerForm.reset();
-    }
-  }, [isRegisterMode]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -307,23 +276,24 @@ const StudentLogin = () => {
                   />
                 </div>
 
-                <FormField
-                  control={registerForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Enter your email"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                {/* Fixed Email Field - Using direct input with proper form registration */}
+                <div className="space-y-2">
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={registerForm.watch("email") || ""}
+                      onChange={(e) => registerForm.setValue("email", e.target.value, { shouldValidate: true })}
+                      onBlur={() => registerForm.trigger("email")}
+                    />
+                  </FormControl>
+                  {registerForm.formState.errors.email && (
+                    <p className="text-sm font-medium text-destructive">
+                      {registerForm.formState.errors.email.message}
+                    </p>
                   )}
-                />
+                </div>
 
                 <FormField
                   control={registerForm.control}

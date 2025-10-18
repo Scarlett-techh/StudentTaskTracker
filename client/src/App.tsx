@@ -35,16 +35,20 @@ function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // ✅ Redirect users to correct dashboard after login
+  // ✅ Redirect users to correct dashboard after login - but only from auth pages
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.userType === "coach") {
-        setLocation("/coach/dashboard");
-      } else {
-        setLocation("/dashboard");
+      // Only redirect if we're on an auth-related page
+      const authPages = ["/", "/login", "/student-login", "/coach/login"];
+      if (authPages.includes(location)) {
+        if (user.userType === "coach") {
+          setLocation("/coach/dashboard");
+        } else {
+          setLocation("/dashboard");
+        }
       }
     }
-  }, [isAuthenticated, user, setLocation]);
+  }, [isAuthenticated, user, setLocation, location]);
 
   // ✅ Show a loading screen while auth is being checked
   if (isLoading) {
@@ -210,6 +214,21 @@ function Router() {
             <Sidebar currentPath={location} />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
               <Settings />
+            </main>
+          </div>
+          <Footer />
+          <MobileNav currentPath={location} />
+        </div>
+      </Route>
+
+      {/* Root route for authenticated users */}
+      <Route path="/">
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <div className="flex flex-1">
+            <Sidebar currentPath={location} />
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+              <Dashboard />
             </main>
           </div>
           <Footer />
