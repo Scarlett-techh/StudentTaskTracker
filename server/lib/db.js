@@ -86,24 +86,27 @@ export async function updateUser(id, data) {
   }
 }
 
-// Get user from request
+// Get user from request - FIXED VERSION
 export async function getUserFromRequest(req) {
   try {
-    // First check traditional session
-    if (req.session && req.session.user) {
-      return await getUserById(req.session.user.id);
-    }
+    console.log("Session data:", req.session);
+    console.log("Session user:", req.session?.user);
 
-    // Then check Replit Auth (Passport)
-    if (req.user && req.user.dbUserId) {
-      return await getUserById(req.user.dbUserId);
+    // First check traditional session (your new auth system)
+    if (req.session && req.session.user && req.session.user.id) {
+      const user = await getUserById(req.session.user.id);
+      console.log("Found user from session:", user?.id);
+      return user;
     }
 
     // Check for user ID in session directly (fallback)
     if (req.session && req.session.userId) {
-      return await getUserById(req.session.userId);
+      const user = await getUserById(req.session.userId);
+      console.log("Found user from session userId:", user?.id);
+      return user;
     }
 
+    console.log("No user found in session");
     return null;
   } catch (error) {
     console.error("Error getting user from request:", error);

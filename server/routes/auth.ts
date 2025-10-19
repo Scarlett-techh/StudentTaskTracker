@@ -88,16 +88,25 @@ router.post("/register", async (req, res) => {
       userType: newUser.userType,
     };
 
-    res.status(201).json({
-      message: "User created successfully",
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        userType: newUser.userType,
-      },
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Session error" });
+      }
+
+      res.status(201).json({
+        message: "User created successfully",
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          userType: newUser.userType,
+          name: newUser.name,
+        },
+      });
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -105,7 +114,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login user
+// Login user - UPDATED RESPONSE
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -147,16 +156,25 @@ router.post("/login", async (req, res) => {
       userType: user.userType,
     };
 
-    res.json({
-      message: "Login successful",
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        userType: user.userType,
-      },
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Session error" });
+      }
+
+      res.json({
+        message: "Login successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          name: user.name, // Add name for compatibility
+        },
+      });
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -164,13 +182,52 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Get current user
-router.get("/user", (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+// Get current user - UPDATED RESPONSE
+router.get("/user", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
-  res.json({ user: req.session.user });
+    // Get fresh user data from database
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, req.session.user.id))
+      .then((rows) => rows[0]);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userType: user.userType,
+        name: user.name,
+        points: user.points,
+        level: user.level,
+        streak: user.streak,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting user:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Debug endpoint to check session
+router.get("/debug", (req, res) => {
+  res.json({
+    session: req.session,
+    sessionID: req.sessionID,
+    user: req.session.user,
+    cookies: req.headers.cookie,
+  });
 });
 
 // Logout user

@@ -3,10 +3,10 @@ import { getUserFromRequest, updateUser, createUser } from "../lib/db.js";
 
 const router = express.Router();
 
-// GET /api/user - Get user data
-router.get("/", (req, res) => {
+// GET /api/user - Get user data (updated for session auth)
+router.get("/", async (req, res) => {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
 
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -18,6 +18,9 @@ router.get("/", (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      userType: user.userType,
       settings: user.settings ? JSON.parse(user.settings) : {},
     });
   } catch (error) {
@@ -26,17 +29,17 @@ router.get("/", (req, res) => {
   }
 });
 
-// PATCH /api/user - Update user (for backward compatibility)
+// PATCH /api/user - Update user
 router.patch("/", async (req, res) => {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
 
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     // Extract and validate the update data
-    const { name, username, email, settings } = req.body;
+    const { name, username, email, settings, firstName, lastName } = req.body;
 
     // Validate email if provided
     if (email && !email.includes("@")) {
@@ -48,6 +51,8 @@ router.patch("/", async (req, res) => {
     if (name !== undefined) updateData.name = name;
     if (username !== undefined) updateData.username = username;
     if (email !== undefined) updateData.email = email;
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
     if (settings !== undefined) updateData.settings = JSON.stringify(settings);
 
     // Update user in database
@@ -57,12 +62,25 @@ router.patch("/", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Return updated user data (without sensitive information)
+    // Update session user data if critical fields changed
+    if (req.session.user && (firstName || lastName || username)) {
+      req.session.user = {
+        ...req.session.user,
+        username: updatedUser.username,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+      };
+    }
+
+    // Return updated user data
     res.json({
       id: updatedUser.id,
       name: updatedUser.name,
       username: updatedUser.username,
       email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      userType: updatedUser.userType,
       settings: updatedUser.settings ? JSON.parse(updatedUser.settings) : {},
     });
   } catch (error) {
@@ -74,7 +92,7 @@ router.patch("/", async (req, res) => {
 // POST /api/user/mood - Update user mood
 router.post("/mood", async (req, res) => {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
 
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -133,7 +151,7 @@ router.post("/mood", async (req, res) => {
 // GET /api/user/mood/today - Get today's mood
 router.get("/mood/today", async (req, res) => {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
 
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
