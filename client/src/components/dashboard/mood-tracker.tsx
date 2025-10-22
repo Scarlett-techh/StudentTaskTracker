@@ -107,36 +107,25 @@ export const MoodTracker = () => {
   const [note, setNote] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, apiClient } = useAuth(); // ✅ ADDED: Import apiClient from useAuth
 
-  // Get today's mood if already set - Using tasks endpoint since mood endpoints don't exist
-  const { data: todaysMood } = useQuery<MoodEntry | null>({
-    queryKey: ["/api/mood/today"],
-    enabled: false, // Disable this query since endpoint doesn't exist
-  });
-
+  // ✅ FIXED: Create mood mutation using apiClient
   const createMoodMutation = useMutation({
     mutationFn: async (data: {
       moodType: string;
       intensity: number;
       note?: string;
     }) => {
-      const response = await fetch("/api/user/mood", {
+      console.log("😊 [MOOD] Sharing mood:", data);
+
+      // ✅ FIXED: Use apiClient instead of raw fetch
+      return await apiClient("/mood", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to share your mood");
-      }
-
-      return response.json();
     },
     onSuccess: () => {
+      console.log("✅ [MOOD] Mood shared successfully");
       toast({
         title: "Mood shared!",
         description: "Thanks for letting us know how you're feeling today.",
@@ -148,6 +137,7 @@ export const MoodTracker = () => {
       setIntensity(3);
     },
     onError: (error: Error) => {
+      console.error("❌ [MOOD] Failed to share mood:", error);
       toast({
         title: "Failed to share mood",
         description: error.message || "Please try again.",
@@ -289,6 +279,19 @@ export const MoodTracker = () => {
             >
               {createMoodMutation.isPending ? "Sharing..." : "Share My Mood"}
             </Button>
+          )}
+
+          {/* ✅ ADDED: Debug info for development */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-100 rounded">
+              <strong>Debug Info:</strong>
+              <br />
+              User: {user ? `Logged in (ID: ${user.id})` : "Not logged in"}
+              <br />
+              Selected Mood: {selectedMood || "None"}
+              <br />
+              API Client: {apiClient ? "Available" : "Not available"}
+            </div>
           )}
         </div>
       </CardContent>

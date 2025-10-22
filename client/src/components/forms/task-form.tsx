@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 // Extend the schema with validation
 const taskFormSchema = z.object({
@@ -50,6 +50,8 @@ const PREDEFINED_SUBJECTS = [
 
 const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel }) => {
   const { toast } = useToast();
+  const { apiClient } = useAuth();
+  const queryClient = useQueryClient();
   const isEditing = !!task;
 
   // Initialize form with default values, initial values, or existing task
@@ -66,17 +68,51 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
     },
   });
 
-  // Create task mutation - FIXED
+  // ✅ FIXED: Enhanced task mutation with better error handling
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
+      console.log('➕ [TASK FORM] Creating/updating task:', data);
+
+      // Combine date and time if both are provided
+      let dueDate = null;
+      if (data.dueDate) {
+        if (data.dueTime) {
+          dueDate = new Date(`${data.dueDate}T${data.dueTime}`).toISOString();
+        } else {
+          dueDate = new Date(data.dueDate).toISOString();
+        }
+      }
+
+      const taskData = {
+        title: data.title,
+        description: data.description || "",
+        subject: data.subject || "general",
+        resourceLink: data.resourceLink || "",
+        status: data.status,
+        dueDate: dueDate,
+      };
+
+      console.log('📤 [TASK FORM] Sending task data:', taskData);
+
       if (isEditing) {
-        return await apiRequest("PATCH", `/api/tasks/${task.id}`, data);
+        const response = await apiClient(`/tasks/${task.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(taskData),
+        });
+        return response;
       } else {
-        return await apiRequest("POST", "/api/tasks", data);
+        const response = await apiClient("/tasks", {
+          method: "POST",
+          body: JSON.stringify(taskData),
+        });
+        return response;
       }
     },
     onSuccess: (data) => {
+      console.log('✅ [TASK FORM] Task operation successful:', data);
+
       if (!data) {
+        console.error('❌ [TASK FORM] No data returned from server');
         toast({
           title: "Error",
           description: "No data returned from server",
@@ -85,34 +121,57 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
         return;
       }
 
-      // Update the query cache with the new task
-      queryClient.setQueryData(["/api/tasks"], (oldData: any[] | undefined) => {
-        if (isEditing) {
-          return oldData ? oldData.map(task => task.id === data.id ? data : task) : [data];
-        } else {
-          // Ensure we're not adding undefined values
-          return oldData ? [...oldData.filter(Boolean), data] : [data];
-        }
-      });
+      // ✅ FIXED: Use invalidateQueries instead of refetch to handle the update
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })
+        .then(() => {
+          console.log('✅ [TASK FORM] Tasks query invalidated successfully');
 
-      toast({
-        title: isEditing ? "Task updated" : "Task created",
-        description: isEditing 
-          ? "Your task has been updated successfully." 
-          : "Your new task has been created.",
-      });
-      if (onSuccess) onSuccess();
+          toast({
+            title: isEditing ? "Task updated" : "Task created",
+            description: isEditing 
+              ? "Your task has been updated successfully." 
+              : "Your new task has been created.",
+          });
+
+          if (onSuccess) {
+            console.log('✅ [TASK FORM] Calling onSuccess callback');
+            onSuccess();
+          }
+        })
+        .catch((error) => {
+          console.error('❌ [TASK FORM] Error invalidating tasks query:', error);
+          toast({
+            title: "Task created but failed to refresh list",
+            description: "The task was created successfully, but we couldn't refresh the list. Please refresh the page.",
+            variant: "default",
+          });
+
+          // Still call onSuccess even if refresh fails
+          if (onSuccess) onSuccess();
+        });
     },
     onError: (error: any) => {
+      console.error('❌ [TASK FORM] Task operation failed:', error);
+
+      let errorMessage = error.message || "An unexpected error occurred";
+
+      // Provide more user-friendly error messages
+      if (errorMessage.includes("401")) {
+        errorMessage = "Your session has expired. Please log in again.";
+      } else if (errorMessage.includes("Network")) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+
       toast({
         title: isEditing ? "Error updating task" : "Error creating task",
-        description: error.message || "An unexpected error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: TaskFormValues) => {
+    console.log('📝 [TASK FORM] Form submitted:', data);
     createTaskMutation.mutate(data);
   };
 
@@ -121,121 +180,17 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Task Title</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter task title" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Add details about the task" 
-                  className="resize-none h-20"
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="resourceLink"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Resource Link</FormLabel>
-              <FormControl>
-                <Input 
-                  type="url"
-                  placeholder="https://example.com - Website or resource used for this task (optional)"
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FormField
             control={form.control}
-            name="subject"
+            name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Subject</FormLabel>
-                <Select 
-                  onValueChange={field.onChange}
-                  value={field.value || "none"}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subject" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {PREDEFINED_SUBJECTS.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.name}>
-                        {subject.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select 
-                  onValueChange={field.onChange}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="dueDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Due Date</FormLabel>
+                <FormLabel>Task Title *</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input 
+                    placeholder="Enter task title" 
+                    {...field} 
+                    disabled={createTaskMutation.isPending}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -244,37 +199,168 @@ const TaskForm: FC<TaskFormProps> = ({ task, initialValues, onSuccess, onCancel 
 
           <FormField
             control={form.control}
-            name="dueTime"
+            name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Due Time</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input type="time" {...field} />
+                  <Textarea 
+                    placeholder="Add details about the task" 
+                    className="resize-none h-20"
+                    {...field} 
+                    disabled={createTaskMutation.isPending}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
 
-        <div className="flex justify-end space-x-2 pt-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit"
-            disabled={createTaskMutation.isPending}
-          >
-            {createTaskMutation.isPending 
-              ? (isEditing ? "Updating..." : "Creating...") 
-              : (isEditing ? "Update Task" : "Create Task")
-            }
-          </Button>
-        </div>
+          <FormField
+            control={form.control}
+            name="resourceLink"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Resource Link</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="url"
+                    placeholder="https://example.com (optional)"
+                    {...field} 
+                    disabled={createTaskMutation.isPending}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="subject"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subject</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    value={field.value || "none"}
+                    disabled={createTaskMutation.isPending}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a subject" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {PREDEFINED_SUBJECTS.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.name}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={createTaskMutation.isPending}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Date</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="date" 
+                      {...field} 
+                      disabled={createTaskMutation.isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="dueTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Time</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="time" 
+                      {...field} 
+                      disabled={createTaskMutation.isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              disabled={createTaskMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              disabled={createTaskMutation.isPending}
+              className="min-w-24"
+            >
+              {createTaskMutation.isPending 
+                ? (isEditing ? "Updating..." : "Creating...") 
+                : (isEditing ? "Update Task" : "Create Task")
+              }
+            </Button>
+          </div>
+
+          {/* Debug info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+              <div className="font-semibold">Debug Info:</div>
+              <div>Mutation Status: {createTaskMutation.status}</div>
+              <div>Is Pending: {createTaskMutation.isPending ? 'Yes' : 'No'}</div>
+            </div>
+          )}
         </form>
       </Form>
     </div>

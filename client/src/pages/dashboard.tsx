@@ -2,7 +2,12 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import ProgressCard from "@/components/dashboard/progress-card";
 import TaskCard from "@/components/dashboard/task-card";
@@ -15,24 +20,46 @@ import { MoodTracker } from "@/components/dashboard/mood-tracker";
 import TaskForm from "@/components/forms/task-form";
 import PhotoUpload from "@/components/forms/photo-upload";
 import { Helmet } from "react-helmet-async";
+import { useAuth } from "@/hooks/useAuth"; // ✅ ADDED: Import useAuth
 
 const Dashboard = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
   const [photoUploadDialogOpen, setPhotoUploadDialogOpen] = useState(false);
+  const { apiClient } = useAuth(); // ✅ ADDED: Get apiClient
 
   // Get current date
   const currentDate = format(new Date(), "EEEE, MMMM d, yyyy");
 
-  // Fetch tasks, notes, and photos
-  const { data: tasks = [], isLoading: isLoadingTasks, refetch: refetchTasks } = useQuery({
+  // ✅ FIXED: Fetch tasks with proper API response handling
+  const {
+    data: tasksData = { tasks: [] },
+    isLoading: isLoadingTasks,
+    refetch: refetchTasks,
+  } = useQuery({
     queryKey: ["/api/tasks"],
+    queryFn: async () => {
+      try {
+        const response = await apiClient("/tasks");
+        return response;
+      } catch (error) {
+        console.error("❌ [DASHBOARD] Error fetching tasks:", error);
+        return { tasks: [] };
+      }
+    },
   });
+
+  // ✅ FIXED: Extract tasks array from response
+  const tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks : [];
 
   const { data: recommendations = [] } = useQuery({
     queryKey: ["/api/recommendations"],
   });
 
-  const { data: photos = [], isLoading: isLoadingPhotos, refetch: refetchPhotos } = useQuery({
+  const {
+    data: photos = [],
+    isLoading: isLoadingPhotos,
+    refetch: refetchPhotos,
+  } = useQuery({
     queryKey: ["/api/photos"],
   });
 
@@ -45,21 +72,21 @@ const Dashboard = () => {
     queryKey: ["/api/user-stats"],
   });
 
-  // Calculate task stats
+  // ✅ FIXED: Calculate task stats using the correct tasks array
   const taskStats = {
-    total: Array.isArray(tasks) ? tasks.length : 0,
-    completed: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === "completed").length : 0,
-    inProgress: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === "in-progress").length : 0,
-    pending: Array.isArray(tasks) ? tasks.filter((t: any) => t.status === "pending").length : 0,
-    upcoming: 4 // This would normally be calculated based on due dates
+    total: tasks.length,
+    completed: tasks.filter((t: any) => t.status === "completed").length,
+    inProgress: tasks.filter((t: any) => t.status === "in-progress").length,
+    pending: tasks.filter((t: any) => t.status === "pending").length,
+    upcoming: 4, // This would normally be calculated based on due dates
   };
 
-  // Generate personalized welcome message
+  // ✅ FIXED: Generate personalized welcome message with proper tasks array
   const getPersonalizedMessage = () => {
     const now = new Date();
     const hour = now.getHours();
-    const firstName = user?.name?.split(' ')[0] || 'Student';
-    
+    const firstName = user?.name?.split(" ")[0] || user?.firstName || "Student";
+
     // Time-based greeting
     let greeting = "Hello";
     if (hour < 12) greeting = "Good Morning";
@@ -69,22 +96,26 @@ const Dashboard = () => {
     // Progress-based encouragement
     let progressMessage = "";
     if (taskStats.completed > 0) {
-      progressMessage = `You've completed ${taskStats.completed} task${taskStats.completed > 1 ? 's' : ''} - great work!`;
+      progressMessage = `You've completed ${taskStats.completed} task${taskStats.completed > 1 ? "s" : ""} - great work!`;
     } else if (taskStats.inProgress > 0) {
-      progressMessage = `You have ${taskStats.inProgress} task${taskStats.inProgress > 1 ? 's' : ''} in progress. Keep going!`;
+      progressMessage = `You have ${taskStats.inProgress} task${taskStats.inProgress > 1 ? "s" : ""} in progress. Keep going!`;
     } else if (taskStats.total > 0) {
-      progressMessage = "Ready to tackle your tasks? Let's make today productive!";
+      progressMessage =
+        "Ready to tackle your tasks? Let's make today productive!";
     } else {
-      progressMessage = "Ready to start your learning journey? Create your first task!";
+      progressMessage =
+        "Ready to start your learning journey? Create your first task!";
     }
 
-    // Subject diversity message
-    const subjects = [...new Set((tasks || []).map((t: any) => t.subject).filter(Boolean))];
+    // ✅ FIXED: Subject diversity message with proper tasks array
+    const subjects = [
+      ...new Set(tasks.map((t: any) => t.subject).filter(Boolean)),
+    ];
     let diversityMessage = "";
     if (subjects.length > 3) {
       diversityMessage = ` You're exploring ${subjects.length} different subjects - amazing variety!`;
     } else if (subjects.length > 1) {
-      diversityMessage = ` You're working on ${subjects.join(' and ')} - nice balance!`;
+      diversityMessage = ` You're working on ${subjects.join(" and ")} - nice balance!`;
     }
 
     // Streak and achievement message
@@ -100,7 +131,7 @@ const Dashboard = () => {
       greeting: `${greeting}, ${firstName}!`,
       main: progressMessage,
       diversity: diversityMessage,
-      motivation: motivationMessage
+      motivation: motivationMessage,
     };
   };
 
@@ -110,12 +141,12 @@ const Dashboard = () => {
     <>
       <Helmet>
         <title>Dashboard - Student Task Tracker</title>
-        <meta 
-          name="description" 
+        <meta
+          name="description"
           content="View your daily progress, manage tasks, take notes, and organize your academic life all in one place."
         />
       </Helmet>
-      
+
       <div className="space-y-6">
         {/* Personalized Welcome Message */}
         <div className="glass-card rounded-2xl text-gray-900 p-8 animate-slide-up shadow-glow relative overflow-hidden">
@@ -123,18 +154,26 @@ const Dashboard = () => {
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-400 to-cyan-400 rounded-full opacity-20 animate-pulse-soft"></div>
           <div className="flex justify-between items-start flex-col sm:flex-row space-y-4 sm:space-y-0 relative z-10">
             <div className="flex-1">
-              <h1 className="text-4xl font-bold mb-3 gradient-heading">{welcomeMessage.greeting}</h1>
-              <p className="text-gray-700 text-xl mb-2">{welcomeMessage.main}</p>
+              <h1 className="text-4xl font-bold mb-3 gradient-heading">
+                {welcomeMessage.greeting}
+              </h1>
+              <p className="text-gray-700 text-xl mb-2">
+                {welcomeMessage.main}
+              </p>
               {welcomeMessage.diversity && (
-                <p className="text-gray-600 text-lg">{welcomeMessage.diversity}</p>
+                <p className="text-gray-600 text-lg">
+                  {welcomeMessage.diversity}
+                </p>
               )}
               {welcomeMessage.motivation && (
-                <p className="points-display text-2xl font-bold mt-2">{welcomeMessage.motivation}</p>
+                <p className="points-display text-2xl font-bold mt-2">
+                  {welcomeMessage.motivation}
+                </p>
               )}
               <p className="text-gray-500 text-base mt-4">{currentDate}</p>
             </div>
             <div className="flex gap-3">
-              <Button 
+              <Button
                 onClick={() => setNewTaskDialogOpen(true)}
                 className="btn-gradient px-6 py-3 text-lg animate-pulse-soft"
               >
@@ -147,30 +186,32 @@ const Dashboard = () => {
 
         {/* Progress Overview */}
         <div className="glass-card rounded-2xl p-8 shadow-accent">
-          <h3 className="text-2xl font-bold gradient-heading mb-6">Today's Progress</h3>
+          <h3 className="text-2xl font-bold gradient-heading mb-6">
+            Today's Progress
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <ProgressCard 
-              label="Completed" 
-              value={taskStats.completed} 
-              total={taskStats.total} 
-              type="completed" 
+            <ProgressCard
+              label="Completed"
+              value={taskStats.completed}
+              total={taskStats.total}
+              type="completed"
             />
-            <ProgressCard 
-              label="In Progress" 
-              value={taskStats.inProgress} 
-              total={taskStats.total} 
-              type="in-progress" 
+            <ProgressCard
+              label="In Progress"
+              value={taskStats.inProgress}
+              total={taskStats.total}
+              type="in-progress"
             />
-            <ProgressCard 
-              label="Pending" 
-              value={taskStats.pending} 
-              total={taskStats.total} 
-              type="pending" 
+            <ProgressCard
+              label="Pending"
+              value={taskStats.pending}
+              total={taskStats.total}
+              type="pending"
             />
-            <ProgressCard 
-              label="Upcoming" 
-              value={taskStats.upcoming} 
-              type="upcoming" 
+            <ProgressCard
+              label="Upcoming"
+              value={taskStats.upcoming}
+              type="upcoming"
             />
           </div>
         </div>
@@ -182,7 +223,9 @@ const Dashboard = () => {
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Today's Tasks</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Today's Tasks
+              </h3>
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm">
                   <span className="mr-1 text-sm">Filter</span>
@@ -193,40 +236,44 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Task List */}
           <div className="p-6">
             {isLoadingTasks ? (
               <div className="text-center py-8">Loading tasks...</div>
-            ) : tasks && tasks.length > 0 ? (
+            ) : tasks.length > 0 ? (
               <div className="space-y-4">
                 {tasks.slice(0, 3).map((task: any) => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task} 
+                  <TaskCard
+                    key={task.id}
+                    task={task}
                     onTaskUpdate={refetchTasks}
                   />
                 ))}
               </div>
             ) : (
               <div className="text-center py-12">
-                <svg 
-                  className="mx-auto h-12 w-12 text-gray-300" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                   ></path>
                 </svg>
-                <h3 className="mt-2 text-lg font-medium text-gray-900">No tasks for today</h3>
-                <p className="text-gray-500 mt-1">Add a new task to get started</p>
-                <Button 
+                <h3 className="mt-2 text-lg font-medium text-gray-900">
+                  No tasks for today
+                </h3>
+                <p className="text-gray-500 mt-1">
+                  Add a new task to get started
+                </p>
+                <Button
                   onClick={() => setNewTaskDialogOpen(true)}
                   className="mt-4"
                 >
@@ -245,14 +292,15 @@ const Dashboard = () => {
 
         {/* Photos and Rewards Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
           {/* Photos Section */}
           <div className="bg-white rounded-lg shadow lg:col-span-1">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900">Recent Photos</h3>
-                <Button 
-                  variant="outline" 
+                <h3 className="text-lg font-medium text-gray-900">
+                  Recent Photos
+                </h3>
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setPhotoUploadDialogOpen(true)}
                 >
@@ -267,16 +315,18 @@ const Dashboard = () => {
               ) : photos && photos.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4">
                   {photos.slice(0, 4).map((photo: any) => (
-                    <PhotoThumbnail 
-                      key={photo.id} 
-                      photo={photo} 
+                    <PhotoThumbnail
+                      key={photo.id}
+                      photo={photo}
                       onPhotoUpdate={refetchPhotos}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No photos yet. Upload your first photo!</p>
+                  <p className="text-gray-500">
+                    No photos yet. Upload your first photo!
+                  </p>
                 </div>
               )}
             </div>
@@ -296,30 +346,31 @@ const Dashboard = () => {
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
           </DialogHeader>
-          <TaskForm 
+          <TaskForm
             onSuccess={() => {
               setNewTaskDialogOpen(false);
               refetchTasks();
-            }} 
-            onCancel={() => setNewTaskDialogOpen(false)} 
+            }}
+            onCancel={() => setNewTaskDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
 
-
-
       {/* Photo Upload Dialog */}
-      <Dialog open={photoUploadDialogOpen} onOpenChange={setPhotoUploadDialogOpen}>
+      <Dialog
+        open={photoUploadDialogOpen}
+        onOpenChange={setPhotoUploadDialogOpen}
+      >
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Upload Photo</DialogTitle>
           </DialogHeader>
-          <PhotoUpload 
+          <PhotoUpload
             onSuccess={() => {
               setPhotoUploadDialogOpen(false);
               refetchPhotos();
-            }} 
-            onCancel={() => setPhotoUploadDialogOpen(false)} 
+            }}
+            onCancel={() => setPhotoUploadDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>

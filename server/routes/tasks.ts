@@ -1,13 +1,129 @@
 // server/routes/tasks.ts
 import express from "express";
 import multer from "multer";
-import { storage } from "../storage.js";
-import { isAuthenticated } from "../replitAuth.js";
 import { db } from "../db";
-import { files, portfolioItems } from "@shared/schema";
+import { tasks as tasksTable, users as usersTable } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
+
+// ✅ FIXED: Simplified storage methods using only known tables
+const storage = {
+  // Get tasks by user ID
+  async getTasksByUserId(userId: number) {
+    try {
+      const userTasks = await db
+        .select()
+        .from(tasksTable)
+        .where(eq(tasksTable.userId, userId));
+      return userTasks;
+    } catch (error) {
+      console.error("Error getting tasks by user ID:", error);
+      throw error;
+    }
+  },
+
+  // Get single task
+  async getTask(taskId: number) {
+    try {
+      const [task] = await db
+        .select()
+        .from(tasksTable)
+        .where(eq(tasksTable.id, taskId));
+      return task;
+    } catch (error) {
+      console.error("Error getting task:", error);
+      throw error;
+    }
+  },
+
+  // Create task
+  async createTask(taskData: any) {
+    try {
+      const [task] = await db.insert(tasksTable).values(taskData).returning();
+      return task;
+    } catch (error) {
+      console.error("Error creating task:", error);
+      throw error;
+    }
+  },
+
+  // Update task
+  async updateTask(taskId: number, updateData: any) {
+    try {
+      const [task] = await db
+        .update(tasksTable)
+        .set(updateData)
+        .where(eq(tasksTable.id, taskId))
+        .returning();
+      return task;
+    } catch (error) {
+      console.error("Error updating task:", error);
+      throw error;
+    }
+  },
+
+  // Delete task
+  async deleteTask(taskId: number) {
+    try {
+      const [task] = await db
+        .delete(tasksTable)
+        .where(eq(tasksTable.id, taskId))
+        .returning();
+      return task;
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
+  },
+
+  // Add points to user
+  async addPoints(pointData: {
+    userId: number;
+    amount: number;
+    reason: string;
+    taskId?: number;
+  }) {
+    try {
+      // Get current user
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, pointData.userId));
+      if (!user) throw new Error("User not found");
+
+      // Update user points
+      const newPoints = (user.points || 0) + pointData.amount;
+      const [updatedUser] = await db
+        .update(usersTable)
+        .set({ points: newPoints })
+        .where(eq(usersTable.id, pointData.userId))
+        .returning();
+
+      return updatedUser;
+    } catch (error) {
+      console.error("Error adding points:", error);
+      throw error;
+    }
+  },
+};
+
+// Session-based authentication middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  console.log("🔐 [TASKS AUTH] Checking session for user:", req.session?.user);
+
+  if (!req.session.user) {
+    console.log("❌ [TASKS AUTH] No user in session - returning 401");
+    return res.status(401).json({
+      error: "Unauthorized - Please log in again",
+      code: "NO_SESSION",
+    });
+  }
+
+  console.log("✅ [TASKS AUTH] User authenticated:", req.session.user.id);
+  req.user = req.session.user;
+  next();
+};
 
 // Configure multer for memory storage
 const upload = multer({
@@ -17,16 +133,79 @@ const upload = multer({
   },
 });
 
-// Update task (including completion with proof) - MAIN ENDPOINT
-router.patch("/:taskId", isAuthenticated, async (req: any, res) => {
+// Get all tasks for current user
+router.get("/", requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.session.user.id;
+    console.log("📋 [TASKS] Fetching tasks for user:", userId);
+
+    const userTasks = await storage.getTasksByUserId(userId);
+
+    res.json({
+      success: true,
+      tasks: userTasks || [],
+    });
+  } catch (error: any) {
+    console.error("❌ [TASKS] Error fetching tasks:", error);
+    res.status(500).json({
+      error: error.message || "Failed to fetch tasks",
+      code: "TASKS_FETCH_ERROR",
+    });
+  }
+});
+
+// Create new task
+router.post("/", requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { title, description, subject, resourceLink, status, dueDate } =
+      req.body;
+
+    console.log("➕ [TASKS] Creating task for user:", userId, req.body);
+
+    // Validate required fields
+    if (!title) {
+      return res.status(400).json({
+        error: "Title is required",
+        code: "MISSING_TITLE",
+      });
+    }
+
+    const newTask = await storage.createTask({
+      userId,
+      title,
+      description: description || "",
+      subject: subject || "general",
+      resourceLink: resourceLink || "",
+      status: status || "pending",
+      dueDate: dueDate ? new Date(dueDate) : null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    console.log("✅ [TASKS] Task created successfully:", newTask.id);
+
+    res.status(201).json({
+      success: true,
+      message: "Task created successfully",
+      task: newTask,
+    });
+  } catch (error: any) {
+    console.error("❌ [TASKS] Error creating task:", error);
+    res.status(500).json({
+      error: error.message || "Failed to create task",
+      code: "TASK_CREATE_ERROR",
+    });
+  }
+});
+
+// Update task (including completion with proof)
+router.patch("/:taskId", requireAuth, async (req: any, res) => {
   try {
     const { taskId } = req.params;
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
+    const userId = req.session.user.id;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    console.log("✏️ [TASKS] Updating task:", taskId, "for user:", userId);
 
     const { status, proofFiles, proofText, proofLink } = req.body;
 
@@ -40,7 +219,7 @@ router.patch("/:taskId", isAuthenticated, async (req: any, res) => {
 
     // Verify user owns this task
     const existingTask = await storage.getTask(parseInt(taskId));
-    if (!existingTask || existingTask.userId !== user.id) {
+    if (!existingTask || existingTask.userId !== userId) {
       return res.status(404).json({ message: "Task not found" });
     }
 
@@ -80,8 +259,8 @@ router.patch("/:taskId", isAuthenticated, async (req: any, res) => {
     // Award points for task completion if status changed to completed
     if (status === "completed" && existingTask.status !== "completed") {
       await storage.addPoints({
-        userId: user.id,
-        amount: 10, // Points for task completion
+        userId: userId,
+        amount: 10,
         reason: "Task completed",
         taskId: parseInt(taskId),
       });
@@ -98,27 +277,24 @@ router.patch("/:taskId", isAuthenticated, async (req: any, res) => {
   }
 });
 
-// Mark task as complete with proof of work (file uploads) - LEGACY ENDPOINT
+// Mark task as complete with proof of work
 router.put(
   "/:taskId/complete",
-  isAuthenticated,
+  requireAuth,
   upload.array("proofFiles"),
   async (req: any, res) => {
     try {
       const { taskId } = req.params;
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
+      const userId = req.session.user.id;
 
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      console.log("✅ [TASKS] Completing task:", taskId, "for user:", userId);
 
       const uploadedFiles = req.files as Express.Multer.File[];
-      const { proofText, proofLink, shareFlags = {} } = req.body;
+      const { proofText, proofLink } = req.body;
 
       // Verify user owns this task
       const existingTask = await storage.getTask(parseInt(taskId));
-      if (!existingTask || existingTask.userId !== user.id) {
+      if (!existingTask || existingTask.userId !== userId) {
         return res.status(404).json({ message: "Task not found" });
       }
 
@@ -155,60 +331,11 @@ router.put(
         return res.status(404).json({ message: "Task not found" });
       }
 
-      // Process each uploaded file for individual file storage (if needed)
-      const savedFiles = [];
-      for (let i = 0; i < uploadedFiles.length; i++) {
-        const file = uploadedFiles[i];
-        const shareToPortfolio = shareFlags[i] === "true";
-
-        // Convert file buffer to base64
-        const base64Data = file.buffer.toString("base64");
-        const dataUri = `data:${file.mimetype};base64,${base64Data}`;
-
-        // Save file to database
-        const savedFile = await storage.createFile({
-          userId: user.id,
-          originalName: file.originalname,
-          fileName: `${Date.now()}-${file.originalname}`,
-          mimeType: file.mimetype,
-          size: file.size,
-          fileData: dataUri,
-          taskId: parseInt(taskId),
-          shareToPortfolio,
-        });
-
-        savedFiles.push(savedFile);
-
-        // If file should be shared to portfolio, create portfolio item with proper attachment format
-        if (shareToPortfolio) {
-          // Create attachment object in the format expected by PortfolioPreview component
-          const attachment = {
-            type: file.mimetype.startsWith("image/") ? "photo" : "file",
-            name: file.originalname,
-            url: dataUri, // Use the base64 data URI for direct access
-            size: file.size,
-            title: file.originalname,
-            mimeType: file.mimetype,
-          };
-
-          await storage.createPortfolioItem({
-            userId: user.id,
-            title: `Proof: ${file.originalname}`,
-            description: `Completed task: ${updatedTask.title}`,
-            type: "task", // Mark as task-based item
-            subject: updatedTask.subject,
-            sourceId: parseInt(taskId), // Reference the task, not the file
-            filePath: savedFile.fileName,
-            attachments: [attachment], // Store attachment in the format expected by preview component
-          });
-        }
-      }
-
       // Award points for task completion
       if (existingTask.status !== "completed") {
         await storage.addPoints({
-          userId: user.id,
-          amount: 10, // Points for task completion
+          userId: userId,
+          amount: 10,
           reason: "Task completed",
           taskId: parseInt(taskId),
         });
@@ -217,7 +344,6 @@ router.put(
       res.json({
         success: true,
         message: "Task completed successfully",
-        files: savedFiles,
       });
     } catch (error: any) {
       console.error("Error completing task:", error);
@@ -229,19 +355,16 @@ router.put(
 );
 
 // Get task proof files
-router.get("/:taskId/files", isAuthenticated, async (req: any, res) => {
+router.get("/:taskId/files", requireAuth, async (req: any, res) => {
   try {
     const { taskId } = req.params;
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
+    const userId = req.session.user.id;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    console.log("📁 [TASKS] Fetching files for task:", taskId, "user:", userId);
 
     // Verify user owns this task
     const task = await storage.getTask(parseInt(taskId));
-    if (!task || task.userId !== user.id) {
+    if (!task || task.userId !== userId) {
       return res.status(404).json({ message: "Task not found" });
     }
 
@@ -258,6 +381,65 @@ router.get("/:taskId/files", isAuthenticated, async (req: any, res) => {
     res
       .status(500)
       .json({ message: error.message || "Failed to fetch task files" });
+  }
+});
+
+// Delete task endpoint
+router.delete("/:taskId", requireAuth, async (req: any, res) => {
+  try {
+    const { taskId } = req.params;
+    const userId = req.session.user.id;
+
+    console.log("🗑️ [TASKS] Deleting task:", taskId, "for user:", userId);
+
+    // Verify user owns this task
+    const task = await storage.getTask(parseInt(taskId));
+    if (!task || task.userId !== userId) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const deleted = await storage.deleteTask(parseInt(taskId));
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Task deleted successfully",
+    });
+  } catch (error: any) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({ message: error.message || "Failed to delete task" });
+  }
+});
+
+// Reorder tasks endpoint
+router.patch("/reorder", requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { tasks: tasksWithNewOrder } = req.body;
+
+    console.log(
+      "🔄 [TASKS] Reordering tasks for user:",
+      userId,
+      tasksWithNewOrder,
+    );
+
+    // Update each task's order
+    for (const taskOrder of tasksWithNewOrder) {
+      await storage.updateTask(taskOrder.id, { order: taskOrder.order });
+    }
+
+    res.json({
+      success: true,
+      message: "Tasks reordered successfully",
+    });
+  } catch (error: any) {
+    console.error("Error reordering tasks:", error);
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to reorder tasks" });
   }
 });
 
