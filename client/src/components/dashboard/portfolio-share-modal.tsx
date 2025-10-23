@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FileText, ExternalLink, File, FolderOpen } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth"; // Import useAuth
 
 interface PortfolioShareModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ const PortfolioShareModal = ({
   onSuccess,
 }: PortfolioShareModalProps) => {
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth(); // Get auth state
   const [isSharing, setIsSharing] = useState(false);
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [selectedPortfolios, setSelectedPortfolios] = useState<string[]>([]);
@@ -44,10 +46,10 @@ const PortfolioShareModal = ({
 
   // Fetch user portfolios when modal opens
   useEffect(() => {
-    if (open) {
+    if (open && isAuthenticated) {
       fetchPortfolios();
     }
-  }, [open]);
+  }, [open, isAuthenticated]);
 
   const fetchPortfolios = async () => {
     try {
@@ -71,33 +73,48 @@ const PortfolioShareModal = ({
         ? [task.proofUrl]
         : [];
 
-  // Fixed: Proper portfolio sharing mutation with correct endpoint
+  // FIXED: Enhanced portfolio sharing with better auth handling
   const shareToPortfolioMutation = useMutation({
     mutationFn: async (portfolioData: any) => {
-      console.log("Sharing task to portfolio with data:", portfolioData);
-
-      // Use the correct endpoint - create a portfolio item directly
-      const response = await apiRequest("POST", "/api/portfolio/items", {
-        title: task.title,
-        description: task.description || `Completed task: ${task.title}`,
-        subject: task.subject || "General",
-        type: "task",
+      console.log("🔄 Sharing task to portfolio with data:", {
         taskId: task.id,
+        portfolioIds: portfolioData.portfolioIds || [],
+        includeProof: portfolioData.includeProof,
+        proofFilesCount: portfolioData.proofFiles?.length || 0,
+        hasProofText: !!task.proofText,
+        hasProofLink: !!task.proofLink,
+      });
+
+      // Check authentication first
+      if (!isAuthenticated) {
+        throw new Error("User is not authenticated. Please log in again.");
+      }
+
+      // Use the fixed share-task endpoint
+      const response = await apiRequest("POST", "/api/portfolio/share-task", {
+        taskId: task.id,
+        portfolioIds: portfolioData.portfolioIds || [],
+        includeProof: portfolioData.includeProof,
         proofFiles: portfolioData.includeProof ? portfolioData.proofFiles : [],
         proofText: portfolioData.includeProof ? task.proofText || "" : "",
         proofLink: portfolioData.includeProof ? task.proofLink || "" : "",
-        // If specific portfolios are selected, use them, otherwise create in default
-        portfolioIds: portfolioData.portfolioIds || [],
       });
 
       if (!response) {
         throw new Error("No response from server");
       }
 
+      // Check if the response indicates success
+      if (!response.success) {
+        throw new Error(
+          response.message || "Failed to share task to portfolio",
+        );
+      }
+
       return response;
     },
     onSuccess: (data) => {
-      console.log("Successfully shared to portfolio:", data);
+      console.log("✅ Successfully shared to portfolio:", data);
 
       // Invalidate portfolio queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
@@ -107,7 +124,8 @@ const PortfolioShareModal = ({
       toast({
         title: "🎉 Added to Portfolio!",
         description:
-          "Your completed task has been added to your portfolio successfully.",
+          data.message ||
+          `Task has been added to ${data.items?.length || 1} portfolio(s) successfully.`,
         variant: "default",
       });
 
@@ -115,16 +133,28 @@ const PortfolioShareModal = ({
       onOpenChange(false);
     },
     onError: (error: any) => {
-      console.error("Portfolio sharing error details:", error);
+      console.error("❌ Portfolio sharing error:", error);
 
-      // More specific error message
-      let errorMessage = "Failed to add task to portfolio. Please try again.";
+      // Parse the 401 error message
+      let errorMessage = "Failed to add task to portfolio. ";
 
-      if (error.message?.includes("No response")) {
+      if (
+        error.message?.includes("401") ||
+        error.message?.includes("Unauthorized")
+      ) {
         errorMessage =
+          "Authentication failed. Please log out and log in again, then try sharing.";
+      } else if (error.message?.includes("No response")) {
+        errorMessage +=
           "Server is not responding. Please check your connection.";
+      } else if (error.message?.includes("Not authenticated")) {
+        errorMessage = "Please log in again to share to your portfolio.";
+      } else if (error.message?.includes("Task not found")) {
+        errorMessage += "The task was not found. Please refresh and try again.";
       } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage += error.message;
+      } else {
+        errorMessage += "Please try again later.";
       }
 
       toast({
@@ -139,17 +169,26 @@ const PortfolioShareModal = ({
   });
 
   const handleShareToPortfolio = async () => {
+    // Double-check authentication before proceeding
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in again to share to your portfolio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSharing(true);
 
     try {
       const shareData = {
         includeProof: includeProof,
         proofFiles: includeProof ? proofFiles : [],
-        portfolioIds:
-          selectedPortfolios.length > 0 ? selectedPortfolios : undefined,
+        portfolioIds: selectedPortfolios.length > 0 ? selectedPortfolios : [],
       };
 
-      console.log("Starting portfolio share with:", shareData);
+      console.log("🔄 Starting portfolio share with:", shareData);
       shareToPortfolioMutation.mutate(shareData);
     } catch (error) {
       console.error("Error in handleShareToPortfolio:", error);
@@ -284,6 +323,16 @@ const PortfolioShareModal = ({
               </p>
             </div>
           )}
+
+          {/* Authentication status */}
+          {!isAuthenticated && (
+            <div className="bg-red-50 p-3 rounded-md border border-red-200">
+              <p className="text-sm text-red-800">
+                ⚠️ You are not authenticated. Please log in again to share to
+                your portfolio.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">
@@ -296,7 +345,7 @@ const PortfolioShareModal = ({
           </Button>
           <Button
             onClick={handleShareToPortfolio}
-            disabled={isSharing}
+            disabled={isSharing || !isAuthenticated}
             className="bg-primary hover:bg-primary/90"
           >
             <FolderOpen className="h-4 w-4 mr-2" />

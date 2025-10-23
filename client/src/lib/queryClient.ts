@@ -94,14 +94,29 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// ✅ FIXED: Updated QueryClient with proper caching configuration
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      refetchOnWindowFocus: true, // Changed to true for better UX
+      staleTime: 1000 * 60 * 2, // 2 minutes - reduced from Infinity
+      gcTime: 1000 * 60 * 10, // 10 minutes - cache time
+      retry: (failureCount, error) => {
+        // Don't retry on 401/403 errors
+        if (
+          error?.message?.includes("401") ||
+          error?.message?.includes("403") ||
+          error?.message?.includes("Not authenticated") ||
+          error?.message?.includes("Unauthorized")
+        ) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      refetchOnMount: true, // Always refetch when component mounts
+      refetchOnReconnect: true, // Refetch when internet reconnects
     },
     mutations: {
       retry: false,

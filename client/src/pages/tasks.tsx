@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import TaskCard from "@/components/dashboard/task-card";
 import TaskForm from "@/components/forms/task-form";
 import { useToast } from "@/hooks/use-toast";
@@ -17,67 +17,81 @@ import { useAuth } from "@/hooks/useAuth";
 
 const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
+  const [isManualRefetch, setIsManualRefetch] = useState(false);
   const { toast } = useToast();
   const { apiClient } = useAuth();
 
-  // ✅ FIXED: Enhanced tasks query with proper error handling and auto-refresh
+  // ✅ IMPROVED: Tasks query with better caching and immediate display
   const {
     data: tasks = [],
     isLoading,
     error,
     refetch,
+    isFetching,
   } = useQuery({
-    queryKey: ["/api/tasks"],
+    queryKey: ["tasks"],
     queryFn: async () => {
       try {
         console.log("📋 [TASKS] Fetching tasks...");
         const response = await apiClient("/tasks");
+        const tasksData = response.tasks || [];
         console.log(
           "✅ [TASKS] Tasks fetched successfully:",
-          response.tasks?.length || 0,
+          tasksData.length,
           "tasks",
         );
-        return response.tasks || [];
+        return tasksData;
       } catch (error) {
         console.error("❌ [TASKS] Error fetching tasks:", error);
-        // Don't show toast here to avoid duplicate errors with the error boundary
         throw error;
       }
     },
     retry: (failureCount, error) => {
       // Don't retry on 401 errors
       if (
-        error.message.includes("Not authenticated") ||
-        error.message.includes("Unauthorized")
+        error?.message?.includes("Not authenticated") ||
+        error?.message?.includes("Unauthorized") ||
+        error?.message?.includes("401")
       ) {
         return false;
       }
       return failureCount < 2;
     },
-    refetchOnWindowFocus: true, // Auto-refresh when window gains focus
-    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    refetchOnWindowFocus: false, // Reduce unnecessary refetches
+    staleTime: 1000 * 60 * 5, // 5 minutes - consider data fresh longer
+    gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache longer
+    refetchOnMount: true, // Always refetch when component mounts
   });
 
-  // Auto-refresh tasks every 2 minutes
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    setIsManualRefetch(true);
+    try {
+      await refetch();
+      toast({
+        title: "Tasks refreshed!",
+        description: "Your task list has been updated.",
+      });
+    } catch (error) {
+      console.error("Failed to refresh tasks:", error);
+    } finally {
+      setIsManualRefetch(false);
+    }
+  };
+
+  // Auto-refresh when component mounts or auth changes
   useEffect(() => {
-    const interval = setInterval(
-      () => {
-        if (!isLoading) {
-          console.log("🔄 [TASKS] Auto-refreshing tasks...");
-          refetch();
-        }
-      },
-      1000 * 60 * 2,
-    ); // 2 minutes
+    // Prefetch tasks when component mounts
+    const prefetchTasks = async () => {
+      try {
+        await refetch();
+      } catch (error) {
+        console.error("Failed to prefetch tasks:", error);
+      }
+    };
 
-    return () => clearInterval(interval);
-  }, [isLoading, refetch]);
-
-  // Fetch task attachments for all tasks
-  const { data: allAttachments = [] } = useQuery({
-    queryKey: ["/api/tasks/attachments"],
-    enabled: Array.isArray(tasks) && tasks.length > 0,
-  });
+    prefetchTasks();
+  }, []);
 
   // Filter out undefined tasks to prevent rendering errors
   const filteredTasks = Array.isArray(tasks)
@@ -110,6 +124,17 @@ const Tasks = () => {
           <h2 className="text-3xl font-bold gradient-heading">My Tasks</h2>
           <div className="flex gap-2">
             <Button
+              onClick={handleManualRefresh}
+              disabled={isManualRefetch || isFetching}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCwIcon
+                className={`h-4 w-4 ${isManualRefetch || isFetching ? "animate-spin" : ""}`}
+              />
+              {isManualRefetch || isFetching ? "Refreshing..." : "Refresh"}
+            </Button>
+            <Button
               onClick={openNewTaskDialog}
               className="btn-bounce bg-primary hover:bg-primary/90 text-white shadow-lg flex items-center gap-2"
             >
@@ -119,8 +144,23 @@ const Tasks = () => {
           </div>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-12">
+            <div className="animate-pulse flex flex-col items-center space-y-4">
+              <div className="h-8 w-24 bg-muted rounded mb-4"></div>
+              <div className="space-y-3 w-full max-w-2xl">
+                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded"></div>
+              </div>
+            </div>
+            <div className="text-gray-500 mt-4">Loading your tasks...</div>
+          </div>
+        )}
+
         {/* Error State */}
-        {error && (
+        {error && !isLoading && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <div className="text-red-600 font-semibold text-lg mb-2">
               Failed to load tasks
@@ -131,10 +171,11 @@ const Tasks = () => {
             <div className="flex justify-center gap-2">
               <Button
                 variant="outline"
-                onClick={() => refetch()}
-                disabled={isLoading}
+                onClick={handleManualRefresh}
+                disabled={isManualRefetch}
                 className="flex items-center gap-2"
               >
+                <RefreshCwIcon className="h-4 w-4" />
                 Try Again
               </Button>
               <Button
@@ -148,15 +189,8 @@ const Tasks = () => {
           </div>
         )}
 
-        {isLoading && !error ? (
-          <div className="text-center py-12">
-            <div className="animate-pulse flex flex-col items-center">
-              <div className="h-8 w-24 bg-muted rounded mb-4"></div>
-              <div className="h-32 w-full max-w-md bg-muted rounded"></div>
-            </div>
-            <div className="text-gray-500 mt-4">Loading your tasks...</div>
-          </div>
-        ) : filteredTasks.length === 0 && !error ? (
+        {/* Empty State */}
+        {!isLoading && !error && filteredTasks.length === 0 && (
           <div className="bg-white rounded-xl card-shadow p-8 text-center">
             <div className="mb-4 p-4 rounded-full bg-primary/10 inline-flex">
               <svg
@@ -188,22 +222,28 @@ const Tasks = () => {
               Create Your First Task
             </Button>
           </div>
-        ) : (
+        )}
+
+        {/* Tasks List */}
+        {!isLoading && !error && filteredTasks.length > 0 && (
           <div className="bg-white rounded-xl card-shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-primary/10 to-secondary/10">
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-xl font-medium text-gray-900">
                     Task List
+                    {(isManualRefetch || isFetching) && (
+                      <span className="ml-2 text-sm text-gray-500">
+                        (Updating...)
+                      </span>
+                    )}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {filteredTasks.length} task
                     {filteredTasks.length !== 1 ? "s" : ""}
-                    {/* Removed: " • Drag to reorder" */}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {/* Removed: Refresh Button */}
                   <Button
                     size="sm"
                     onClick={openNewTaskDialog}
@@ -223,7 +263,6 @@ const Tasks = () => {
                     key={task.id}
                     className="task-card transition-all duration-200 hover:shadow-md"
                   >
-                    {/* Removed drag-and-drop props and cursor-move class */}
                     <TaskCard
                       task={task}
                       onTaskUpdate={handleTaskUpdate}
