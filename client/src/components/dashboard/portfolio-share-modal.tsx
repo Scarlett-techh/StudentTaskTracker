@@ -27,12 +27,14 @@ interface PortfolioShareModalProps {
     proofText?: string;
     proofLink?: string;
   };
+  onSuccess?: () => void;
 }
 
 const PortfolioShareModal = ({
   open,
   onOpenChange,
   task,
+  onSuccess,
 }: PortfolioShareModalProps) => {
   const { toast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
@@ -49,11 +51,12 @@ const PortfolioShareModal = ({
 
   const fetchPortfolios = async () => {
     try {
-      // Fixed: Added /api prefix to match your API structure
       const response = await fetch("/api/portfolio");
       if (response.ok) {
         const data = await response.json();
         setPortfolios(data);
+      } else {
+        console.error("Failed to fetch portfolios:", response.status);
       }
     } catch (error) {
       console.error("Error fetching portfolios:", error);
@@ -68,49 +71,65 @@ const PortfolioShareModal = ({
         ? [task.proofUrl]
         : [];
 
-  // Share to portfolio mutation - using the correct endpoint that exists in your backend
+  // Fixed: Proper portfolio sharing mutation with correct endpoint
   const shareToPortfolioMutation = useMutation({
-    mutationFn: async (portfolioIds: string[]) => {
-      // Use the existing /api/portfolio/share-task endpoint
-      const response = await apiRequest("POST", "/api/portfolio/share-task", {
+    mutationFn: async (portfolioData: any) => {
+      console.log("Sharing task to portfolio with data:", portfolioData);
+
+      // Use the correct endpoint - create a portfolio item directly
+      const response = await apiRequest("POST", "/api/portfolio/items", {
+        title: task.title,
+        description: task.description || `Completed task: ${task.title}`,
+        subject: task.subject || "General",
+        type: "task",
         taskId: task.id,
-        portfolioIds: portfolioIds,
-        includeProof: includeProof,
-        proofFiles: includeProof ? proofFiles : [],
-        proofText: includeProof ? task.proofText || "" : "",
-        proofLink: includeProof ? task.proofLink || "" : "",
+        proofFiles: portfolioData.includeProof ? portfolioData.proofFiles : [],
+        proofText: portfolioData.includeProof ? task.proofText || "" : "",
+        proofLink: portfolioData.includeProof ? task.proofLink || "" : "",
+        // If specific portfolios are selected, use them, otherwise create in default
+        portfolioIds: portfolioData.portfolioIds || [],
       });
 
       if (!response) {
         throw new Error("No response from server");
       }
 
-      // Check if the response indicates success
-      if (!response.success) {
-        throw new Error(
-          response.message || "Failed to share task to portfolio",
-        );
-      }
-
       return response;
     },
     onSuccess: (data) => {
-      // Invalidate both portfolio queries to ensure UI updates
+      console.log("Successfully shared to portfolio:", data);
+
+      // Invalidate portfolio queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/items"] });
       queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
 
       toast({
-        title: "Added to Portfolio",
-        description: `Task has been added to ${data.items?.length || 1} portfolio(s) successfully.`,
+        title: "🎉 Added to Portfolio!",
+        description:
+          "Your completed task has been added to your portfolio successfully.",
+        variant: "default",
       });
+
+      if (onSuccess) onSuccess();
       onOpenChange(false);
     },
     onError: (error: any) => {
-      console.error("Portfolio sharing error:", error);
+      console.error("Portfolio sharing error details:", error);
+
+      // More specific error message
+      let errorMessage = "Failed to add task to portfolio. Please try again.";
+
+      if (error.message?.includes("No response")) {
+        errorMessage =
+          "Server is not responding. Please check your connection.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Error adding to portfolio",
-        description:
-          error.message || "Failed to add task to portfolio. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -122,41 +141,24 @@ const PortfolioShareModal = ({
   const handleShareToPortfolio = async () => {
     setIsSharing(true);
 
-    // If no portfolios exist, create a default one first
-    if (portfolios.length === 0) {
-      try {
-        // Create a default portfolio
-        const response = await apiRequest("POST", "/api/portfolio", {
-          title: "My Portfolio",
-          description: "Default portfolio for my completed tasks",
-          type: "general",
-          subject: "General",
-        });
+    try {
+      const shareData = {
+        includeProof: includeProof,
+        proofFiles: includeProof ? proofFiles : [],
+        portfolioIds:
+          selectedPortfolios.length > 0 ? selectedPortfolios : undefined,
+      };
 
-        if (response) {
-          // Use the newly created portfolio
-          shareToPortfolioMutation.mutate([response.id]);
-        } else {
-          throw new Error("Failed to create default portfolio");
-        }
-      } catch (error: any) {
-        console.error("Error creating default portfolio:", error);
-        toast({
-          title: "Error",
-          description:
-            "Failed to create a portfolio for your task. Please try again.",
-          variant: "destructive",
-        });
-        setIsSharing(false);
-      }
-    } else if (selectedPortfolios.length === 0) {
-      // If portfolios exist but none are selected, use the first one
-      shareToPortfolioMutation.mutate([portfolios[0].id]);
-    } else {
-      // Use the selected portfolios
-      shareToPortfolioMutation.mutate(selectedPortfolios);
+      console.log("Starting portfolio share with:", shareData);
+      shareToPortfolioMutation.mutate(shareData);
+    } catch (error) {
+      console.error("Error in handleShareToPortfolio:", error);
+      setIsSharing(false);
     }
   };
+
+  // If no portfolios exist, we'll create one automatically when sharing
+  const hasPortfolios = portfolios.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,6 +172,7 @@ const PortfolioShareModal = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Task Preview */}
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h4 className="font-semibold text-blue-900 mb-2">{task.title}</h4>
             {task.description && (
@@ -238,7 +241,7 @@ const PortfolioShareModal = ({
             )}
 
           {/* Portfolio Selection - Only show if portfolios exist */}
-          {portfolios.length > 0 && (
+          {hasPortfolios && (
             <div className="space-y-2">
               <Label className="text-sm">Select portfolios (optional):</Label>
               {portfolios.map((portfolio) => (
@@ -261,7 +264,6 @@ const PortfolioShareModal = ({
                       }
                     }}
                   />
-                  {/* Fixed: Using portfolio.title instead of portfolio.name */}
                   <Label
                     htmlFor={`portfolio-${portfolio.id}`}
                     className="text-sm font-normal"
@@ -270,6 +272,16 @@ const PortfolioShareModal = ({
                   </Label>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Info message if no portfolios exist */}
+          {!hasPortfolios && (
+            <div className="bg-amber-50 p-3 rounded-md border border-amber-200">
+              <p className="text-sm text-amber-800">
+                No portfolios found. A new portfolio item will be created
+                automatically.
+              </p>
             </div>
           )}
         </div>

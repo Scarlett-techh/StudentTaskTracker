@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { PlusIcon, RefreshCwIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import TaskCard from "@/components/dashboard/task-card";
 import TaskForm from "@/components/forms/task-form";
 import { useToast } from "@/hooks/use-toast";
@@ -19,10 +19,8 @@ const Tasks = () => {
   const [newTaskDialogOpen, setNewTaskDialogOpen] = useState(false);
   const { toast } = useToast();
   const { apiClient } = useAuth();
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
 
-  // ✅ FIXED: Enhanced tasks query with proper error handling
+  // ✅ FIXED: Enhanced tasks query with proper error handling and auto-refresh
   const {
     data: tasks = [],
     isLoading,
@@ -56,8 +54,24 @@ const Tasks = () => {
       }
       return failureCount < 2;
     },
-    refetchOnWindowFocus: false, // Reduce unnecessary refetches
+    refetchOnWindowFocus: true, // Auto-refresh when window gains focus
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
   });
+
+  // Auto-refresh tasks every 2 minutes
+  useEffect(() => {
+    const interval = setInterval(
+      () => {
+        if (!isLoading) {
+          console.log("🔄 [TASKS] Auto-refreshing tasks...");
+          refetch();
+        }
+      },
+      1000 * 60 * 2,
+    ); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [isLoading, refetch]);
 
   // Fetch task attachments for all tasks
   const { data: allAttachments = [] } = useQuery({
@@ -75,86 +89,10 @@ const Tasks = () => {
     setNewTaskDialogOpen(true);
   };
 
-  // Handle drag-and-drop reordering
-  const handleDragStart = (position: number) => {
-    dragItem.current = position;
-  };
-
-  const handleDragEnter = (position: number) => {
-    dragOverItem.current = position;
-  };
-
-  const handleDrop = async () => {
-    if (
-      dragItem.current === null ||
-      dragOverItem.current === null ||
-      !Array.isArray(filteredTasks)
-    )
-      return;
-
-    // Make a copy of the tasks array
-    const _tasks = [...filteredTasks];
-
-    // Get the dragged item
-    const draggedItemContent = _tasks[dragItem.current];
-
-    // Remove the dragged item
-    _tasks.splice(dragItem.current, 1);
-
-    // Add the dragged item at the new position
-    _tasks.splice(dragOverItem.current, 0, draggedItemContent);
-
-    // Reset refs
-    dragItem.current = null;
-    dragOverItem.current = null;
-
-    // Update the order property for each task
-    const tasksWithNewOrder = _tasks.map((task, index) => ({
-      id: task.id,
-      order: index,
-    }));
-
-    // ✅ FIXED: Update the tasks order using apiClient
-    try {
-      console.log("🔄 [TASKS] Reordering tasks:", tasksWithNewOrder);
-      await apiClient("/tasks/reorder", {
-        method: "PATCH",
-        body: JSON.stringify({ tasks: tasksWithNewOrder }),
-      });
-
-      // Refetch tasks to get the updated order
-      await refetch();
-
-      toast({
-        title: "Tasks reordered",
-        description: "Your tasks have been successfully reordered.",
-      });
-    } catch (error: any) {
-      console.error("❌ [TASKS] Error reordering tasks:", error);
-      toast({
-        title: "Error reordering tasks",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle manual refresh
-  const handleRefresh = async () => {
-    try {
-      await refetch();
-      toast({
-        title: "Tasks refreshed",
-        description: "Your tasks have been updated.",
-      });
-    } catch (error) {
-      console.error("❌ [TASKS] Error refreshing tasks:", error);
-      toast({
-        title: "Error refreshing tasks",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
+  // Handle task updates - automatically refetches data
+  const handleTaskUpdate = () => {
+    console.log("🔄 [TASKS] Task updated, auto-refreshing...");
+    refetch();
   };
 
   return (
@@ -171,17 +109,6 @@ const Tasks = () => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold gradient-heading">My Tasks</h2>
           <div className="flex gap-2">
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              disabled={isLoading}
-              className="flex items-center gap-2"
-            >
-              <RefreshCwIcon
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
             <Button
               onClick={openNewTaskDialog}
               className="btn-bounce bg-primary hover:bg-primary/90 text-white shadow-lg flex items-center gap-2"
@@ -208,9 +135,6 @@ const Tasks = () => {
                 disabled={isLoading}
                 className="flex items-center gap-2"
               >
-                <RefreshCwIcon
-                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                />
                 Try Again
               </Button>
               <Button
@@ -274,22 +198,12 @@ const Tasks = () => {
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {filteredTasks.length} task
-                    {filteredTasks.length !== 1 ? "s" : ""} • Drag to reorder
+                    {filteredTasks.length !== 1 ? "s" : ""}
+                    {/* Removed: " • Drag to reorder" */}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleRefresh}
-                    disabled={isLoading}
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCwIcon
-                      className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                    />
-                    Refresh
-                  </Button>
+                  {/* Removed: Refresh Button */}
                   <Button
                     size="sm"
                     onClick={openNewTaskDialog}
@@ -304,17 +218,17 @@ const Tasks = () => {
 
             <div className="p-4">
               <div className="space-y-4">
-                {filteredTasks.map((task: any, index: number) => (
+                {filteredTasks.map((task: any) => (
                   <div
                     key={task.id}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragEnter={() => handleDragEnter(index)}
-                    onDragEnd={handleDrop}
-                    onDragOver={(e) => e.preventDefault()}
-                    className="task-card cursor-move transition-all duration-200 hover:shadow-md"
+                    className="task-card transition-all duration-200 hover:shadow-md"
                   >
-                    <TaskCard task={task} onTaskUpdate={refetch} />
+                    {/* Removed drag-and-drop props and cursor-move class */}
+                    <TaskCard
+                      task={task}
+                      onTaskUpdate={handleTaskUpdate}
+                      isDraggable={false}
+                    />
                   </div>
                 ))}
               </div>
@@ -335,7 +249,8 @@ const Tasks = () => {
           <TaskForm
             onSuccess={() => {
               setNewTaskDialogOpen(false);
-              // The query will automatically refetch due to invalidation in TaskForm
+              // Auto-refresh tasks after successful creation
+              handleTaskUpdate();
               toast({
                 title: "Task created successfully!",
                 description: "Your new task has been added to your list.",

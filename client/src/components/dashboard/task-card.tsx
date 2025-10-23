@@ -1,4 +1,4 @@
-import { useState, FC } from "react";
+import { useState, FC, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,7 @@ interface TaskCardProps {
     proofFiles?: string[]; // Add support for multiple proof files
     proofText?: string; // Add support for text proofs
     proofLink?: string; // Add support for link proofs
+    canShareToPortfolio?: boolean; // Add explicit flag for sharing
   };
   onTaskUpdate?: () => void;
   isDraggable?: boolean;
@@ -72,6 +73,31 @@ const TaskCard: FC<TaskCardProps> = ({
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [proofPreviewOpen, setProofPreviewOpen] = useState(false);
   const [currentProofIndex, setCurrentProofIndex] = useState(0);
+  const [canShare, setCanShare] = useState(false);
+
+  // Update canShare state whenever task changes
+  useEffect(() => {
+    const hasProof =
+      (task.proofFiles && task.proofFiles.length > 0) ||
+      task.proofUrl ||
+      task.proofText ||
+      task.proofLink;
+
+    const shareable = task.status === "completed" && hasProof;
+    setCanShare(shareable);
+
+    // Debug logging
+    console.log("Task sharing debug:", {
+      taskId: task.id,
+      status: task.status,
+      hasProof,
+      proofFiles: task.proofFiles,
+      proofUrl: task.proofUrl,
+      proofText: task.proofText,
+      proofLink: task.proofLink,
+      canShare: shareable,
+    });
+  }, [task]);
 
   // Status badge configuration
   const statusConfig = {
@@ -230,7 +256,8 @@ const TaskCard: FC<TaskCardProps> = ({
 
       toast({
         title: "Task completed! 🎉",
-        description: "Your task has been marked as completed with proof.",
+        description:
+          "Your task has been marked as completed with proof. You can now share it to your portfolio!",
       });
     } catch (error: any) {
       toast({
@@ -296,6 +323,12 @@ const TaskCard: FC<TaskCardProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Handle share to portfolio
+  const handleShareClick = () => {
+    console.log("Share button clicked for task:", task.id);
+    setShareDialogOpen(true);
   };
 
   return (
@@ -532,7 +565,8 @@ const TaskCard: FC<TaskCardProps> = ({
 
             <div className="flex flex-col items-end ml-4">
               <div className="flex space-x-1">
-                {task.status === "completed" && (
+                {/* SHARE BUTTON - FIXED CONDITION */}
+                {canShare && (
                   <button
                     className={cn(
                       "transition-all hover:scale-110 p-1 rounded-full",
@@ -540,8 +574,8 @@ const TaskCard: FC<TaskCardProps> = ({
                         ? "text-white/80 hover:text-white hover:bg-white/20"
                         : "text-gray-400 hover:text-blue-600 hover:bg-blue-100",
                     )}
-                    onClick={() => setShareDialogOpen(true)}
-                    title="Share completed task"
+                    onClick={handleShareClick}
+                    title="Share completed task to portfolio"
                   >
                     <Share2 className="h-4 w-4" />
                   </button>
@@ -656,6 +690,13 @@ const TaskCard: FC<TaskCardProps> = ({
         open={shareDialogOpen}
         onOpenChange={setShareDialogOpen}
         task={task}
+        onSuccess={() => {
+          toast({
+            title: "Task shared to portfolio!",
+            description:
+              "Your completed task has been added to your portfolio.",
+          });
+        }}
       />
 
       {/* Completion Modal - Updated to support multiple files */}
