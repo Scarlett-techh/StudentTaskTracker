@@ -252,7 +252,7 @@ export const insertPointsHistorySchema = createInsertSchema(pointsHistory).pick(
   },
 );
 
-// Portfolio items table - UPDATED to include task proof fields
+// Portfolio items table - UPDATED to include task proof fields AND taskId
 export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -262,16 +262,20 @@ export const portfolioItems = pgTable("portfolio_items", {
   subject: text("subject"),
   score: text("score"), // For test scores or grades
   sourceId: integer("source_id"), // Reference to original task/note if applicable
+  // FIXED: Added taskId field that was missing
+  taskId: integer("task_id"), // Reference to the original task
   featured: boolean("featured").notNull().default(false),
   filePath: text("file_path"), // Path to uploaded file
   link: text("link"), // URL for link type items
-  // NEW: Task proof fields
+  // Task proof fields
   proofFiles: text("proof_files").array(), // Array of proof file URLs
   proofText: text("proof_text"), // Text proof
   proofLink: text("proof_link"), // Link proof
   // Keep attachments for backward compatibility
   attachments: jsonb("attachments").default("[]").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // FIXED: Added updatedAt field for consistency
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertPortfolioItemSchema = createInsertSchema(
@@ -284,10 +288,11 @@ export const insertPortfolioItemSchema = createInsertSchema(
   subject: true,
   score: true,
   sourceId: true,
+  taskId: true, // Added taskId field
   featured: true,
   filePath: true,
   link: true,
-  proofFiles: true, // Added proof fields
+  proofFiles: true,
   proofText: true,
   proofLink: true,
   attachments: true,

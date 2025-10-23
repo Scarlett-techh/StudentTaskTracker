@@ -26,7 +26,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
 
 interface ShareTaskModalProps {
   open: boolean;
@@ -45,7 +44,6 @@ interface ShareTaskModalProps {
 
 const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   const { toast } = useToast();
-  const { apiClient } = useAuth();
   const [copied, setCopied] = useState(false);
   const [includeProof, setIncludeProof] = useState(true);
   const [isSharingToPortfolio, setIsSharingToPortfolio] = useState(false);
@@ -119,25 +117,28 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
     }
   };
 
-  // ✅ FIXED: Handle sharing to portfolio - Simplified without portfolio selection
+  // ✅ FIXED: Handle sharing to portfolio - Ensure title is always provided
   const handleShareToPortfolio = async () => {
     setIsSharingToPortfolio(true);
 
     try {
+      // ✅ FIXED: Ensure title is never empty
+      const portfolioTitle = task.title?.trim() || `Completed Task ${task.id}`;
+
       console.log("📋 [SHARE TASK] Sharing task to portfolio:", {
         taskId: task.id,
-        title: task.title,
+        title: portfolioTitle,
         includeProof,
         proofFilesCount: includeProof ? proofFiles.length : 0,
         hasProofText: includeProof && !!task.proofText,
         hasProofLink: includeProof && !!task.proofLink,
       });
 
-      // ✅ FIXED: Use the simplified share-task endpoint
+      // ✅ FIXED: Use the corrected share-task endpoint with guaranteed title
       const response = await apiRequest("POST", "/api/portfolio/share-task", {
         taskId: task.id,
-        title: task.title,
-        description: task.description || `Completed task: ${task.title}`,
+        title: portfolioTitle, // ✅ This will never be empty
+        description: task.description || `Completed task: ${portfolioTitle}`,
         subject: task.subject || task.category || "General",
         proofFiles: includeProof ? proofFiles : [],
         proofText: includeProof ? task.proofText || "" : "",
@@ -162,11 +163,23 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
       }
     } catch (error: any) {
       console.error("❌ [SHARE TASK] Error sharing to portfolio:", error);
+
+      // ✅ FIXED: More specific error handling
+      let errorMessage = "Failed to share task to portfolio. Please try again.";
+
+      if (error.message.includes("Title is required")) {
+        errorMessage =
+          "Task title is required. Please make sure your task has a title.";
+      } else if (error.message.includes("400")) {
+        errorMessage =
+          "Invalid request. Please check the task details and try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Error",
-        description:
-          error.message ||
-          "Failed to share task to portfolio. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -188,13 +201,15 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
           {/* Task Information */}
           <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
             <h3 className="font-medium text-blue-900 mb-2">Task Details</h3>
-            <p className="text-blue-800 font-semibold">{task.title}</p>
+            <p className="text-blue-800 font-semibold">
+              {task.title || "Untitled Task"}
+            </p>
             {task.description && (
               <p className="text-blue-700 text-sm mt-1">{task.description}</p>
             )}
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-white text-blue-700">
-                {task.subject || task.category}
+                {task.subject || task.category || "General"}
               </Badge>
             </div>
           </div>
@@ -299,14 +314,25 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
 
             <Button
               onClick={handleShareToPortfolio}
-              disabled={isSharingToPortfolio}
+              disabled={isSharingToPortfolio || !task.title?.trim()}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
               <FolderOpen className="h-4 w-4 mr-2" />
               {isSharingToPortfolio
                 ? "Sharing to Portfolio..."
                 : "Share to Portfolio"}
+              {!task.title?.trim() && " (Title Required)"}
             </Button>
+
+            {/* Warning if no title */}
+            {!task.title?.trim() && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-yellow-800 text-sm">
+                  <strong>Warning:</strong> This task doesn't have a title.
+                  Please add a title before sharing to portfolio.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Social Media Sharing Section */}

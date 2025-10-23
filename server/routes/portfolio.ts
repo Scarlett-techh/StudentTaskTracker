@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { db } from "../db.js";
-import { portfolioItems, users } from "@shared/schema";
+import { portfolioItems, users, tasks } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 const router = express.Router();
@@ -408,15 +408,17 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
-// ✅ FIXED: Share task to portfolio
+// ✅ FIXED: Share task to portfolio - UPDATED TO MATCH FRONTEND DATA STRUCTURE
 router.post("/share-task", requireAuth, async (req: any, res) => {
   try {
     const userId = req.session.user.id;
     const {
       taskId,
-      title,
-      description,
-      subject,
+      taskTitle, // Changed from 'title' to match frontend
+      taskDescription, // Changed from 'description' to match frontend
+      taskSubject, // Changed from 'subject' to match frontend
+      portfolioIds, // Added this field
+      includeProof, // Added this field
       proofFiles = [],
       proofText = "",
       proofLink = "",
@@ -425,9 +427,16 @@ router.post("/share-task", requireAuth, async (req: any, res) => {
     console.log("📋 [PORTFOLIO] Sharing task to portfolio:", {
       userId,
       taskId,
-      title,
+      taskTitle,
+      portfolioIds,
+      includeProof,
       proofFilesCount: proofFiles.length,
     });
+
+    // Use the correct field names from frontend
+    const title = taskTitle || `Task ${taskId}`;
+    const description = taskDescription || `Completed task: ${title}`;
+    const subject = taskSubject || "General";
 
     if (!title) {
       return res.status(400).json({
@@ -436,24 +445,51 @@ router.post("/share-task", requireAuth, async (req: any, res) => {
       });
     }
 
+    // Verify the task exists and belongs to the user
+    try {
+      const [task] = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)));
+
+      if (!task) {
+        return res.status(404).json({
+          error: "Task not found or you don't have permission to access it",
+          code: "TASK_NOT_FOUND",
+        });
+      }
+
+      console.log("✅ [PORTFOLIO] Task verified:", task.title);
+    } catch (taskError) {
+      console.error("❌ [PORTFOLIO] Error verifying task:", taskError);
+      // Continue anyway - the task might be in a different format
+    }
+
     const portfolioData = {
       userId,
       title,
-      description: description || `Completed task: ${title}`,
-      subject: subject || "General",
+      description,
+      subject,
       type: "task",
       taskId: taskId || null,
-      proofFiles: proofFiles || [],
-      proofText: proofText || "",
-      proofLink: proofLink || "",
-      attachments: proofFiles.map((file: string, index: number) => ({
-        filename: `proof-${index + 1}`,
-        path: file,
-        url: file.startsWith("/") ? file : `/api/portfolio/files/${file}`,
-        mimetype: getMimeType(file),
-        size: 0,
-      })),
+      proofFiles: includeProof ? proofFiles : [],
+      proofText: includeProof ? proofText : "",
+      proofLink: includeProof ? proofLink : "",
+      attachments: (includeProof ? proofFiles : []).map(
+        (file: string, index: number) => ({
+          filename: `proof-${index + 1}`,
+          path: file,
+          url: file.startsWith("/") ? file : `/api/portfolio/files/${file}`,
+          mimetype: getMimeType(file),
+          size: 0,
+        }),
+      ),
     };
+
+    console.log(
+      "📦 [PORTFOLIO] Creating portfolio item with data:",
+      portfolioData,
+    );
 
     const newItem = await portfolioStorage.createPortfolioItem(portfolioData);
 

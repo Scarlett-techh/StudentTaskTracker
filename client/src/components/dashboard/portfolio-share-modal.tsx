@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FileText, ExternalLink, File, FolderOpen } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth"; // Import useAuth
+import { useAuth } from "@/hooks/useAuth";
 
 interface PortfolioShareModalProps {
   open: boolean;
@@ -38,7 +38,7 @@ const PortfolioShareModal = ({
   onSuccess,
 }: PortfolioShareModalProps) => {
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth(); // Get auth state
+  const { user, isAuthenticated } = useAuth();
   const [isSharing, setIsSharing] = useState(false);
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [selectedPortfolios, setSelectedPortfolios] = useState<string[]>([]);
@@ -59,9 +59,12 @@ const PortfolioShareModal = ({
         setPortfolios(data);
       } else {
         console.error("Failed to fetch portfolios:", response.status);
+        // If no portfolios exist, set empty array
+        setPortfolios([]);
       }
     } catch (error) {
       console.error("Error fetching portfolios:", error);
+      setPortfolios([]);
     }
   };
 
@@ -73,7 +76,7 @@ const PortfolioShareModal = ({
         ? [task.proofUrl]
         : [];
 
-  // FIXED: Enhanced portfolio sharing with better auth handling
+  // FIXED: Enhanced portfolio sharing with better error handling and data validation
   const shareToPortfolioMutation = useMutation({
     mutationFn: async (portfolioData: any) => {
       console.log("🔄 Sharing task to portfolio with data:", {
@@ -90,18 +93,35 @@ const PortfolioShareModal = ({
         throw new Error("User is not authenticated. Please log in again.");
       }
 
-      // Use the fixed share-task endpoint
-      const response = await apiRequest("POST", "/api/portfolio/share-task", {
+      // Validate task data
+      if (!task.id) {
+        throw new Error("Invalid task: Task ID is missing");
+      }
+
+      // Prepare the data for the API
+      const requestData = {
         taskId: task.id,
         portfolioIds: portfolioData.portfolioIds || [],
         includeProof: portfolioData.includeProof,
         proofFiles: portfolioData.includeProof ? portfolioData.proofFiles : [],
         proofText: portfolioData.includeProof ? task.proofText || "" : "",
         proofLink: portfolioData.includeProof ? task.proofLink || "" : "",
-      });
+        taskTitle: task.title,
+        taskDescription: task.description || "",
+        taskSubject: task.subject || "",
+      };
+
+      console.log("📤 Sending portfolio share request:", requestData);
+
+      // Use the fixed share-task endpoint with better error handling
+      const response = await apiRequest(
+        "POST",
+        "/api/portfolio/share-task",
+        requestData,
+      );
 
       if (!response) {
-        throw new Error("No response from server");
+        throw new Error("No response from server - connection failed");
       }
 
       // Check if the response indicates success
@@ -120,6 +140,7 @@ const PortfolioShareModal = ({
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio/items"] });
       queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
 
       toast({
         title: "🎉 Added to Portfolio!",
@@ -135,7 +156,7 @@ const PortfolioShareModal = ({
     onError: (error: any) => {
       console.error("❌ Portfolio sharing error:", error);
 
-      // Parse the 401 error message
+      // Enhanced error parsing with more specific messages
       let errorMessage = "Failed to add task to portfolio. ";
 
       if (
@@ -144,13 +165,19 @@ const PortfolioShareModal = ({
       ) {
         errorMessage =
           "Authentication failed. Please log out and log in again, then try sharing.";
-      } else if (error.message?.includes("No response")) {
+      } else if (
+        error.message?.includes("No response") ||
+        error.message?.includes("connection failed")
+      ) {
         errorMessage +=
-          "Server is not responding. Please check your connection.";
+          "Server is not responding. Please check your connection and try again.";
       } else if (error.message?.includes("Not authenticated")) {
         errorMessage = "Please log in again to share to your portfolio.";
       } else if (error.message?.includes("Task not found")) {
         errorMessage += "The task was not found. Please refresh and try again.";
+      } else if (error.message?.includes("Invalid task")) {
+        errorMessage +=
+          "The task data is invalid. Please try with a different task.";
       } else if (error.message) {
         errorMessage += error.message;
       } else {
@@ -169,11 +196,21 @@ const PortfolioShareModal = ({
   });
 
   const handleShareToPortfolio = async () => {
-    // Double-check authentication before proceeding
+    // Enhanced authentication check
     if (!isAuthenticated) {
       toast({
         title: "Authentication Required",
         description: "Please log in again to share to your portfolio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate task
+    if (!task.id) {
+      toast({
+        title: "Invalid Task",
+        description: "This task cannot be shared. Please select a valid task.",
         variant: "destructive",
       });
       return;
@@ -189,7 +226,7 @@ const PortfolioShareModal = ({
       };
 
       console.log("🔄 Starting portfolio share with:", shareData);
-      shareToPortfolioMutation.mutate(shareData);
+      await shareToPortfolioMutation.mutateAsync(shareData);
     } catch (error) {
       console.error("Error in handleShareToPortfolio:", error);
       setIsSharing(false);
@@ -197,7 +234,7 @@ const PortfolioShareModal = ({
   };
 
   // If no portfolios exist, we'll create one automatically when sharing
-  const hasPortfolios = portfolios.length > 0;
+  const hasPortfolios = portfolios && portfolios.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -215,7 +252,9 @@ const PortfolioShareModal = ({
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h4 className="font-semibold text-blue-900 mb-2">{task.title}</h4>
             {task.description && (
-              <p className="text-sm text-blue-800 mb-2">{task.description}</p>
+              <p className="text-sm text-blue-800 mb-2 line-clamp-2">
+                {task.description}
+              </p>
             )}
             {task.subject && (
               <span className="inline-block px-2 py-1 bg-blue-200 text-blue-800 rounded-full text-xs font-medium">
@@ -307,7 +346,9 @@ const PortfolioShareModal = ({
                     htmlFor={`portfolio-${portfolio.id}`}
                     className="text-sm font-normal"
                   >
-                    {portfolio.title || portfolio.name}
+                    {portfolio.title ||
+                      portfolio.name ||
+                      `Portfolio ${portfolio.id}`}
                   </Label>
                 </div>
               ))}
