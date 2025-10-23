@@ -1,12 +1,12 @@
-// server/routes/portfolio.ts (updated)
+// server/routes/portfolio.ts (FIXED VERSION)
 import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import { storage } from "../storage.js";
-import { isAuthenticated } from "../replitAuth.js";
 import { db } from "../db.js";
+import { portfolioItems, users } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 const router = express.Router();
 
@@ -39,6 +39,134 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
 });
+
+// ✅ FIXED: Session-based authentication middleware (consistent with tasks route)
+const requireAuth = (req: any, res: any, next: any) => {
+  console.log(
+    "🔐 [PORTFOLIO AUTH] Checking session for user:",
+    req.session?.user,
+  );
+
+  if (!req.session.user) {
+    console.log("❌ [PORTFOLIO AUTH] No user in session - returning 401");
+    return res.status(401).json({
+      error: "Unauthorized - Please log in again",
+      code: "NO_SESSION",
+    });
+  }
+
+  console.log("✅ [PORTFOLIO AUTH] User authenticated:", req.session.user.id);
+  req.user = req.session.user;
+  next();
+};
+
+// ✅ FIXED: Portfolio storage functions using Drizzle ORM
+const portfolioStorage = {
+  // Get all portfolio items for user
+  async getPortfolioItems(userId: number) {
+    try {
+      console.log("📚 [PORTFOLIO] Fetching items for user:", userId);
+      const items = await db
+        .select()
+        .from(portfolioItems)
+        .where(eq(portfolioItems.userId, userId))
+        .orderBy(desc(portfolioItems.createdAt));
+
+      console.log(
+        `✅ [PORTFOLIO] Found ${items.length} items for user ${userId}`,
+      );
+      return items;
+    } catch (error) {
+      console.error("❌ [PORTFOLIO] Error getting portfolio items:", error);
+      throw error;
+    }
+  },
+
+  // Get single portfolio item
+  async getPortfolioItem(itemId: number) {
+    try {
+      const [item] = await db
+        .select()
+        .from(portfolioItems)
+        .where(eq(portfolioItems.id, itemId));
+      return item;
+    } catch (error) {
+      console.error("❌ [PORTFOLIO] Error getting portfolio item:", error);
+      throw error;
+    }
+  },
+
+  // Create portfolio item
+  async createPortfolioItem(itemData: any) {
+    try {
+      console.log("➕ [PORTFOLIO] Creating portfolio item:", itemData);
+
+      // Ensure required fields
+      const dataToInsert = {
+        userId: itemData.userId,
+        title: itemData.title,
+        description: itemData.description || "",
+        subject: itemData.subject || "General",
+        type: itemData.type || "file",
+        filePath: itemData.filePath || null,
+        fileUrl: itemData.fileUrl || null,
+        fileName: itemData.fileName || null,
+        fileType: itemData.fileType || null,
+        link: itemData.link || null,
+        taskId: itemData.taskId || null,
+        proofFiles: itemData.proofFiles || [],
+        proofText: itemData.proofText || "",
+        proofLink: itemData.proofLink || "",
+        attachments: itemData.attachments || [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const [newItem] = await db
+        .insert(portfolioItems)
+        .values(dataToInsert)
+        .returning();
+
+      console.log("✅ [PORTFOLIO] Portfolio item created:", newItem.id);
+      return newItem;
+    } catch (error) {
+      console.error("❌ [PORTFOLIO] Error creating portfolio item:", error);
+      throw error;
+    }
+  },
+
+  // Delete portfolio item
+  async deletePortfolioItem(itemId: number) {
+    try {
+      const [deletedItem] = await db
+        .delete(portfolioItems)
+        .where(eq(portfolioItems.id, itemId))
+        .returning();
+      return deletedItem;
+    } catch (error) {
+      console.error("❌ [PORTFOLIO] Error deleting portfolio item:", error);
+      throw error;
+    }
+  },
+};
+
+// Helper function to get MIME type from filename
+function getMimeType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  const mimeTypes: { [key: string]: string } = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".pdf": "application/pdf",
+    ".doc": "application/msword",
+    ".docx":
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".txt": "text/plain",
+  };
+  return mimeTypes[ext] || "application/octet-stream";
+}
 
 // ========================
 // Portfolio Routes
@@ -75,131 +203,107 @@ router.get("/files/:filename", (req, res) => {
     // Send the file
     res.sendFile(filePath);
   } catch (error: any) {
-    console.error("Error serving file:", error);
+    console.error("❌ [PORTFOLIO] Error serving file:", error);
     res.status(500).json({ message: "Error serving file" });
   }
 });
 
-// Get portfolio items for authenticated user
-router.get("/", isAuthenticated, async (req: any, res) => {
+// ✅ FIXED: Get portfolio items for authenticated user
+router.get("/", requireAuth, async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
+    const userId = req.session.user.id;
+    console.log("📚 [PORTFOLIO] Fetching items for user:", userId);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const items = await portfolioStorage.getPortfolioItems(userId);
 
-    // Get portfolio items for the user
-    const items = await storage.getPortfolioItems(user.id);
-
-    // Enhance items with file URLs
+    // Enhance items with file URLs for frontend compatibility
     const enhancedItems = items.map((item) => {
-      if (item.filePath) {
+      const enhancedItem: any = { ...item };
+
+      // For file-based items, ensure fileUrl is set
+      if (item.filePath && !item.fileUrl) {
         const filename = path.basename(item.filePath);
-        return {
-          ...item,
-          fileUrl: `/api/portfolio/files/${filename}`,
-          proofUrl: `/api/portfolio/files/${filename}`, // For compatibility
-        };
+        enhancedItem.fileUrl = `/api/portfolio/files/${filename}`;
       }
-      return item;
+
+      // For task items, ensure proofUrl is set for first proof file
+      if (
+        item.type === "task" &&
+        item.proofFiles &&
+        item.proofFiles.length > 0
+      ) {
+        enhancedItem.proofUrl = item.proofFiles[0];
+      }
+
+      return enhancedItem;
     });
 
-    res.json(enhancedItems || []);
+    console.log(`✅ [PORTFOLIO] Returning ${enhancedItems.length} items`);
+    res.json({
+      success: true,
+      items: enhancedItems,
+      count: enhancedItems.length,
+    });
   } catch (error: any) {
-    console.error("Error fetching portfolio items:", error);
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to fetch portfolio items" });
+    console.error("❌ [PORTFOLIO] Error fetching portfolio items:", error);
+    res.status(500).json({
+      error: error.message || "Failed to fetch portfolio items",
+      code: "PORTFOLIO_FETCH_ERROR",
+    });
   }
 });
 
-// NEW: Get portfolio items specifically (for the items endpoint)
-router.get("/items", isAuthenticated, async (req: any, res) => {
-  try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Get portfolio items for the user
-    const items = await storage.getPortfolioItems(user.id);
-
-    // Enhance items with file URLs
-    const enhancedItems = items.map((item) => {
-      if (item.filePath) {
-        const filename = path.basename(item.filePath);
-        return {
-          ...item,
-          fileUrl: `/api/portfolio/files/${filename}`,
-          proofUrl: `/api/portfolio/files/${filename}`,
-        };
-      }
-      return item;
-    });
-
-    res.json(enhancedItems || []);
-  } catch (error: any) {
-    console.error("Error fetching portfolio items:", error);
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to fetch portfolio items" });
-  }
-});
-
-// Create a new portfolio item (for manual uploads)
+// ✅ FIXED: Create portfolio item with file upload
 router.post(
   "/upload",
-  isAuthenticated,
+  requireAuth,
   upload.array("files"),
   async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
+      const userId = req.session.user.id;
       const { title, description, subject, type, link } = req.body;
       const files = req.files as Express.Multer.File[];
 
+      console.log("➕ [PORTFOLIO] Creating portfolio item via upload:", {
+        userId,
+        title,
+        type,
+        fileCount: files?.length,
+      });
+
       if (!title) {
-        return res.status(400).json({ message: "Title is required" });
+        return res.status(400).json({
+          error: "Title is required",
+          code: "MISSING_TITLE",
+        });
       }
 
       const savedItems = [];
 
-      // Handle multiple files
-      if (files && files.length > 0) {
+      // Handle file uploads
+      if ((type === "file" || type === "photo") && files && files.length > 0) {
         for (const file of files) {
           const filename = path.basename(file.path);
           const fileUrl = `/api/portfolio/files/${filename}`;
 
-          // Determine file type
-          const fileType = file.mimetype.startsWith("image/")
-            ? "image"
-            : file.mimetype === "application/pdf"
-              ? "pdf"
-              : "other";
-
           const portfolioData = {
-            userId: user.id,
+            userId,
             title:
               files.length > 1
                 ? `${title} (${files.indexOf(file) + 1})`
                 : title,
-            description,
-            subject,
+            description: description || "",
+            subject: subject || "General",
             type: type === "photo" ? "photo" : "file",
             filePath: file.path,
             fileUrl: fileUrl,
-            fileType: fileType,
+            fileType: file.mimetype.startsWith("image/")
+              ? "image"
+              : file.mimetype === "application/pdf"
+                ? "pdf"
+                : "other",
             fileName: file.originalname,
-            link: type === "link" ? link : null,
+            link: null,
             attachments: [
               {
                 filename: file.originalname,
@@ -209,305 +313,184 @@ router.post(
                 url: fileUrl,
               },
             ],
-            createdAt: new Date(),
           };
 
-          const newItem = await storage.createPortfolioItem(portfolioData);
-
-          // Add fileUrl to the response
-          const enhancedItem = {
-            ...newItem,
-            fileUrl: fileUrl,
-            proofUrl: fileUrl, // For compatibility
-          };
-
-          savedItems.push(enhancedItem);
+          const newItem =
+            await portfolioStorage.createPortfolioItem(portfolioData);
+          savedItems.push(newItem);
         }
       } else if (type === "link") {
         // Handle link type items
+        if (!link) {
+          return res.status(400).json({
+            error: "Link is required for link type items",
+            code: "MISSING_LINK",
+          });
+        }
+
         const portfolioData = {
-          userId: user.id,
+          userId,
           title,
-          description,
-          subject,
+          description: description || "",
+          subject: subject || "General",
           type: "link",
-          link,
+          link: link,
           attachments: [],
-          createdAt: new Date(),
         };
 
-        const newItem = await storage.createPortfolioItem(portfolioData);
+        const newItem =
+          await portfolioStorage.createPortfolioItem(portfolioData);
         savedItems.push(newItem);
       } else {
-        return res
-          .status(400)
-          .json({ message: "Files are required for file/photo types" });
+        return res.status(400).json({
+          error: "Files are required for file/photo types",
+          code: "MISSING_FILES",
+        });
       }
 
-      res.status(201).json(savedItems);
+      res.status(201).json({
+        success: true,
+        items: savedItems,
+        message: `Successfully created ${savedItems.length} portfolio item(s)`,
+      });
     } catch (error: any) {
-      console.error("Error creating portfolio item:", error);
-      res
-        .status(500)
-        .json({ message: error.message || "Failed to create portfolio item" });
+      console.error("❌ [PORTFOLIO] Error creating portfolio item:", error);
+      res.status(500).json({
+        error: error.message || "Failed to create portfolio item",
+        code: "PORTFOLIO_CREATE_ERROR",
+      });
     }
   },
 );
 
-// Create portfolio item from form data (alternative endpoint)
-router.post("/", isAuthenticated, async (req: any, res) => {
+// ✅ FIXED: Create portfolio item (for non-file items)
+router.post("/", requireAuth, async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
+    const userId = req.session.user.id;
+    const { title, description, subject, type, link } = req.body;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    console.log("➕ [PORTFOLIO] Creating portfolio item:", {
+      userId,
+      title,
+      type,
+    });
+
+    if (!title) {
+      return res.status(400).json({
+        error: "Title is required",
+        code: "MISSING_TITLE",
+      });
     }
 
-    const portfolioData = req.body;
+    const portfolioData = {
+      userId,
+      title,
+      description: description || "",
+      subject: subject || "General",
+      type: type || "file",
+      link: type === "link" ? link : null,
+      attachments: [],
+    };
 
-    // Add user ID to the portfolio data
-    portfolioData.userId = user.id;
+    const newItem = await portfolioStorage.createPortfolioItem(portfolioData);
 
-    // Create the portfolio item
-    const newItem = await storage.createPortfolioItem(portfolioData);
-
-    if (!newItem) {
-      return res
-        .status(500)
-        .json({ message: "Failed to create portfolio item" });
-    }
-
-    res.status(201).json(newItem);
+    res.status(201).json({
+      success: true,
+      item: newItem,
+      message: "Portfolio item created successfully",
+    });
   } catch (error: any) {
-    console.error("Error creating portfolio item:", error);
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to create portfolio item" });
+    console.error("❌ [PORTFOLIO] Error creating portfolio item:", error);
+    res.status(500).json({
+      error: error.message || "Failed to create portfolio item",
+      code: "PORTFOLIO_CREATE_ERROR",
+    });
   }
 });
 
-// NEW: Create portfolio items directly (for the items endpoint)
-router.post("/items", isAuthenticated, async (req: any, res) => {
+// ✅ FIXED: Share task to portfolio
+router.post("/share-task", requireAuth, async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
+    const userId = req.session.user.id;
     const {
+      taskId,
       title,
       description,
       subject,
-      type = "task",
-      taskId,
       proofFiles = [],
       proofText = "",
       proofLink = "",
-      portfolioIds = [],
     } = req.body;
+
+    console.log("📋 [PORTFOLIO] Sharing task to portfolio:", {
+      userId,
+      taskId,
+      title,
+      proofFilesCount: proofFiles.length,
+    });
 
     if (!title) {
-      return res.status(400).json({ message: "Title is required" });
+      return res.status(400).json({
+        error: "Title is required",
+        code: "MISSING_TITLE",
+      });
     }
 
-    const savedItems = [];
+    const portfolioData = {
+      userId,
+      title,
+      description: description || `Completed task: ${title}`,
+      subject: subject || "General",
+      type: "task",
+      taskId: taskId || null,
+      proofFiles: proofFiles || [],
+      proofText: proofText || "",
+      proofLink: proofLink || "",
+      attachments: proofFiles.map((file: string, index: number) => ({
+        filename: `proof-${index + 1}`,
+        path: file,
+        url: file.startsWith("/") ? file : `/api/portfolio/files/${file}`,
+        mimetype: getMimeType(file),
+        size: 0,
+      })),
+    };
 
-    // If no specific portfolios are provided, create one portfolio item
-    const targetPortfolioIds = portfolioIds.length > 0 ? portfolioIds : [null];
-
-    for (const portfolioId of targetPortfolioIds) {
-      const portfolioData = {
-        userId: user.id,
-        title,
-        description: description || `Completed task: ${title}`,
-        subject: subject || "General",
-        type,
-        taskId,
-        proofFiles,
-        proofText,
-        proofLink,
-        attachments: proofFiles.map((file: string, index: number) => ({
-          filename: `proof-${index + 1}`,
-          path: file,
-          url: file.startsWith("/") ? file : `/api/portfolio/files/${file}`,
-          mimetype: this.getMimeType(file),
-          size: 0,
-        })),
-        createdAt: new Date(),
-        // Include portfolioId if provided
-        ...(portfolioId && { portfolioId }),
-      };
-
-      const newItem = await storage.createPortfolioItem(portfolioData);
-      savedItems.push(newItem);
-    }
+    const newItem = await portfolioStorage.createPortfolioItem(portfolioData);
 
     res.status(201).json({
       success: true,
-      items: savedItems,
-      message: `Successfully created ${savedItems.length} portfolio item(s)`,
+      item: newItem,
+      message: "Task successfully shared to portfolio",
     });
   } catch (error: any) {
-    console.error("Error creating portfolio items:", error);
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to create portfolio items" });
-  }
-});
-
-// Helper function to get MIME type from filename
-function getMimeType(filename: string): string {
-  const ext = path.extname(filename).toLowerCase();
-  const mimeTypes: { [key: string]: string } = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".gif": "image/gif",
-    ".webp": "image/webp",
-    ".pdf": "application/pdf",
-    ".doc": "application/msword",
-    ".docx":
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".txt": "text/plain",
-  };
-  return mimeTypes[ext] || "application/octet-stream";
-}
-
-// Share task to portfolio with all proof types - FIXED VERSION
-router.post("/share-task", isAuthenticated, async (req: any, res) => {
-  try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const {
-      taskId,
-      portfolioIds = [],
-      includeProof = true,
-      proofFiles = [],
-      proofText = "",
-      proofLink = "",
-    } = req.body;
-
-    console.log("📋 Sharing task to portfolio:", {
-      taskId,
-      portfolioIds,
-      includeProof,
-      proofFilesCount: proofFiles.length,
-      hasProofText: !!proofText,
-      hasProofLink: !!proofLink,
-    });
-
-    // Get task details
-    const task = await db.query.tasks.findFirst({
-      where: (tasks: any, { eq }: any) => eq(tasks.id, taskId),
-    });
-
-    if (!task) {
-      console.error("❌ Task not found:", taskId);
-      return res.status(404).json({ error: "Task not found" });
-    }
-
-    console.log("✅ Found task:", task.title);
-
-    // If no portfolios specified, create a default one
-    let targetPortfolioIds = portfolioIds;
-    if (targetPortfolioIds.length === 0) {
-      // Create a default portfolio
-      const defaultPortfolio = {
-        userId: user.id,
-        title: "My Completed Tasks",
-        description: "Portfolio for completed tasks",
-        type: "task",
-        subject: "General",
-      };
-
-      // You might need to create a portfolio first, but for now we'll create items directly
-      targetPortfolioIds = [null]; // Use null to indicate no specific portfolio
-    }
-
-    // Create portfolio items for each selected portfolio
-    const results = [];
-    for (const portfolioId of targetPortfolioIds) {
-      const portfolioData = {
-        userId: user.id,
-        title: task.title,
-        description: task.description || `Completed task: ${task.title}`,
-        type: "task",
-        subject: task.subject || "General",
-        category: task.category,
-        sourceId: taskId,
-        // Include all proof types if requested
-        proofFiles: includeProof ? proofFiles : [],
-        proofText: includeProof ? proofText : "",
-        proofLink: includeProof ? proofLink : "",
-        // For backward compatibility, also populate attachments with files
-        attachments: includeProof
-          ? proofFiles.map((file: string, index: number) => ({
-              filename: `proof-${index + 1}`,
-              path: file,
-              url: file.startsWith("/") ? file : `/api/portfolio/files/${file}`,
-              mimetype: getMimeType(file),
-              size: 0,
-            }))
-          : [],
-        createdAt: new Date(),
-        // Include portfolioId if provided
-        ...(portfolioId && { portfolioId }),
-      };
-
-      console.log("📁 Creating portfolio item with data:", portfolioData);
-
-      // Create the portfolio item
-      const newItem = await storage.createPortfolioItem(portfolioData);
-
-      if (!newItem) {
-        console.error("❌ Failed to create portfolio item");
-        throw new Error("Failed to create portfolio item");
-      }
-
-      console.log("✅ Created portfolio item:", newItem.id);
-      results.push(newItem);
-    }
-
-    console.log("🎉 Successfully created portfolio items:", results.length);
-
-    res.status(201).json({
-      success: true,
-      items: results,
-      message: `Successfully added task to ${results.length} portfolio(s)`,
-    });
-  } catch (error: any) {
-    console.error("❌ Error sharing task to portfolio:", error);
+    console.error("❌ [PORTFOLIO] Error sharing task to portfolio:", error);
     res.status(500).json({
-      message: error.message || "Failed to share task to portfolio",
-      error: error.toString(),
+      error: error.message || "Failed to share task to portfolio",
+      code: "SHARE_TASK_ERROR",
     });
   }
 });
 
-// Delete portfolio item
-router.delete("/:id", isAuthenticated, async (req: any, res) => {
+// ✅ FIXED: Delete portfolio item
+router.delete("/:id", requireAuth, async (req: any, res) => {
   try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUserByReplitId(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
+    const userId = req.session.user.id;
     const itemId = Number(req.params.id);
 
+    console.log(
+      "🗑️ [PORTFOLIO] Deleting portfolio item:",
+      itemId,
+      "for user:",
+      userId,
+    );
+
     // Verify the portfolio item belongs to the user
-    const item = await storage.getPortfolioItem(itemId);
-    if (!item || item.userId !== user.id) {
-      return res.status(404).json({ message: "Portfolio item not found" });
+    const item = await portfolioStorage.getPortfolioItem(itemId);
+    if (!item || item.userId !== userId) {
+      return res.status(404).json({
+        error: "Portfolio item not found",
+        code: "ITEM_NOT_FOUND",
+      });
     }
 
     // Delete the associated file if it exists
@@ -515,10 +498,18 @@ router.delete("/:id", isAuthenticated, async (req: any, res) => {
       fs.unlinkSync(item.filePath);
     }
 
-    await storage.deletePortfolioItem(itemId);
-    res.json({ success: true });
+    await portfolioStorage.deletePortfolioItem(itemId);
+
+    res.json({
+      success: true,
+      message: "Portfolio item deleted successfully",
+    });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error("❌ [PORTFOLIO] Error deleting portfolio item:", error);
+    res.status(500).json({
+      error: error.message || "Failed to delete portfolio item",
+      code: "PORTFOLIO_DELETE_ERROR",
+    });
   }
 });
 

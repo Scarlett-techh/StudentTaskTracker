@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
 
 // Sample subjects data with the requested additional subjects
 const SAMPLE_SUBJECTS = [
@@ -527,6 +528,7 @@ function PreviewModal({
 
 export default function Portfolio() {
   const { toast } = useToast();
+  const { apiClient } = useAuth();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -544,7 +546,7 @@ export default function Portfolio() {
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Fetch portfolio items from API - this now gets ALL items from database
+  // ✅ FIXED: Use apiClient for authenticated requests
   const {
     data: portfolioItems = [],
     isLoading,
@@ -553,12 +555,16 @@ export default function Portfolio() {
     queryKey: ["/api/portfolio"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/portfolio");
-        if (!response.ok) throw new Error("Failed to fetch portfolio items");
-        const items = await response.json();
-        return items || [];
+        console.log("📚 [PORTFOLIO] Fetching portfolio items...");
+        const response = await apiClient("/portfolio");
+        console.log(
+          "✅ [PORTFOLIO] Portfolio items fetched:",
+          response.items?.length || 0,
+          "items",
+        );
+        return response.items || [];
       } catch (error) {
-        console.error("Error fetching portfolio items:", error);
+        console.error("❌ [PORTFOLIO] Error fetching portfolio items:", error);
         setConnectionError(true);
         return [];
       }
@@ -571,50 +577,58 @@ export default function Portfolio() {
     setSubjects(SAMPLE_SUBJECTS);
   }, []);
 
-  // Create portfolio item mutation - now uses backend API
+  // ✅ FIXED: Create portfolio item mutation using apiRequest
   const createPortfolioMutation = useMutation({
     mutationFn: async (formData: any) => {
-      const formDataToSend = new FormData();
+      console.log("➕ [PORTFOLIO] Creating portfolio item:", formData);
 
-      // Add basic fields
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("subject", formData.subject);
-      formDataToSend.append("type", formData.type);
-
-      if (formData.type === "link") {
-        formDataToSend.append("link", formData.link);
-      }
-
-      // Add files if any
+      // Handle file uploads differently from regular data
       if (
         (formData.type === "file" || formData.type === "photo") &&
         selectedFiles.length > 0
       ) {
+        const uploadFormData = new FormData();
+
+        // Add basic fields
+        uploadFormData.append("title", formData.title);
+        uploadFormData.append("description", formData.description);
+        uploadFormData.append("subject", formData.subject);
+        uploadFormData.append("type", formData.type);
+
+        // Add files
         selectedFiles.forEach((file) => {
-          formDataToSend.append("files", file);
+          uploadFormData.append("files", file);
+        });
+
+        const response = await fetch("/api/portfolio/upload", {
+          method: "POST",
+          body: uploadFormData,
+          credentials: "include", // Important for session cookies
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Failed to upload portfolio item",
+          );
+        }
+
+        return await response.json();
+      } else {
+        // For links and items without files, use apiClient
+        return await apiClient("/portfolio", {
+          method: "POST",
+          data: formData,
         });
       }
-
-      const response = await fetch("/api/portfolio/upload", {
-        method: "POST",
-        body: formDataToSend,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create portfolio item");
-      }
-
-      return await response.json();
     },
-    onSuccess: (newItems) => {
-      // Refetch portfolio items to get the updated list from the server
-      refetch();
+    onSuccess: (data) => {
+      // Refetch portfolio items to get the updated list
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
 
       toast({
         title: "Added to portfolio",
-        description: `${newItems.length} item(s) have been added to your portfolio.`,
+        description: "Item has been added to your portfolio successfully.",
       });
 
       // Reset form
@@ -631,6 +645,7 @@ export default function Portfolio() {
       setConnectionError(false);
     },
     onError: (error: any) => {
+      console.error("❌ [PORTFOLIO] Error creating portfolio item:", error);
       toast({
         title: "Error adding item",
         description:
@@ -641,29 +656,24 @@ export default function Portfolio() {
     },
   });
 
-  // Delete portfolio item mutation
+  // ✅ FIXED: Delete portfolio item mutation using apiClient
   const deletePortfolioMutation = useMutation({
     mutationFn: async (itemId: number) => {
-      const response = await fetch(`/api/portfolio/${itemId}`, {
+      console.log("🗑️ [PORTFOLIO] Deleting portfolio item:", itemId);
+      return await apiClient(`/portfolio/${itemId}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete portfolio item");
-      }
-
-      return await response.json();
     },
     onSuccess: () => {
       // Refetch portfolio items after deletion
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       toast({
         title: "Removed from portfolio",
         description: "Item has been removed from your portfolio.",
       });
     },
     onError: (error: any) => {
+      console.error("❌ [PORTFOLIO] Error deleting portfolio item:", error);
       toast({
         title: "Error removing item",
         description: error.message || "Failed to remove item from portfolio",
@@ -674,6 +684,8 @@ export default function Portfolio() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
     if (!formData.title.trim()) {
       toast({
         title: "Error",
@@ -682,6 +694,7 @@ export default function Portfolio() {
       });
       return;
     }
+
     if (formData.type === "link" && !formData.link.trim()) {
       toast({
         title: "Error",
@@ -690,6 +703,7 @@ export default function Portfolio() {
       });
       return;
     }
+
     if (
       (formData.type === "file" || formData.type === "photo") &&
       selectedFiles.length === 0

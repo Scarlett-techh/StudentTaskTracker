@@ -1,4 +1,4 @@
-// client/src/components/dashboard/share-task-modal.tsx (updated)
+// client/src/components/dashboard/share-task-modal.tsx (FIXED VERSION)
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { apiRequest } from "@/lib/queryClient"; // Import the apiRequest function
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ShareTaskModalProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface ShareTaskModalProps {
     title: string;
     description?: string;
     category: string;
+    subject?: string;
     proofFiles?: string[];
     proofText?: string;
     proofLink?: string;
@@ -43,36 +45,20 @@ interface ShareTaskModalProps {
 
 const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
   const { toast } = useToast();
+  const { apiClient } = useAuth();
   const [copied, setCopied] = useState(false);
   const [includeProof, setIncludeProof] = useState(true);
-  const [portfolios, setPortfolios] = useState<any[]>([]);
-  const [selectedPortfolios, setSelectedPortfolios] = useState<string[]>([]);
   const [isSharingToPortfolio, setIsSharingToPortfolio] = useState(false);
 
-  // Get all proof files (support both single proofUrl and multiple proofFiles)
-  const proofFiles =
-    task.proofFiles && task.proofFiles.length > 0 ? task.proofFiles : [];
-
-  // Fetch user portfolios when modal opens
-  useEffect(() => {
-    if (open) {
-      fetchPortfolios();
-    }
-  }, [open]);
-
-  const fetchPortfolios = async () => {
-    try {
-      // Use apiRequest instead of direct fetch for consistency
-      const response = await apiRequest("GET", "/api/portfolio");
-      setPortfolios(response || []);
-    } catch (error) {
-      console.error("Error fetching portfolios:", error);
-      setPortfolios([]);
-    }
-  };
+  // ✅ FIXED: Get all proof files (support both single proofUrl and multiple proofFiles)
+  const proofFiles = Array.isArray(task.proofFiles)
+    ? task.proofFiles.filter((file) => file && file.trim() !== "")
+    : [];
 
   // Generate share message
-  const shareMessage = `I just completed "${task.title}" in my ${task.category} category! #TaskCompleted`;
+  const shareMessage = `I just completed "${task.title}"${
+    task.subject ? ` in ${task.subject}` : ""
+  }! #TaskCompleted`;
 
   // Handle copy to clipboard
   const handleCopy = () => {
@@ -133,44 +119,54 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
     }
   };
 
-  // Handle sharing to portfolio - FIXED: Using apiRequest instead of direct fetch
+  // ✅ FIXED: Handle sharing to portfolio - Simplified without portfolio selection
   const handleShareToPortfolio = async () => {
-    if (selectedPortfolios.length === 0) {
-      toast({
-        title: "No portfolio selected",
-        description: "Please select at least one portfolio to share to",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSharingToPortfolio(true);
 
     try {
-      // FIXED: Use apiRequest instead of direct fetch to avoid URL formatting issues
+      console.log("📋 [SHARE TASK] Sharing task to portfolio:", {
+        taskId: task.id,
+        title: task.title,
+        includeProof,
+        proofFilesCount: includeProof ? proofFiles.length : 0,
+        hasProofText: includeProof && !!task.proofText,
+        hasProofLink: includeProof && !!task.proofLink,
+      });
+
+      // ✅ FIXED: Use the simplified share-task endpoint
       const response = await apiRequest("POST", "/api/portfolio/share-task", {
         taskId: task.id,
-        portfolioIds: selectedPortfolios,
-        includeProof: includeProof,
+        title: task.title,
+        description: task.description || `Completed task: ${task.title}`,
+        subject: task.subject || task.category || "General",
         proofFiles: includeProof ? proofFiles : [],
         proofText: includeProof ? task.proofText || "" : "",
         proofLink: includeProof ? task.proofLink || "" : "",
       });
 
+      console.log("✅ [SHARE TASK] Share response:", response);
+
       if (response && response.success) {
         toast({
           title: "Success!",
-          description: `Task shared to ${response.items?.length || 1} portfolio(s) successfully`,
+          description:
+            response.message || "Task shared to portfolio successfully",
         });
         onOpenChange(false);
       } else {
-        throw new Error(response?.message || "Failed to share to portfolio");
+        throw new Error(
+          response?.error ||
+            response?.message ||
+            "Failed to share to portfolio",
+        );
       }
     } catch (error: any) {
-      console.error("Error sharing to portfolio:", error);
+      console.error("❌ [SHARE TASK] Error sharing to portfolio:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to share task to portfolio",
+        description:
+          error.message ||
+          "Failed to share task to portfolio. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -180,7 +176,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Share Your Accomplishment</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -189,9 +185,27 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Task Information */}
+          <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+            <h3 className="font-medium text-blue-900 mb-2">Task Details</h3>
+            <p className="text-blue-800 font-semibold">{task.title}</p>
+            {task.description && (
+              <p className="text-blue-700 text-sm mt-1">{task.description}</p>
+            )}
+            <div className="flex items-center mt-2">
+              <Badge variant="outline" className="bg-white text-blue-700">
+                {task.subject || task.category}
+              </Badge>
+            </div>
+          </div>
+
           {/* Portfolio Sharing Section */}
           <div className="space-y-4">
             <h3 className="font-medium">Share to Portfolio</h3>
+            <p className="text-sm text-muted-foreground">
+              Add this completed task to your learning portfolio to showcase
+              your achievement.
+            </p>
 
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -224,8 +238,14 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {proofFiles.slice(0, 3).map((file, index) => {
-                          const fileName =
-                            file.split("/").pop() || `file-${index + 1}`;
+                          // Extract filename from URL or use index
+                          let fileName = `proof-${index + 1}`;
+                          if (file.includes("/")) {
+                            fileName = file.split("/").pop() || fileName;
+                          } else if (file.startsWith("data:")) {
+                            fileName = `image-${index + 1}`;
+                          }
+
                           return (
                             <Badge
                               key={index}
@@ -277,59 +297,19 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                 </div>
               )}
 
-            {portfolios.length > 0 ? (
-              <div className="space-y-2">
-                <Label className="text-sm">Select portfolios:</Label>
-                {portfolios.map((portfolio) => (
-                  <div
-                    key={portfolio.id}
-                    className="flex items-center space-x-2"
-                  >
-                    <Checkbox
-                      id={`portfolio-${portfolio.id}`}
-                      checked={selectedPortfolios.includes(portfolio.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedPortfolios([
-                            ...selectedPortfolios,
-                            portfolio.id,
-                          ]);
-                        } else {
-                          setSelectedPortfolios(
-                            selectedPortfolios.filter(
-                              (id) => id !== portfolio.id,
-                            ),
-                          );
-                        }
-                      }}
-                    />
-                    {/* Fixed: Use portfolio.title with fallback */}
-                    <Label
-                      htmlFor={`portfolio-${portfolio.id}`}
-                      className="text-sm font-normal"
-                    >
-                      {portfolio.title || portfolio.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                You don't have any portfolios yet. Create one in the Portfolio
-                section.
-              </p>
-            )}
-
             <Button
               onClick={handleShareToPortfolio}
-              disabled={isSharingToPortfolio || portfolios.length === 0}
-              className="w-full"
+              disabled={isSharingToPortfolio}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
               <FolderOpen className="h-4 w-4 mr-2" />
-              {isSharingToPortfolio ? "Sharing..." : "Share to Portfolio"}
+              {isSharingToPortfolio
+                ? "Sharing to Portfolio..."
+                : "Share to Portfolio"}
             </Button>
           </div>
 
+          {/* Social Media Sharing Section */}
           <div className="border-t pt-4">
             <h3 className="font-medium mb-3">Share on Social Media</h3>
 
@@ -338,11 +318,11 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                 value={shareMessage}
                 readOnly
                 rows={3}
-                className="pr-10"
+                className="pr-10 resize-none"
               />
               <button
                 onClick={handleCopy}
-                className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-100"
+                className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-100 transition-colors"
                 aria-label="Copy to clipboard"
               >
                 {copied ? (
@@ -360,6 +340,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(getTwitterShareUrl(), "_blank")}
+                  className="flex-1 min-w-[120px]"
                 >
                   <Twitter className="h-4 w-4 mr-2" />
                   Twitter
@@ -368,6 +349,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(getFacebookShareUrl(), "_blank")}
+                  className="flex-1 min-w-[120px]"
                 >
                   <Facebook className="h-4 w-4 mr-2" />
                   Facebook
@@ -376,6 +358,7 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(getLinkedInShareUrl(), "_blank")}
+                  className="flex-1 min-w-[120px]"
                 >
                   <Linkedin className="h-4 w-4 mr-2" />
                   LinkedIn
@@ -384,11 +367,17 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(getEmailShareUrl(), "_blank")}
+                  className="flex-1 min-w-[120px]"
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Email
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleShare}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  className="flex-1 min-w-[120px]"
+                >
                   <Link className="h-4 w-4 mr-2" />
                   Direct Share
                 </Button>
@@ -396,10 +385,11 @@ const ShareTaskModal = ({ open, onOpenChange, task }: ShareTaskModalProps) => {
             </div>
           </div>
 
-          <div className="pt-2 text-sm text-muted-foreground">
+          {/* Help Text */}
+          <div className="pt-2 text-sm text-muted-foreground border-t">
             <p>
-              Sharing your completed tasks can help motivate others and track
-              your own progress!
+              💡 <strong>Tip:</strong> Sharing your completed tasks helps build
+              your learning portfolio and motivates others!
             </p>
           </div>
         </div>
