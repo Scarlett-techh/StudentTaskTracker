@@ -1,20 +1,45 @@
 // server/storage.ts (updated)
 import {
-  users, tasks, notes, photos, taskAttachments, subjects, 
-  achievements, userAchievements, pointsHistory, coachStudents, dailyNotifications, moodEntries, portfolioItems,
-  type User, type InsertUser, type UpsertUser,
-  type Task, type InsertTask,
-  type Note, type InsertNote,
-  type Photo, type InsertPhoto,
-  type TaskAttachment, type InsertTaskAttachment,
-  type Subject, type InsertSubject,
-  type Achievement, type InsertAchievement,
-  type UserAchievement, type InsertUserAchievement,
-  type PointsHistory, type InsertPointsHistory,
-  type CoachStudent, type InsertCoachStudent,
-  type DailyNotification, type InsertDailyNotification,
-  type MoodEntry, type InsertMoodEntry,
-  type PortfolioItem, type InsertPortfolioItem
+  users,
+  tasks,
+  notes,
+  photos,
+  taskAttachments,
+  subjects,
+  achievements,
+  userAchievements,
+  pointsHistory,
+  coachStudents,
+  dailyNotifications,
+  moodEntries,
+  portfolioItems,
+  type User,
+  type InsertUser,
+  type UpsertUser,
+  type Task,
+  type InsertTask,
+  type Note,
+  type InsertNote,
+  type Photo,
+  type InsertPhoto,
+  type TaskAttachment,
+  type InsertTaskAttachment,
+  type Subject,
+  type InsertSubject,
+  type Achievement,
+  type InsertAchievement,
+  type UserAchievement,
+  type InsertUserAchievement,
+  type PointsHistory,
+  type InsertPointsHistory,
+  type CoachStudent,
+  type InsertCoachStudent,
+  type DailyNotification,
+  type InsertDailyNotification,
+  type MoodEntry,
+  type InsertMoodEntry,
+  type PortfolioItem,
+  type InsertPortfolioItem,
 } from "@shared/schema";
 import { DatabaseStorage } from "./db-storage";
 
@@ -61,7 +86,7 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
-  updateTaskOrder(tasks: { id: number, order: number }[]): Promise<boolean>;
+  updateTaskOrder(tasks: { id: number; order: number }[]): Promise<boolean>;
 
   // Note methods
   getNotes(userId: number): Promise<Note[]>;
@@ -74,46 +99,75 @@ export interface IStorage {
   getPhotos(userId: number): Promise<Photo[]>;
   getPhoto(id: number): Promise<Photo | undefined>;
   createPhoto(photo: InsertPhoto): Promise<Photo>;
-  updatePhoto(id: number, photo: Partial<InsertPhoto>): Promise<Photo | undefined>;
+  updatePhoto(
+    id: number,
+    photo: Partial<InsertPhoto>,
+  ): Promise<Photo | undefined>;
   deletePhoto(id: number): Promise<boolean>;
 
   // TaskAttachment methods
   getTaskAttachments(taskId: number): Promise<TaskAttachment[]>;
-  createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
+  createTaskAttachment(
+    attachment: InsertTaskAttachment,
+  ): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
 
   // Subject methods
   getSubjects(userId: number): Promise<Subject[]>;
   createSubject(subject: InsertSubject): Promise<Subject>;
-  updateSubject(id: number, subject: Partial<InsertSubject>): Promise<Subject | undefined>;
+  updateSubject(
+    id: number,
+    subject: Partial<InsertSubject>,
+  ): Promise<Subject | undefined>;
   deleteSubject(id: number): Promise<boolean>;
   initializeDefaultSubjectsForUser(userId: number): Promise<void>;
 
   // Gamification methods
   getAchievements(): Promise<Achievement[]>;
-  getUserAchievements(userId: number): Promise<(UserAchievement & { achievement: Achievement })[]>;
-  awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
+  getUserAchievements(
+    userId: number,
+  ): Promise<(UserAchievement & { achievement: Achievement })[]>;
+  awardAchievement(
+    userAchievement: InsertUserAchievement,
+  ): Promise<UserAchievement>;
   addPoints(pointsHistory: InsertPointsHistory): Promise<PointsHistory>;
   getPointsHistory(userId: number): Promise<PointsHistory[]>;
   updateUserStreak(userId: number): Promise<User | undefined>;
-  getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }>;
+  getUserStats(
+    userId: number,
+  ): Promise<{ points: number; level: number; streak: number }>;
 
   // Coach-Student methods
   getCoachesByEmail(email: string): Promise<User[]>;
   getCoachStudents(coachId: number): Promise<User[]>;
-  getCoachStats(coachId: number): Promise<{ totalStudents: number, tasksAssigned: number, completedToday: number, pendingTasks: number }>;
+  getCoachStats(
+    coachId: number,
+  ): Promise<{
+    totalStudents: number;
+    tasksAssigned: number;
+    completedToday: number;
+    pendingTasks: number;
+  }>;
 
   // Mood tracking methods
   getMoodEntries(userId: number): Promise<MoodEntry[]>;
   getTodaysMood(userId: number): Promise<MoodEntry | undefined>;
   createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry>;
-  getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]>;
+  createMood(moodEntry: InsertMoodEntry): Promise<MoodEntry>; // ADD THIS METHOD
+  getStudentsMoodsToday(
+    studentIds: number[],
+  ): Promise<(MoodEntry & { studentName: string })[]>;
 
   // Portfolio methods
   getPortfolioItems(userId: number): Promise<PortfolioItem[]>;
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
-  createPortfolioItem(portfolioItem: InsertPortfolioItem): Promise<PortfolioItem>;
-  updatePortfolioItem(id: number, portfolioItem: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined>;
+  createPortfolioItem(
+    portfolioItem: InsertPortfolioItem,
+  ): Promise<PortfolioItem>;
+  updatePortfolioItem(
+    id: number,
+    portfolioItem: Partial<InsertPortfolioItem>,
+  ): Promise<PortfolioItem | undefined>;
   deletePortfolioItem(id: number): Promise<boolean>;
 
   // File methods - NEW
@@ -181,25 +235,33 @@ export class MemStorage implements IStorage {
 
     // Create demo user
     this.createUser({
-      username: 'emma',
-      password: 'password123',
-      name: 'Emma Wilson',
-      avatar: '',
-      email: 'emma.wilson@student.example.com',
+      username: "emma",
+      password: "password123",
+      name: "Emma Wilson",
+      avatar: "",
+      email: "emma.wilson@student.example.com",
     });
 
     // Create demo subjects
-    this.createSubject({ name: 'Mathematics', color: '#3B82F6', userId: 1 });
-    this.createSubject({ name: 'Science', color: '#8B5CF6', userId: 1 });
-    this.createSubject({ name: 'English', color: '#10B981', userId: 1 });
-    this.createSubject({ name: 'History', color: '#FBBF24', userId: 1 });
+    this.createSubject({ name: "Mathematics", color: "#3B82F6", userId: 1 });
+    this.createSubject({ name: "Science", color: "#8B5CF6", userId: 1 });
+    this.createSubject({ name: "English", color: "#10B981", userId: 1 });
+    this.createSubject({ name: "History", color: "#FBBF24", userId: 1 });
     // Add new requested subjects
-    this.createSubject({ name: 'Physical Activity', color: '#EC4899', userId: 1 });
-    this.createSubject({ name: 'Life Skills', color: '#F97316', userId: 1 });
-    this.createSubject({ name: 'Interest / Passion', color: '#14B8A6', userId: 1 });
-    this.createSubject({ name: 'Art', color: '#EF4444', userId: 1 });
-    this.createSubject({ name: 'Game Design', color: '#8B5CF6', userId: 1 });
-    this.createSubject({ name: 'Coding', color: '#059669', userId: 1 });
+    this.createSubject({
+      name: "Physical Activity",
+      color: "#EC4899",
+      userId: 1,
+    });
+    this.createSubject({ name: "Life Skills", color: "#F97316", userId: 1 });
+    this.createSubject({
+      name: "Interest / Passion",
+      color: "#14B8A6",
+      userId: 1,
+    });
+    this.createSubject({ name: "Art", color: "#EF4444", userId: 1 });
+    this.createSubject({ name: "Game Design", color: "#8B5CF6", userId: 1 });
+    this.createSubject({ name: "Coding", color: "#059669", userId: 1 });
   }
 
   // User methods
@@ -209,14 +271,14 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username
+      (user) => user.username === username,
     );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userCurrentId++;
-    const user: User = { 
-      ...insertUser, 
+    const user: User = {
+      ...insertUser,
       id,
       name: insertUser.name || null,
       avatar: insertUser.avatar || null,
@@ -228,13 +290,19 @@ export class MemStorage implements IStorage {
       streak: 0,
       lastActiveDate: null,
       createdAt: new Date(),
-      userType: insertUser.userType || 'student'
+      userType: insertUser.userType || "student",
     };
     this.users.set(id, user);
     return user;
   }
 
-  async updateUser(id: number, updateData: Partial<InsertUser> & { resetToken?: string | null, resetTokenExpiry?: Date | null }): Promise<User | undefined> {
+  async updateUser(
+    id: number,
+    updateData: Partial<InsertUser> & {
+      resetToken?: string | null;
+      resetTokenExpiry?: Date | null;
+    },
+  ): Promise<User | undefined> {
     const user = this.users.get(id);
 
     if (!user) {
@@ -247,8 +315,14 @@ export class MemStorage implements IStorage {
       name: updateData.name !== undefined ? updateData.name : user.name,
       avatar: updateData.avatar !== undefined ? updateData.avatar : user.avatar,
       email: updateData.email !== undefined ? updateData.email : user.email,
-      resetToken: updateData.resetToken !== undefined ? updateData.resetToken : user.resetToken,
-      resetTokenExpiry: updateData.resetTokenExpiry !== undefined ? updateData.resetTokenExpiry : user.resetTokenExpiry
+      resetToken:
+        updateData.resetToken !== undefined
+          ? updateData.resetToken
+          : user.resetToken,
+      resetTokenExpiry:
+        updateData.resetTokenExpiry !== undefined
+          ? updateData.resetTokenExpiry
+          : user.resetTokenExpiry,
     };
 
     this.users.set(id, updatedUser);
@@ -256,21 +330,19 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email
-    );
+    return Array.from(this.users.values()).find((user) => user.email === email);
   }
 
   async getUserByResetToken(token: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.resetToken === token
+      (user) => user.resetToken === token,
     );
   }
 
   // Replit Auth methods
   async getUserByReplitId(replitId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.replitId === replitId
+      (user) => user.replitId === replitId,
     );
   }
 
@@ -298,13 +370,13 @@ export class MemStorage implements IStorage {
   // Task methods
   async getTasks(userId: number): Promise<Task[]> {
     return Array.from(this.tasks.values())
-      .filter(task => task.userId === userId)
+      .filter((task) => task.userId === userId)
       .sort((a, b) => a.order - b.order);
   }
 
   async getTasksByStatus(userId: number, status: string): Promise<Task[]> {
     return Array.from(this.tasks.values())
-      .filter(task => task.userId === userId && task.status === status)
+      .filter((task) => task.userId === userId && task.status === status)
       .sort((a, b) => a.order - b.order);
   }
 
@@ -322,16 +394,19 @@ export class MemStorage implements IStorage {
       description: insertTask.description || null,
       subject: insertTask.subject || null,
       resourceLink: insertTask.resourceLink || null,
-      status: insertTask.status || 'pending',
+      status: insertTask.status || "pending",
       dueDate: insertTask.dueDate || null,
       dueTime: insertTask.dueTime || null,
-      order: insertTask.order !== undefined ? insertTask.order : 0
+      order: insertTask.order !== undefined ? insertTask.order : 0,
     };
     this.tasks.set(id, task);
     return task;
   }
 
-  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(
+    id: number,
+    taskUpdate: Partial<InsertTask>,
+  ): Promise<Task | undefined> {
     const task = this.tasks.get(id);
     if (!task) return undefined;
 
@@ -344,7 +419,9 @@ export class MemStorage implements IStorage {
     return this.tasks.delete(id);
   }
 
-  async updateTaskOrder(tasks: { id: number, order: number }[]): Promise<boolean> {
+  async updateTaskOrder(
+    tasks: { id: number; order: number }[],
+  ): Promise<boolean> {
     try {
       for (const { id, order } of tasks) {
         const task = this.tasks.get(id);
@@ -361,8 +438,11 @@ export class MemStorage implements IStorage {
   // Note methods
   async getNotes(userId: number): Promise<Note[]> {
     return Array.from(this.notes.values())
-      .filter(note => note.userId === userId)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .filter((note) => note.userId === userId)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
   }
 
   async getNote(id: number): Promise<Note | undefined> {
@@ -373,19 +453,22 @@ export class MemStorage implements IStorage {
     const id = this.noteCurrentId++;
     const createdAt = new Date();
     const updatedAt = new Date();
-    const note: Note = { 
-      ...insertNote, 
-      id, 
-      createdAt, 
+    const note: Note = {
+      ...insertNote,
+      id,
+      createdAt,
       updatedAt,
       content: insertNote.content || null,
-      subject: insertNote.subject || null
+      subject: insertNote.subject || null,
     };
     this.notes.set(id, note);
     return note;
   }
 
-  async updateNote(id: number, noteUpdate: Partial<InsertNote>): Promise<Note | undefined> {
+  async updateNote(
+    id: number,
+    noteUpdate: Partial<InsertNote>,
+  ): Promise<Note | undefined> {
     const note = this.notes.get(id);
     if (!note) return undefined;
 
@@ -402,8 +485,11 @@ export class MemStorage implements IStorage {
   // Photo methods
   async getPhotos(userId: number): Promise<Photo[]> {
     return Array.from(this.photos.values())
-      .filter(photo => photo.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .filter((photo) => photo.userId === userId)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
   }
 
   async getPhoto(id: number): Promise<Photo | undefined> {
@@ -413,20 +499,23 @@ export class MemStorage implements IStorage {
   async createPhoto(insertPhoto: InsertPhoto): Promise<Photo> {
     const id = this.photoCurrentId++;
     const createdAt = new Date();
-    const photo: Photo = { 
-      ...insertPhoto, 
-      id, 
+    const photo: Photo = {
+      ...insertPhoto,
+      id,
       createdAt,
       subject: insertPhoto.subject || null,
       thumbnailData: insertPhoto.thumbnailData || null,
       taskId: insertPhoto.taskId || null,
-      noteId: insertPhoto.noteId || null
+      noteId: insertPhoto.noteId || null,
     };
     this.photos.set(id, photo);
     return photo;
   }
 
-  async updatePhoto(id: number, photoUpdate: Partial<InsertPhoto>): Promise<Photo | undefined> {
+  async updatePhoto(
+    id: number,
+    photoUpdate: Partial<InsertPhoto>,
+  ): Promise<Photo | undefined> {
     const photo = this.photos.get(id);
     if (!photo) return undefined;
 
@@ -441,19 +530,22 @@ export class MemStorage implements IStorage {
 
   // TaskAttachment methods
   async getTaskAttachments(taskId: number): Promise<TaskAttachment[]> {
-    return Array.from(this.taskAttachments.values())
-      .filter(attachment => attachment.taskId === taskId);
+    return Array.from(this.taskAttachments.values()).filter(
+      (attachment) => attachment.taskId === taskId,
+    );
   }
 
-  async createTaskAttachment(insertAttachment: InsertTaskAttachment): Promise<TaskAttachment> {
+  async createTaskAttachment(
+    insertAttachment: InsertTaskAttachment,
+  ): Promise<TaskAttachment> {
     const id = this.taskAttachmentCurrentId++;
     const createdAt = new Date();
-    const attachment: TaskAttachment = { 
-      ...insertAttachment, 
-      id, 
+    const attachment: TaskAttachment = {
+      ...insertAttachment,
+      id,
       createdAt,
       photoId: insertAttachment.photoId || null,
-      noteId: insertAttachment.noteId || null 
+      noteId: insertAttachment.noteId || null,
     };
     this.taskAttachments.set(id, attachment);
     return attachment;
@@ -465,8 +557,9 @@ export class MemStorage implements IStorage {
 
   // Subject methods
   async getSubjects(userId: number): Promise<Subject[]> {
-    return Array.from(this.subjects.values())
-      .filter(subject => subject.userId === userId);
+    return Array.from(this.subjects.values()).filter(
+      (subject) => subject.userId === userId,
+    );
   }
 
   async createSubject(insertSubject: InsertSubject): Promise<Subject> {
@@ -476,7 +569,10 @@ export class MemStorage implements IStorage {
     return subject;
   }
 
-  async updateSubject(id: number, subjectUpdate: Partial<InsertSubject>): Promise<Subject | undefined> {
+  async updateSubject(
+    id: number,
+    subjectUpdate: Partial<InsertSubject>,
+  ): Promise<Subject | undefined> {
     const subject = this.subjects.get(id);
     if (!subject) return undefined;
 
@@ -494,27 +590,32 @@ export class MemStorage implements IStorage {
     return Array.from(this.achievements.values());
   }
 
-  async getUserAchievements(userId: number): Promise<(UserAchievement & { achievement: Achievement })[]> {
-    const userAchievements = Array.from(this.userAchievements.values())
-      .filter(ua => ua.userId === userId);
+  async getUserAchievements(
+    userId: number,
+  ): Promise<(UserAchievement & { achievement: Achievement })[]> {
+    const userAchievements = Array.from(this.userAchievements.values()).filter(
+      (ua) => ua.userId === userId,
+    );
 
-    return userAchievements.map(ua => {
+    return userAchievements.map((ua) => {
       const achievement = this.achievements.get(ua.achievementId);
       return {
         ...ua,
-        achievement: achievement as Achievement
+        achievement: achievement as Achievement,
       };
     });
   }
 
-  async awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
+  async awardAchievement(
+    userAchievement: InsertUserAchievement,
+  ): Promise<UserAchievement> {
     const id = this.userAchievementCurrentId++;
 
     const newUserAchievement: UserAchievement = {
       id,
       userId: userAchievement.userId,
       achievementId: userAchievement.achievementId,
-      achievedAt: new Date()
+      achievedAt: new Date(),
     };
 
     this.userAchievements.set(id, newUserAchievement);
@@ -530,7 +631,7 @@ export class MemStorage implements IStorage {
       amount: pointsData.amount,
       reason: pointsData.reason,
       taskId: pointsData.taskId,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     this.pointsHistory.set(id, pointsRecord);
@@ -546,7 +647,7 @@ export class MemStorage implements IStorage {
 
       await this.updateUser(user.id, {
         points: newPoints,
-        level: newLevel
+        level: newLevel,
       } as any);
     }
 
@@ -555,7 +656,7 @@ export class MemStorage implements IStorage {
 
   async getPointsHistory(userId: number): Promise<PointsHistory[]> {
     return Array.from(this.pointsHistory.values())
-      .filter(record => record.userId === userId)
+      .filter((record) => record.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by most recent first
   }
 
@@ -566,7 +667,9 @@ export class MemStorage implements IStorage {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to start of day
 
-    const lastActive = user.lastActiveDate ? new Date(user.lastActiveDate) : null;
+    const lastActive = user.lastActiveDate
+      ? new Date(user.lastActiveDate)
+      : null;
     if (lastActive) {
       lastActive.setHours(0, 0, 0, 0); // Normalize to start of day
 
@@ -577,34 +680,36 @@ export class MemStorage implements IStorage {
       if (lastActive.getTime() === yesterday.getTime()) {
         await this.updateUser(userId, {
           streak: (user.streak || 0) + 1,
-          lastActiveDate: new Date()
+          lastActiveDate: new Date(),
         } as any);
-      } 
+      }
       // If last active was before yesterday, reset streak to 1
       else if (lastActive.getTime() < yesterday.getTime()) {
         await this.updateUser(userId, {
           streak: 1,
-          lastActiveDate: new Date()
+          lastActiveDate: new Date(),
         } as any);
       }
       // If last active was today, don't change streak but update timestamp
       else if (lastActive.getTime() !== today.getTime()) {
         await this.updateUser(userId, {
-          lastActiveDate: new Date()
+          lastActiveDate: new Date(),
         } as any);
       }
     } else {
       // First time user is active, set streak to 1
       await this.updateUser(userId, {
         streak: 1,
-        lastActiveDate: new Date()
+        lastActiveDate: new Date(),
       } as any);
     }
 
     return this.getUser(userId);
   }
 
-  async getUserStats(userId: number): Promise<{ points: number, level: number, streak: number }> {
+  async getUserStats(
+    userId: number,
+  ): Promise<{ points: number; level: number; streak: number }> {
     const user = await this.getUser(userId);
 
     if (!user) {
@@ -614,12 +719,14 @@ export class MemStorage implements IStorage {
     return {
       points: user.points || 0,
       level: user.level || 1,
-      streak: user.streak || 0
+      streak: user.streak || 0,
     };
   }
 
   // Method to add achievements to the system
-  private async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
+  private async createAchievement(
+    achievement: InsertAchievement,
+  ): Promise<Achievement> {
     const id = this.achievementCurrentId++;
 
     const newAchievement: Achievement = {
@@ -629,7 +736,7 @@ export class MemStorage implements IStorage {
       icon: achievement.icon || null,
       pointsRequired: achievement.pointsRequired,
       badgeImageUrl: achievement.badgeImageUrl || null,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     this.achievements.set(id, newAchievement);
@@ -644,36 +751,41 @@ export class MemStorage implements IStorage {
         description: "Complete 10 tasks",
         icon: "trophy",
         pointsRequired: 100,
-        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2583/2583344.png"
+        badgeImageUrl:
+          "https://cdn-icons-png.flaticon.com/512/2583/2583344.png",
       },
       {
         title: "Note Taker",
         description: "Create 5 notes",
         icon: "notebook",
         pointsRequired: 50,
-        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075908.png"
+        badgeImageUrl:
+          "https://cdn-icons-png.flaticon.com/512/3075/3075908.png",
       },
       {
         title: "Photographer",
         description: "Upload 3 photos",
         icon: "camera",
         pointsRequired: 30,
-        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png"
+        badgeImageUrl:
+          "https://cdn-icons-png.flaticon.com/512/3075/3075977.png",
       },
       {
         title: "Streak Master",
         description: "Keep a 7-day streak",
         icon: "calendar",
         pointsRequired: 70,
-        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/6358/6358101.png"
+        badgeImageUrl:
+          "https://cdn-icons-png.flaticon.com/512/6358/6358101.png",
       },
       {
         title: "Subject Expert",
         description: "Complete 5 tasks in the same subject",
         icon: "book",
         pointsRequired: 50,
-        badgeImageUrl: "https://cdn-icons-png.flaticon.com/512/2232/2232688.png"
-      }
+        badgeImageUrl:
+          "https://cdn-icons-png.flaticon.com/512/2232/2232688.png",
+      },
     ];
 
     for (const achievement of defaultAchievements) {
@@ -682,8 +794,8 @@ export class MemStorage implements IStorage {
   }
 
   async getCoachesByEmail(email: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => 
-      user.email === email
+    return Array.from(this.users.values()).filter(
+      (user) => user.email === email,
     );
   }
 
@@ -691,20 +803,27 @@ export class MemStorage implements IStorage {
     // Get all students who have tasks assigned by this coach
     const studentsWithCoachTasks = new Set<number>();
 
-    Array.from(this.tasks.values()).forEach(task => {
+    Array.from(this.tasks.values()).forEach((task) => {
       if (task.assignedByCoachId === coachId) {
         studentsWithCoachTasks.add(task.userId);
       }
     });
 
-    return Array.from(this.users.values()).filter(user => 
-      studentsWithCoachTasks.has(user.id)
+    return Array.from(this.users.values()).filter((user) =>
+      studentsWithCoachTasks.has(user.id),
     );
   }
 
-  async getCoachStats(coachId: number): Promise<{ totalStudents: number, tasksAssigned: number, completedToday: number, pendingTasks: number }> {
-    const coachTasks = Array.from(this.tasks.values()).filter(task => 
-      task.assignedByCoachId === coachId
+  async getCoachStats(
+    coachId: number,
+  ): Promise<{
+    totalStudents: number;
+    tasksAssigned: number;
+    completedToday: number;
+    pendingTasks: number;
+  }> {
+    const coachTasks = Array.from(this.tasks.values()).filter(
+      (task) => task.assignedByCoachId === coachId,
     );
 
     const studentsWithCoachTasks = new Set<number>();
@@ -713,14 +832,18 @@ export class MemStorage implements IStorage {
 
     const today = new Date().toDateString();
 
-    coachTasks.forEach(task => {
+    coachTasks.forEach((task) => {
       studentsWithCoachTasks.add(task.userId);
 
-      if (task.status === 'completed' && task.updatedAt && new Date(task.updatedAt).toDateString() === today) {
+      if (
+        task.status === "completed" &&
+        task.updatedAt &&
+        new Date(task.updatedAt).toDateString() === today
+      ) {
         completedToday++;
       }
 
-      if (task.status === 'pending') {
+      if (task.status === "pending") {
         pendingTasks++;
       }
     });
@@ -729,48 +852,63 @@ export class MemStorage implements IStorage {
       totalStudents: studentsWithCoachTasks.size,
       tasksAssigned: coachTasks.length,
       completedToday,
-      pendingTasks
+      pendingTasks,
     };
   }
 
   // Mood tracking methods
   async getMoodEntries(userId: number): Promise<MoodEntry[]> {
-    return Array.from(this.moodEntries.values()).filter(entry => entry.userId === userId)
+    return Array.from(this.moodEntries.values())
+      .filter((entry) => entry.userId === userId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   async getTodaysMood(userId: number): Promise<MoodEntry | undefined> {
     const today = new Date().toDateString();
-    return Array.from(this.moodEntries.values())
-      .find(entry => entry.userId === userId && new Date(entry.date).toDateString() === today);
+    return Array.from(this.moodEntries.values()).find(
+      (entry) =>
+        entry.userId === userId &&
+        new Date(entry.date).toDateString() === today,
+    );
   }
 
   async createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry> {
     const id = this.moodEntryCurrentId++;
+    const now = new Date();
     const newMoodEntry: MoodEntry = {
       ...moodEntry,
       id,
       note: moodEntry.note || null,
-      date: new Date(),
-      createdAt: new Date(),
+      date: now,
+      createdAt: now,
     };
     this.moodEntries.set(id, newMoodEntry);
     return newMoodEntry;
   }
 
-  async getStudentsMoodsToday(studentIds: number[]): Promise<(MoodEntry & { studentName: string })[]> {
+  // ADD THIS METHOD - FIX for the error
+  async createMood(moodEntry: InsertMoodEntry): Promise<MoodEntry> {
+    return this.createMoodEntry(moodEntry);
+  }
+
+  async getStudentsMoodsToday(
+    studentIds: number[],
+  ): Promise<(MoodEntry & { studentName: string })[]> {
     const today = new Date().toDateString();
     const todaysMoods: (MoodEntry & { studentName: string })[] = [];
 
     for (const studentId of studentIds) {
-      const mood = Array.from(this.moodEntries.values())
-        .find(entry => entry.userId === studentId && new Date(entry.date).toDateString() === today);
+      const mood = Array.from(this.moodEntries.values()).find(
+        (entry) =>
+          entry.userId === studentId &&
+          new Date(entry.date).toDateString() === today,
+      );
 
       if (mood) {
         const student = this.users.get(studentId);
         todaysMoods.push({
           ...mood,
-          studentName: student?.name || student?.username || 'Unknown Student'
+          studentName: student?.name || student?.username || "Unknown Student",
         });
       }
     }
@@ -780,10 +918,14 @@ export class MemStorage implements IStorage {
 
   // Portfolio methods - UPDATED to handle attachments
   async getPortfolioItems(userId: number): Promise<PortfolioItem[]> {
-    return Array.from(this.portfolioItems.values()).filter(item => item.userId === userId);
+    return Array.from(this.portfolioItems.values()).filter(
+      (item) => item.userId === userId,
+    );
   }
 
-  async createPortfolioItem(insertPortfolioItem: InsertPortfolioItem): Promise<PortfolioItem> {
+  async createPortfolioItem(
+    insertPortfolioItem: InsertPortfolioItem,
+  ): Promise<PortfolioItem> {
     const id = this.portfolioItemCurrentId++;
     const portfolioItem: PortfolioItem = {
       id,
@@ -799,13 +941,16 @@ export class MemStorage implements IStorage {
       // NEW: Handle attachments field
       attachments: insertPortfolioItem.attachments || [],
       userId: insertPortfolioItem.userId,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.portfolioItems.set(id, portfolioItem);
     return portfolioItem;
   }
 
-  async updatePortfolioItem(id: number, portfolioItemUpdate: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined> {
+  async updatePortfolioItem(
+    id: number,
+    portfolioItemUpdate: Partial<InsertPortfolioItem>,
+  ): Promise<PortfolioItem | undefined> {
     const existingItem = this.portfolioItems.get(id);
     if (!existingItem) return undefined;
 
@@ -813,9 +958,10 @@ export class MemStorage implements IStorage {
       ...existingItem,
       ...portfolioItemUpdate,
       // NEW: Handle attachments field in updates
-      attachments: portfolioItemUpdate.attachments !== undefined 
-        ? portfolioItemUpdate.attachments 
-        : existingItem.attachments
+      attachments:
+        portfolioItemUpdate.attachments !== undefined
+          ? portfolioItemUpdate.attachments
+          : existingItem.attachments,
     };
     this.portfolioItems.set(id, updatedItem);
     return updatedItem;
@@ -832,7 +978,9 @@ export class MemStorage implements IStorage {
   // Initialize default subjects for a user (MemStorage implementation)
   async initializeDefaultSubjectsForUser(userId: number): Promise<void> {
     // Check if user already has subjects
-    const userSubjects = Array.from(this.subjects.values()).filter(s => s.userId === userId);
+    const userSubjects = Array.from(this.subjects.values()).filter(
+      (s) => s.userId === userId,
+    );
     if (userSubjects.length > 0) {
       return; // User already has subjects
     }
@@ -856,7 +1004,7 @@ export class MemStorage implements IStorage {
         id,
         name: subject.name,
         color: subject.color,
-        userId: subject.userId
+        userId: subject.userId,
       };
       this.subjects.set(id, newSubject);
     }
@@ -869,7 +1017,7 @@ export class MemStorage implements IStorage {
     const file: File = {
       ...insertFile,
       id,
-      createdAt
+      createdAt,
     };
     this.files.set(id, file);
     return file;
@@ -881,7 +1029,7 @@ export class MemStorage implements IStorage {
 
   async getFilesByUserId(userId: number): Promise<File[]> {
     return Array.from(this.files.values())
-      .filter(file => file.userId === userId)
+      .filter((file) => file.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }

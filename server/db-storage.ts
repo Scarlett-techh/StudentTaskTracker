@@ -443,9 +443,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).where(eq(users.coachId, coachId));
   }
 
-  async getCoachStats(
-    coachId: number,
-  ): Promise<{
+  async getCoachStats(coachId: number): Promise<{
     totalStudents: number;
     tasksAssigned: number;
     completedToday: number;
@@ -489,64 +487,101 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Mood tracking methods
+  // Mood tracking methods - FIXED WITH PROPER DATE HANDLING
   async getMoodEntries(userId: number): Promise<MoodEntry[]> {
-    return await db
-      .select()
-      .from(moodEntries)
-      .where(eq(moodEntries.userId, userId))
-      .orderBy(desc(moodEntries.createdAt));
+    try {
+      return await db
+        .select()
+        .from(moodEntries)
+        .where(eq(moodEntries.userId, userId))
+        .orderBy(desc(moodEntries.createdAt));
+    } catch (error) {
+      console.error("Error in getMoodEntries:", error);
+      return [];
+    }
   }
 
   async getTodaysMood(userId: number): Promise<MoodEntry | undefined> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const [mood] = await db
-      .select()
-      .from(moodEntries)
-      .where(
-        and(
-          eq(moodEntries.userId, userId),
-          sql`DATE(created_at) = DATE('now')`,
-        ),
-      );
-    return mood;
+    try {
+      const [mood] = await db
+        .select()
+        .from(moodEntries)
+        .where(
+          and(
+            eq(moodEntries.userId, userId),
+            sql`DATE(created_at) = CURRENT_DATE`,
+          ),
+        );
+      return mood;
+    } catch (error) {
+      console.error("Error in getTodaysMood:", error);
+      return undefined;
+    }
   }
 
   async createMoodEntry(moodEntry: InsertMoodEntry): Promise<MoodEntry> {
-    const [newMoodEntry] = await db
-      .insert(moodEntries)
-      .values(moodEntry)
-      .returning();
-    return newMoodEntry;
+    try {
+      console.log("Creating mood entry with data:", moodEntry);
+
+      // Use SQL now() for database timestamps to avoid Date object issues
+      const [newMoodEntry] = await db
+        .insert(moodEntries)
+        .values({
+          userId: moodEntry.userId,
+          moodType: moodEntry.moodType,
+          intensity: moodEntry.intensity,
+          note: moodEntry.note || null,
+          // Let the database handle the timestamp with default values
+          // The schema has defaultNow() for both date and createdAt
+        })
+        .returning();
+
+      console.log("Successfully created mood entry:", newMoodEntry);
+      return newMoodEntry;
+    } catch (error: any) {
+      console.error("Error in createMoodEntry:", error);
+      console.error("Full error details:", {
+        message: error.message,
+        stack: error.stack,
+        input: moodEntry,
+      });
+
+      throw error;
+    }
+  }
+
+  async createMood(moodEntry: InsertMoodEntry): Promise<MoodEntry> {
+    return this.createMoodEntry(moodEntry);
   }
 
   async getStudentsMoodsToday(
     studentIds: number[],
   ): Promise<(MoodEntry & { studentName: string })[]> {
-    if (studentIds.length === 0) return [];
+    try {
+      if (studentIds.length === 0) return [];
 
-    const result = await db
-      .select({
-        ...moodEntries,
-        studentName: users.name,
-      })
-      .from(moodEntries)
-      .leftJoin(users, eq(moodEntries.userId, users.id))
-      .where(
-        and(
-          sql`user_id IN (${studentIds.join(",")})`,
-          sql`DATE(mood_entries.created_at) = DATE('now')`,
-        ),
-      );
+      const result = await db
+        .select({
+          ...moodEntries,
+          studentName: users.name,
+        })
+        .from(moodEntries)
+        .leftJoin(users, eq(moodEntries.userId, users.id))
+        .where(
+          and(
+            sql`${moodEntries.userId} IN (${sql.join(studentIds, sql.raw(","))})`,
+            sql`DATE(${moodEntries.createdAt}) = CURRENT_DATE`,
+          ),
+        );
 
-    return result.map((row) => ({
-      ...row,
-      studentName: row.studentName || "Unknown Student",
-    }));
+      return result.map((row) => ({
+        ...row,
+        studentName: row.studentName || "Unknown Student",
+      }));
+    } catch (error) {
+      console.error("Error in getStudentsMoodsToday:", error);
+      return [];
+    }
   }
 
   private async createAchievement(
