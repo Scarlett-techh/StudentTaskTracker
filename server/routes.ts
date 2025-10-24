@@ -247,21 +247,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================
-  // Mood Endpoints - FIXED THESE
+  // Mood Endpoints - ADDED THESE
   // ========================
   app.get("/api/user/mood/today", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUserByReplitId(userId);
 
-      const todaysMood = await storage.getTodaysMood(user.id);
-      res.json(todaysMood);
+      // For now, return null since we don't have mood storage implemented
+      // This will be updated once we add mood storage to the database
+      res.json(null);
     } catch (err: any) {
       handleError(err, res);
     }
   });
 
-  // FIXED: This endpoint should use the moodEntries table, not update user profile
   app.post("/api/user/mood", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -274,61 +274,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use the proper moodEntries table instead of updating user profile
-      const moodEntry = await storage.createMood({
-        userId: user.id,
-        moodType,
-        intensity,
-        note: note || null,
+      // For now, just update the user's mood in their profile
+      // This is a temporary solution until we implement proper mood storage
+      const updatedUser = await storage.updateUser(user.id, {
+        mood: moodType,
+        moodIntensity: intensity,
+        moodNote: note,
+        lastMoodUpdate: new Date().toISOString(),
       });
 
       // Return success response
       res.json({
         success: true,
         message: "Mood shared successfully",
-        mood: moodEntry,
+        mood: {
+          moodType,
+          intensity,
+          note,
+          date: new Date().toISOString(),
+        },
       });
     } catch (err: any) {
       console.error("Error saving mood:", err);
       res.status(500).json({
         message: "Failed to save mood. Please try again.",
-        code: "MOOD_CREATE_ERROR",
-      });
-    }
-  });
-
-  // ADD THIS: New endpoint for the frontend that's calling /mood (not /api/user/mood)
-  app.post("/mood", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(userId);
-      const { moodType, intensity, note } = req.body;
-
-      if (!moodType || !intensity) {
-        return res.status(400).json({
-          message: "Mood type and intensity are required",
-        });
-      }
-
-      // Use the proper moodEntries table
-      const moodEntry = await storage.createMood({
-        userId: user.id,
-        moodType,
-        intensity,
-        note: note || null,
-      });
-
-      // Return success response
-      res.json({
-        success: true,
-        message: "Mood shared successfully",
-        mood: moodEntry,
-      });
-    } catch (err: any) {
-      console.error("Error saving mood:", err);
-      res.status(500).json({
-        message: "Failed to save mood. Please try again.",
-        code: "MOOD_CREATE_ERROR",
       });
     }
   });
