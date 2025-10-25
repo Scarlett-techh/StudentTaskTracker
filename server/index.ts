@@ -15,7 +15,7 @@ import userRoutes from "./api/user.js";
 import accountRoutes from "./api/user/account.js";
 import settingsRoutes from "./api/user/settings.js";
 import authRoutes from "./routes/auth";
-
+import analyticsRoutes from "./routes/analytics"; // ✅ FIXED: Correct import path
 const app = express();
 
 // Initialize PostgreSQL session store
@@ -131,6 +131,7 @@ app.use("/api/user/account", accountRoutes);
 app.use("/api/user/settings", settingsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/mood", moodRoutes);
+app.use("/api/analytics", analyticsRoutes); // ✅ FIXED: This will now work with correct import
 app.use("/api/tasks", tasksRoutes); // ✅ ADDED: Register tasks routes
 
 // ✅ ADDED: Debug endpoint to check if tasks routes are working
@@ -151,6 +152,15 @@ app.get("/api/tasks/debug-test", (req, res) => {
     sessionID: req.sessionID,
     message:
       "Tasks routes are properly registered and authentication is working",
+  });
+});
+
+// ✅ ADDED: Debug endpoint for analytics
+app.get("/api/analytics/debug-test", requireAuth, (req: any, res) => {
+  res.json({
+    success: true,
+    message: "Analytics routes are working",
+    user: req.session.user,
   });
 });
 
@@ -236,7 +246,9 @@ app.use((req, res, next) => {
         `🔐 Session secret: ${process.env.SESSION_SECRET ? "Set" : "Using default"}`,
       );
       log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`);
-      log(`✅ Registered routes: /api/auth, /api/user, /api/mood, /api/tasks`);
+      log(
+        `✅ Registered routes: /api/auth, /api/user, /api/mood, /api/tasks, /api/analytics`,
+      );
     },
   );
 })();

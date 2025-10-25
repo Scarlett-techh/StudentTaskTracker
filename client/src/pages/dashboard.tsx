@@ -290,53 +290,10 @@ const Dashboard = () => {
           <LearningRecommendations />
         </div>
 
-        {/* Photos and Rewards Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Photos Section */}
-          <div className="bg-white rounded-lg shadow lg:col-span-1">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Recent Photos
-                </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPhotoUploadDialogOpen(true)}
-                >
-                  <PlusIcon className="mr-1 h-4 w-4" />
-                  Upload
-                </Button>
-              </div>
-            </div>
-            <div className="p-6">
-              {isLoadingPhotos ? (
-                <div className="text-center py-8">Loading photos...</div>
-              ) : photos && photos.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {photos.slice(0, 4).map((photo: any) => (
-                    <PhotoThumbnail
-                      key={photo.id}
-                      photo={photo}
-                      onPhotoUpdate={refetchPhotos}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">
-                    No photos yet. Upload your first photo!
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* User Stats & Achievements Section */}
-          <div className="lg:col-span-1 space-y-6">
-            <UserStats />
-            <LearningWallet />
-          </div>
+        {/* User Stats & Achievements Section */}
+        <div className="space-y-6">
+          <UserStats />
+          <LearningWallet />
         </div>
       </div>
 

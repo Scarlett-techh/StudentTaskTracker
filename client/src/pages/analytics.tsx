@@ -41,41 +41,91 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-// Custom hook for analytics data
+// Types for our analytics data
+interface AnalyticsData {
+  totalTasks: number;
+  completedTasks: number;
+  inProgressTasks: number;
+  pendingTasks: number;
+  completionRate: number;
+  streak: number;
+  level: number;
+  points: number;
+  subjectPerformance: Array<{
+    name: string;
+    total: number;
+    completed: number;
+  }>;
+  progressOverTime: Array<{
+    date: string;
+    tasks: number;
+  }>;
+  taskDistribution: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  averageCompletionTime: number;
+  recentActivity: Array<{
+    id: number;
+    title: string;
+    status: string;
+    subject: string;
+    updatedAt: string;
+    type: string;
+  }>;
+  lastUpdated: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: "pending" | "in-progress" | "completed";
+  subject?: string;
+  dueDate?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+// Custom hook for analytics data - UPDATED to use real backend
 const useAnalyticsData = () => {
   const queryClient = useQueryClient();
 
-  // Fetch comprehensive analytics data
+  // Fetch comprehensive analytics data from the new endpoint
   const {
-    data: analyticsData,
+    data: analyticsResponse,
     isLoading,
     error,
     refetch,
   } = useQuery({
     queryKey: ["/api/analytics"],
-    staleTime: 0, // Always consider data stale to force refreshes
+    queryFn: async () => {
+      const response = await fetch("/api/analytics");
+      if (!response.ok) throw new Error("Failed to fetch analytics");
+      const data = await response.json();
+      return data.data; // Return the actual analytics data
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
   });
 
-  // Also fetch tasks separately for real-time updates
+  // Also fetch tasks separately for fallback and real-time updates
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
     staleTime: 0,
   });
 
-  // Manually trigger refetch when tasks might have changed
-  useEffect(() => {
-    refetch();
-  }, [tasks?.length]); // Refetch when task count changes
-
   return {
-    analyticsData,
+    analyticsData: analyticsResponse as AnalyticsData,
     tasks: Array.isArray(tasks) ? tasks : [],
     isLoading,
     error,
     refetch,
-    invalidateAnalytics: () =>
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] }),
+    invalidateAnalytics: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
   };
 };
 
@@ -96,56 +146,40 @@ export default function Analytics() {
 
   // Safe data processing with fallbacks
   const safeTasks = Array.isArray(tasks) ? tasks : [];
-  const completedTasks = safeTasks.filter(
-    (task: any) => task.status === "completed",
-  );
-  const inProgressTasks = safeTasks.filter(
-    (task: any) => task.status === "in-progress",
-  );
-  const pendingTasks = safeTasks.filter(
-    (task: any) => task.status === "pending" || !task.status,
-  );
+  const completedTasks =
+    analyticsData?.completedTasks ||
+    safeTasks.filter((task: Task) => task.status === "completed").length;
+  const totalTasks = analyticsData?.totalTasks || safeTasks.length;
 
   // Use analytics data if available, otherwise compute from tasks
-  const chartData =
-    analyticsData?.subjectPerformance ||
-    safeTasks.reduce((acc: any[], task: any) => {
-      const subject = task.subject || "Uncategorized";
-      const existing = acc.find((item) => item.name === subject);
-      if (existing) {
-        existing.total++;
-        if (task.status === "completed") existing.completed++;
-      } else {
-        acc.push({
-          name: subject,
-          total: 1,
-          completed: task.status === "completed" ? 1 : 0,
-        });
-      }
-      return acc;
-    }, []);
-
-  const statusData = [
+  const chartData = analyticsData?.subjectPerformance || [];
+  const statusData = analyticsData?.taskDistribution || [
     {
       name: "Completed",
-      value: analyticsData?.completedTasks || completedTasks.length,
+      value: completedTasks,
       color: "#22c55e",
     },
     {
       name: "In Progress",
-      value: analyticsData?.inProgressTasks || inProgressTasks.length,
+      value:
+        analyticsData?.inProgressTasks ||
+        safeTasks.filter((task: Task) => task.status === "in-progress").length,
       color: "#f59e0b",
     },
     {
       name: "Pending",
-      value: analyticsData?.pendingTasks || pendingTasks.length,
+      value:
+        analyticsData?.pendingTasks ||
+        safeTasks.filter(
+          (task: Task) => task.status === "pending" || !task.status,
+        ).length,
       color: "#ef4444",
     },
   ];
 
   // Enhanced skill development data based on actual task completion
   const calculateSkillLevel = (base: number, multiplier: number) => {
-    const calculated = Math.min(100, base + completedTasks.length * multiplier);
+    const calculated = Math.min(100, base + completedTasks * multiplier);
     return Math.max(5, calculated); // Minimum 5%
   };
 
@@ -182,12 +216,12 @@ export default function Analytics() {
     },
   ];
 
-  // Enhanced progress data for line chart
+  // Use real progress data from backend
   const progressData = analyticsData?.progressOverTime || [
-    { date: "Week 1", tasks: Math.floor(completedTasks.length * 0.3) },
-    { date: "Week 2", tasks: Math.floor(completedTasks.length * 0.5) },
-    { date: "Week 3", tasks: Math.floor(completedTasks.length * 0.7) },
-    { date: "Week 4", tasks: completedTasks.length },
+    { date: "Week 1", tasks: Math.floor(completedTasks * 0.3) },
+    { date: "Week 2", tasks: Math.floor(completedTasks * 0.5) },
+    { date: "Week 3", tasks: Math.floor(completedTasks * 0.7) },
+    { date: "Week 4", tasks: completedTasks },
   ];
 
   // Refresh analytics data
@@ -212,18 +246,22 @@ export default function Analytics() {
   };
 
   // Enhanced Export Function
-  const handleExportPDF = () => {
+  const handleExportReport = () => {
     try {
       const reportData = `
 LEARNING ANALYTICS REPORT
 Generated: ${new Date().toLocaleDateString()}
+Last Updated: ${analyticsData?.lastUpdated ? new Date(analyticsData.lastUpdated).toLocaleString() : "N/A"}
 
 OVERVIEW:
-• Total Tasks: ${safeTasks.length}
-• Completed: ${completedTasks.length}
-• In Progress: ${inProgressTasks.length}
-• Pending: ${pendingTasks.length}
-• Completion Rate: ${safeTasks.length > 0 ? ((completedTasks.length / safeTasks.length) * 100).toFixed(1) : 0}%
+• Total Tasks: ${analyticsData?.totalTasks || totalTasks}
+• Completed: ${analyticsData?.completedTasks || completedTasks}
+• In Progress: ${analyticsData?.inProgressTasks || 0}
+• Pending: ${analyticsData?.pendingTasks || 0}
+• Completion Rate: ${analyticsData?.completionRate?.toFixed(1) || (totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0)}%
+• Current Streak: ${analyticsData?.streak || 0} days
+• Learning Level: ${analyticsData?.level || 1}
+• Total Points: ${analyticsData?.points || 0}
 
 SUBJECT PERFORMANCE:
 ${chartData
@@ -237,6 +275,17 @@ LEARNING SKILLS:
 ${skillData
   .map((skill: any) => `• ${skill.subject}: ${skill.A}% developed`)
   .join("\n")}
+
+RECENT ACTIVITY:
+${
+  analyticsData?.recentActivity
+    ?.slice(0, 5)
+    .map(
+      (activity: any) =>
+        `• ${new Date(activity.updatedAt).toLocaleDateString()}: ${activity.title} (${activity.status})`,
+    )
+    .join("\n") || "No recent activity"
+}
       `.trim();
 
       const blob = new Blob([reportData], { type: "text/plain" });
@@ -265,7 +314,7 @@ ${skillData
   // Enhanced Share Function
   const handleShareReport = async () => {
     try {
-      const shareText = `🎯 My Learning Progress: ${completedTasks.length} tasks completed | ${(stats as any)?.streak || 0}-day streak | Level ${(stats as any)?.level || 1}`;
+      const shareText = `🎯 My Learning Progress: ${completedTasks} tasks completed | ${analyticsData?.streak || 0}-day streak | Level ${analyticsData?.level || 1} | ${analyticsData?.completionRate?.toFixed(1) || 0}% completion rate`;
 
       if (navigator.share) {
         await navigator.share({
@@ -284,44 +333,53 @@ ${skillData
     }
   };
 
-  // Enhanced AI analysis
+  // Enhanced AI analysis using real analytics data
   useEffect(() => {
-    if (completedTasks.length > 0) {
+    if (completedTasks > 0) {
       const completionRate =
-        safeTasks.length > 0
-          ? (completedTasks.length / safeTasks.length) * 100
-          : 0;
+        analyticsData?.completionRate ||
+        (totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0);
 
       const analysis = {
-        analysis: `You've completed ${completedTasks.length} out of ${safeTasks.length} tasks (${completionRate.toFixed(1)}% completion rate). ${completionRate >= 70 ? "Excellent work! You're maintaining great consistency." : completionRate >= 40 ? "Good progress! Keep building momentum." : "Getting started! Every task completed builds your skills."}`,
+        analysis: `You've completed ${completedTasks} out of ${totalTasks} tasks (${completionRate.toFixed(1)}% completion rate). ${completionRate >= 70 ? "Excellent work! You're maintaining great consistency." : completionRate >= 40 ? "Good progress! Keep building momentum." : "Getting started! Every task completed builds your skills."}`,
         strengths:
-          completedTasks.length > 0
+          completedTasks > 0
             ? [
                 "Task completion commitment",
                 "Learning consistency",
                 "Progress tracking",
+                ...(analyticsData?.streak > 7 ? ["Strong daily streak"] : []),
+                ...(completionRate > 60 ? ["High completion rate"] : []),
               ]
             : ["Developing foundational learning habits"],
         recommendations: [
           completionRate < 50
             ? "Focus on completing pending tasks"
             : "Challenge yourself with advanced topics",
-          "Maintain your current streak",
+          analyticsData?.streak > 0
+            ? `Maintain your ${analyticsData.streak}-day streak`
+            : "Start building a daily learning habit",
           "Explore different subject areas for balanced growth",
+          ...(analyticsData?.pendingTasks > 10
+            ? ["Prioritize your pending tasks"]
+            : []),
         ],
         achievements: [
-          `Completed ${completedTasks.length} tasks`,
+          `Completed ${completedTasks} tasks`,
           `${analyticsData?.streak || 0}-day active streak`,
           `Level ${analyticsData?.level || 1} learner`,
+          ...(analyticsData?.points
+            ? [`${analyticsData.points} points earned`]
+            : []),
         ],
         learningStyle:
-          completedTasks.length > 10
+          completedTasks > 10
             ? "Consistent and methodical learner"
             : "Developing personalized learning approach",
       };
       setAiAnalysis(analysis);
     }
-  }, [completedTasks, safeTasks, analyticsData]);
+  }, [completedTasks, totalTasks, analyticsData]);
 
   // Loading state
   if (isLoading) {
@@ -330,6 +388,9 @@ ${skillData
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
           <p className="text-muted-foreground">Loading analytics data...</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Analyzing your learning patterns...
+          </p>
         </div>
       </div>
     );
@@ -345,15 +406,15 @@ ${skillData
             Failed to load analytics
           </h3>
           <p className="text-muted-foreground mb-4">
-            Please try refreshing the page
+            {error instanceof Error
+              ? error.message
+              : "Please try refreshing the page"}
           </p>
           <Button onClick={handleRefresh}>Retry</Button>
         </div>
       </div>
     );
   }
-
-  const stats = analyticsData || {};
 
   return (
     <>
@@ -374,6 +435,12 @@ ${skillData
             </h2>
             <p className="text-muted-foreground mt-2">
               Real-time insights into your learning journey and progress
+              {analyticsData?.lastUpdated && (
+                <span className="text-xs block mt-1">
+                  Last updated:{" "}
+                  {new Date(analyticsData.lastUpdated).toLocaleString()}
+                </span>
+              )}
             </p>
           </div>
 
@@ -390,8 +457,8 @@ ${skillData
               Refresh
             </Button>
             <Button
-              onClick={handleExportPDF}
-              disabled={safeTasks.length === 0}
+              onClick={handleExportReport}
+              disabled={totalTasks === 0}
               className="bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 border-0 shadow-sm"
             >
               <FileTextIcon className="h-4 w-4 mr-2" />
@@ -399,7 +466,7 @@ ${skillData
             </Button>
             <Button
               onClick={handleShareReport}
-              disabled={safeTasks.length === 0}
+              disabled={totalTasks === 0}
               className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 border-0 shadow-sm"
             >
               <Share2 className="h-4 w-4 mr-2" />
@@ -448,7 +515,9 @@ ${skillData
                   <CheckCircleIcon className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{safeTasks.length}</div>
+                  <div className="text-2xl font-bold">
+                    {analyticsData?.totalTasks || totalTasks}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     All learning tasks
                   </p>
@@ -464,12 +533,14 @@ ${skillData
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {completedTasks.length}
+                    {analyticsData?.completedTasks || completedTasks}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {safeTasks.length > 0
-                      ? `${((completedTasks.length / safeTasks.length) * 100).toFixed(1)}% completion`
-                      : "No tasks"}
+                    {analyticsData?.completionRate?.toFixed(1) ||
+                      (totalTasks > 0
+                        ? ((completedTasks / totalTasks) * 100).toFixed(1)
+                        : 0)}
+                    % completion rate
                   </p>
                 </CardContent>
               </Card>
@@ -482,9 +553,11 @@ ${skillData
                   <BookOpenIcon className="h-4 w-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.level || 1}</div>
+                  <div className="text-2xl font-bold">
+                    {analyticsData?.level || 1}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {stats.points || 0} points earned
+                    {analyticsData?.points || 0} points earned
                   </p>
                 </CardContent>
               </Card>
@@ -497,7 +570,9 @@ ${skillData
                   <ClockIcon className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.streak || 0}</div>
+                  <div className="text-2xl font-bold">
+                    {analyticsData?.streak || 0}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Days of consistent learning
                   </p>
@@ -758,12 +833,11 @@ ${skillData
             </Card>
           </TabsContent>
 
-          {/* Rest of the tabs content remains similar but with enhanced UI */}
+          {/* Subjects Tab */}
           <TabsContent
             value="subjects"
             className="animate-in fade-in duration-500"
           >
-            {/* Enhanced Subjects tab content */}
             <Card className="shadow-sm border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -863,7 +937,6 @@ ${skillData
             value="insights"
             className="animate-in fade-in duration-500"
           >
-            {/* Enhanced Insights tab content */}
             <Card className="shadow-sm border-0 mx-2 md:mx-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
@@ -879,7 +952,7 @@ ${skillData
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {completedTasks.length === 0 ? (
+                  {completedTasks === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <Brain className="h-16 w-16 mx-auto mb-4 opacity-50" />
                       <p className="text-lg mb-2">No data to analyze yet</p>
@@ -986,10 +1059,67 @@ ${skillData
                         </div>
                       )}
 
+                      {/* Recent Activity */}
+                      {analyticsData?.recentActivity &&
+                        analyticsData.recentActivity.length > 0 && (
+                          <Card className="shadow-sm border-0">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                <ClockIcon className="h-5 w-5 text-blue-500" />
+                                Recent Activity
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {analyticsData.recentActivity
+                                  .slice(0, 5)
+                                  .map((activity: any) => (
+                                    <div
+                                      key={activity.id}
+                                      className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg"
+                                    >
+                                      <div
+                                        className={`w-2 h-2 rounded-full ${
+                                          activity.status === "completed"
+                                            ? "bg-green-500"
+                                            : activity.status === "in-progress"
+                                              ? "bg-yellow-500"
+                                              : "bg-gray-500"
+                                        }`}
+                                      />
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">
+                                          {activity.title}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {activity.subject} •{" "}
+                                          {new Date(
+                                            activity.updatedAt,
+                                          ).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                      <span
+                                        className={`text-xs px-2 py-1 rounded-full ${
+                                          activity.status === "completed"
+                                            ? "bg-green-100 text-green-800"
+                                            : activity.status === "in-progress"
+                                              ? "bg-yellow-100 text-yellow-800"
+                                              : "bg-gray-100 text-gray-800"
+                                        }`}
+                                      >
+                                        {activity.status}
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                       {/* Action Buttons */}
                       <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         <Button
-                          onClick={handleExportPDF}
+                          onClick={handleExportReport}
                           className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:from-pink-600 hover:to-rose-600 border-0 shadow-sm"
                         >
                           <FileTextIcon className="h-4 w-4 mr-2" />
