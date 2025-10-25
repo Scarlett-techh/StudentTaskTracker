@@ -161,31 +161,30 @@ const TaskCard: FC<TaskCardProps> = ({
     ? getProofUrl(firstImageProof)
     : null;
 
-  // Task status toggle mutation
+  // Task status toggle mutation - FIXED: Use this for simple status changes
   const toggleStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
       return apiRequest("PATCH", `/api/tasks/${task.id}`, {
         status: newStatus,
       });
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user-achievements"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/points-history"] });
+    onSuccess: async (data, variables) => {
+      // Invalidate all relevant queries to refresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/user-achievements"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/points-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/analytics"] }),
+      ]);
 
       if (onTaskUpdate) onTaskUpdate();
 
       // Show special toast when completing a task (earning points)
       if (variables === "completed") {
-        // Base points + category bonus
-        const basePoints = 10;
-        const categoryBonus = task.category ? 5 : 0;
-        const totalPoints = basePoints + categoryBonus;
-
         toast({
           title: "Task completed! 🎉",
-          description: `You earned ${totalPoints} points for completing this task!`,
+          description: "You earned 10 points for completing this task!",
           variant: "default",
         });
       } else {
@@ -209,8 +208,13 @@ const TaskCard: FC<TaskCardProps> = ({
     mutationFn: async () => {
       return apiRequest("DELETE", `/api/tasks/${task.id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/analytics"] }),
+      ]);
+
       if (onTaskUpdate) onTaskUpdate();
       toast({
         title: "Task deleted",
@@ -221,6 +225,47 @@ const TaskCard: FC<TaskCardProps> = ({
     onError: (error) => {
       toast({
         title: "Error deleting task",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Task completion with proof mutation - FIXED: Use mutation instead of direct apiRequest
+  const completeWithProofMutation = useMutation({
+    mutationFn: async (proofData: {
+      proofUrls?: string[];
+      proofText?: string;
+      proofLink?: string;
+    }) => {
+      return apiRequest("PATCH", `/api/tasks/${task.id}`, {
+        status: "completed",
+        proofFiles: proofData.proofUrls,
+        proofText: proofData.proofText,
+        proofLink: proofData.proofLink,
+      });
+    },
+    onSuccess: async () => {
+      // Invalidate all relevant queries to refresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/user-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/user-achievements"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/points-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/analytics"] }),
+      ]);
+
+      if (onTaskUpdate) onTaskUpdate();
+
+      toast({
+        title: "Task completed! 🎉",
+        description:
+          "Your task has been marked as completed with proof. You can now share it to your portfolio!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error completing task",
         description: error.message,
         variant: "destructive",
       });
@@ -242,30 +287,7 @@ const TaskCard: FC<TaskCardProps> = ({
     proofText?: string;
     proofLink?: string;
   }) => {
-    try {
-      // Update task with proof and mark as completed
-      await apiRequest("PATCH", `/api/tasks/${task.id}`, {
-        status: "completed",
-        proofFiles: proofData.proofUrls, // Store as array for multiple files
-        proofText: proofData.proofText,
-        proofLink: proofData.proofLink,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      if (onTaskUpdate) onTaskUpdate();
-
-      toast({
-        title: "Task completed! 🎉",
-        description:
-          "Your task has been marked as completed with proof. You can now share it to your portfolio!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error completing task",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    completeWithProofMutation.mutate(proofData);
   };
 
   const handleDeleteTask = () => {
@@ -389,6 +411,7 @@ const TaskCard: FC<TaskCardProps> = ({
                           "h-8 w-8 p-0 rounded-full transition-all duration-300 hover:scale-110",
                           "bg-white border-2 border-amber-400 hover:bg-amber-50",
                         )}
+                        disabled={completeWithProofMutation.isPending}
                       >
                         <CheckSquare className="h-4 w-4 text-amber-600" />
                       </Button>
@@ -705,6 +728,7 @@ const TaskCard: FC<TaskCardProps> = ({
         onOpenChange={setCompletionDialogOpen}
         task={task}
         onComplete={handleCompleteWithProof}
+        isSubmitting={completeWithProofMutation.isPending}
       />
 
       {/* Proof Preview Dialog - NOW USING THE FIXED FILEPREVIEW COMPONENT */}

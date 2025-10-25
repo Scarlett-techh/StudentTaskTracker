@@ -281,18 +281,7 @@ export const MoodTracker = () => {
             </Button>
           )}
 
-          {/* ✅ ADDED: Debug info for development */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-100 rounded">
-              <strong>Debug Info:</strong>
-              <br />
-              User: {user ? `Logged in (ID: ${user.id})` : "Not logged in"}
-              <br />
-              Selected Mood: {selectedMood || "None"}
-              <br />
-              API Client: {apiClient ? "Available" : "Not available"}
-            </div>
-          )}
+          
         </div>
       </CardContent>
     </Card>

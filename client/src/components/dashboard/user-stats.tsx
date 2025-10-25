@@ -1,12 +1,9 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Award, Star, Zap, Trophy, Plus } from "lucide-react";
+import { Award, Star, Zap, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 
 interface Achievement {
   id: number;
@@ -33,49 +30,44 @@ interface UserStats {
 }
 
 export default function UserStats() {
-  const { toast } = useToast();
-  
   // Fetch user's stats
   const { data: stats, isLoading: statsLoading } = useQuery<UserStats>({
     queryKey: ["/api/user-stats"],
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   // Fetch user's achievements
-  const { data: achievements, isLoading: achievementsLoading } = useQuery<UserAchievement[]>({
+  const { data: achievements, isLoading: achievementsLoading } = useQuery<
+    UserAchievement[]
+  >({
     queryKey: ["/api/user-achievements"],
   });
 
-  // Calculate points to next level
-  const pointsToNextLevel = stats ? (stats.level * 100) : 100;
+  // Calculate level and progress properly
+  const calculateLevelAndProgress = () => {
+    if (!stats)
+      return {
+        level: 1,
+        progress: 0,
+        pointsToNextLevel: 100,
+        currentLevelPoints: 0,
+      };
+
+    // Each level requires 100 points
+    const level = Math.floor(stats.points / 100) + 1;
+    const currentLevelPoints = stats.points % 100;
+    const pointsToNextLevel = 100;
+    const progress = Math.min(
+      100,
+      (currentLevelPoints / pointsToNextLevel) * 100,
+    );
+
+    return { level, progress, pointsToNextLevel, currentLevelPoints };
+  };
+
+  const { level, progress, pointsToNextLevel, currentLevelPoints } =
+    calculateLevelAndProgress();
   const currentPoints = stats?.points || 0;
-  const progressPercentage = stats ? Math.min(100, Math.round((currentPoints % 100) * 100 / 100)) : 0;
-  
-  // Mutation for adding test points
-  const addPointsMutation = useMutation({
-    mutationFn: async (amount: number) => {
-      // Simulate API call for points
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          // Update the local data to simulate earning points
-          queryClient.setQueryData(["/api/user-stats"], (oldData: any) => {
-            return {
-              ...oldData,
-              points: (oldData?.points || 0) + amount
-            };
-          });
-          resolve({ success: true });
-        }, 500);
-      });
-    },
-    onSuccess: (_, amount) => {
-      toast({
-        title: `${amount} Points Earned!`,
-        description: "You can now purchase certificates in the Learning Wallet.",
-        variant: "default",
-      });
-    }
-  });
 
   return (
     <div className="space-y-4">
@@ -98,24 +90,31 @@ export default function UserStats() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    Level {stats?.level}
+                    Level {level}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {currentPoints} points earned
+                    {currentPoints} total points earned
                   </p>
                 </div>
                 <div className="flex items-center">
                   <Zap className="h-4 w-4 mr-1 text-yellow-500" />
-                  <span className="text-sm font-medium">{stats?.streak || 0} day streak</span>
+                  <span className="text-sm font-medium">
+                    {stats?.streak || 0} day streak
+                  </span>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span>Progress to Level {stats ? stats.level + 1 : 1}</span>
-                  <span>{currentPoints % 100}/{pointsToNextLevel} points</span>
+                  <span>Progress to Level {level + 1}</span>
+                  <span>
+                    {currentLevelPoints}/{pointsToNextLevel} points
+                  </span>
                 </div>
-                <Progress value={progressPercentage} className="h-2" />
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Earn 10 points per completed task
+                </p>
               </div>
             </div>
           )}
@@ -126,8 +125,12 @@ export default function UserStats() {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center">
             <Trophy className="mr-2 h-5 w-5 text-amber-500" />
-            Achievements 
-            {achievements && <span className="ml-2 text-sm font-normal text-muted-foreground">({achievements.length} earned)</span>}
+            Achievements
+            {achievements && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({achievements.length} earned)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -139,33 +142,30 @@ export default function UserStats() {
           ) : achievements && achievements.length > 0 ? (
             <div className="space-y-2">
               {achievements.map((achievement) => (
-                <div key={achievement.id} className="flex items-center space-x-2">
+                <div
+                  key={achievement.id}
+                  className="flex items-center space-x-2"
+                >
                   <Award className="h-5 w-5 text-green-500" />
                   <div>
-                    <p className="text-sm font-medium">{achievement.achievement.title}</p>
-                    <p className="text-xs text-muted-foreground">{achievement.achievement.description}</p>
+                    <p className="text-sm font-medium">
+                      {achievement.achievement.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {achievement.achievement.description}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-3">
-              <p className="text-sm text-muted-foreground">Complete tasks to earn achievements!</p>
+              <p className="text-sm text-muted-foreground">
+                Complete tasks to earn achievements!
+              </p>
             </div>
           )}
         </CardContent>
-        <CardFooter>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full"
-            onClick={() => addPointsMutation.mutate(50)}
-            disabled={addPointsMutation.isPending}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {addPointsMutation.isPending ? "Adding Points..." : "Add 50 Points (Testing)"}
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );
