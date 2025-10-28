@@ -102,19 +102,13 @@ router.post("/register", async (req, res) => {
       name: newUser.name,
     };
 
-    // Save session explicitly with error handling
-    return new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) {
-          console.error("❌ [REGISTER] Session save error:", err);
-          reject(err);
-          return res.status(500).json({ error: "Session error" });
-        }
-
-        console.log('✅ [REGISTER] Session saved for user:', newUser.id);
-
-        res.status(201).json({
-          message: "User created successfully",
+    // Save session explicitly with error handling - SIMPLIFIED for Vercel
+    req.session.save((err) => {
+      if (err) {
+        console.error("❌ [REGISTER] Session save error:", err);
+        // Even if session fails, still return success but warn about session
+        return res.status(201).json({
+          message: "User created successfully (session may not be persistent)",
           user: {
             id: newUser.id,
             username: newUser.username,
@@ -124,18 +118,37 @@ router.post("/register", async (req, res) => {
             userType: newUser.userType,
             name: newUser.name,
           },
+          warning: "Session storage issue - you may need to login again"
         });
-        resolve();
+      }
+
+      console.log('✅ [REGISTER] Session saved for user:', newUser.id);
+
+      res.status(201).json({
+        message: "User created successfully",
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          userType: newUser.userType,
+          name: newUser.name,
+        },
       });
     });
 
   } catch (error) {
     console.error("❌ [REGISTER] Error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ 
+      error: "Internal server error",
+      // Add more details for debugging
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
   }
 });
 
-// Login user
+// Login user - FIXED FOR VERCEL
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -184,20 +197,13 @@ router.post("/login", async (req, res) => {
       name: user.name,
     };
 
-    // Save session explicitly with proper error handling
-    return new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) {
-          console.error("❌ [LOGIN] Session save error:", err);
-          reject(err);
-          return res.status(500).json({ error: "Session error" });
-        }
-
-        console.log('✅ [LOGIN] Session saved successfully for user:', user.id);
-        console.log('🔐 [LOGIN] Session after save:', req.session);
-
-        res.json({
-          message: "Login successful",
+    // SIMPLIFIED session save for Vercel - remove Promise wrapper
+    req.session.save((err) => {
+      if (err) {
+        console.error("❌ [LOGIN] Session save error:", err);
+        // Even if session fails, still return success but with warning
+        return res.json({
+          message: "Login successful (session may not be persistent)",
           user: {
             id: user.id,
             username: user.username,
@@ -207,14 +213,33 @@ router.post("/login", async (req, res) => {
             userType: user.userType,
             name: user.name,
           },
+          warning: "Session storage issue - you may need to login again periodically"
         });
-        resolve();
+      }
+
+      console.log('✅ [LOGIN] Session saved successfully for user:', user.id);
+
+      res.json({
+        message: "Login successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          name: user.name,
+        },
       });
     });
 
   } catch (error) {
     console.error("❌ [LOGIN] Error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ 
+      error: "Internal server error",
+      // Add more details for debugging
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
   }
 });
 
