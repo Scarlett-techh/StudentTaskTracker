@@ -203,36 +203,28 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  await ensureSessionsTable();
+// ✅ Remove the entire (async () => { ... })(); block and replace with:
 
-  const server = await registerRoutes(app);
+await ensureSessionsTable();
 
-  // ✅ FIXED: Enhanced error handling middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    console.error("❌ [UNHANDLED ERROR]", err);
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+const server = await registerRoutes(app);
 
-    // Don't throw the error again, just log it
-    res.status(status).json({
-      error: message,
-      code: err.code || "UNKNOWN_ERROR",
-    });
+// ✅ FIXED: Enhanced error handling middleware
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("❌ [UNHANDLED ERROR]", err);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+
+  res.status(status).json({
+    error: message,
+    code: err.code || "UNKNOWN_ERROR",
   });
+});
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-
-    // 👇 Catch-all: always return index.html for React routes
-    app.get("*", (_req, res) => {
-      res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
-    });
-  }
-
-  // ✅ Use Replit's provided PORT, fallback to 5000
+// Only setup Vite and start server in development
+if (process.env.NODE_ENV === "development") {
+  await setupVite(app, server);
+  
   const port = process.env.PORT ? Number(process.env.PORT) : 5000;
   server.listen(
     {
@@ -241,14 +233,10 @@ app.use((req, res, next) => {
       reusePort: true,
     },
     () => {
-      log(`🚀 Server running on port ${port}`);
-      log(
-        `🔐 Session secret: ${process.env.SESSION_SECRET ? "Set" : "Using default"}`,
-      );
-      log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`);
-      log(
-        `✅ Registered routes: /api/auth, /api/user, /api/mood, /api/tasks, /api/analytics`,
-      );
+      console.log(`🚀 Server running on port ${port}`);
     },
   );
-})();
+}
+
+// ✅ CRITICAL: Export for Vercel serverless functions
+export default app;
