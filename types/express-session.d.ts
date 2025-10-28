@@ -1,0 +1,15 @@
+// types/express-session.d.ts
+import 'express-session';
+
+declare module 'express-session' {
+  interface SessionData {
+    user: {
+      id: number;
+      email: string;
+      username: string;
+      firstName: string;
+      lastName: string;
+      userType: string;
+    };
+  }
+}
