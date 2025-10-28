@@ -28,4 +28,9 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  // ADD THESE TWO LINES - Simple Fix
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+  },
+  publicDir: path.resolve(import.meta.dirname, "attached_assets")
 });
