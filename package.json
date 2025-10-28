@@ -10,7 +10,8 @@
     "check": "tsc --noEmit --skipLibCheck",
     "db:push": "drizzle-kit push"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@types/multer": "^1.4.13", 
     "@fullcalendar/core": "^6.1.17",
     "@fullcalendar/daygrid": "^6.1.17",
     "@fullcalendar/interaction": "^6.1.17",
